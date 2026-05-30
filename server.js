@@ -1,0 +1,223 @@
+/**
+ * DonPeeSMS Backend — Main Entry Point
+ * Express + MongoDB + JWT + Stripe + NowPayments + PayPal + SMS providers
+ */
+require('dotenv').config();
+
+const express      = require('express');
+const cors         = require('cors');
+const helmet       = require('helmet');
+const morgan       = require('morgan');
+const compression  = require('compression');
+const cookieParser = require('cookie-parser');
+const mongoSanitize= require('express-mongo-sanitize');
+const hpp          = require('hpp');
+
+const env          = require('./config/env');
+const { connectDB }= require('./config/db');
+const logger       = require('./utils/logger');
+const { errorHandler, notFound } = require('./middleware/errorHandler');
+const { globalLimiter } = require('./middleware/rateLimiter');
+
+const authRoutes    = require('./routes/authRoutes');
+const walletRoutes  = require('./routes/walletRoutes');
+const numberRoutesModule = require('./routes/numberRoutes');
+const numberRoutes  = numberRoutesModule;
+const apiV1Numbers  = numberRoutesModule.apiRouter;
+const userRoutes    = require('./routes/userRoutes');
+const paymentRoutes = require('./routes/paymentRoutes');
+
+const app = express();
+
+// ── TRUST PROXY (for IP behind nginx/cloudflare) ──
+app.set('trust proxy', 1);
+
+// ══════════════════════════════════════════
+// SECURITY MIDDLEWARE
+// ══════════════════════════════════════════
+app.use(helmet({
+  contentSecurityPolicy: env.env === 'production',
+  crossOriginEmbedderPolicy: false
+}));
+
+app.use(cors({
+  origin: (origin, cb) => {
+    if (!origin) return cb(null, true);
+    const allowed = [env.frontendUrl, 'http://localhost:5173', 'http://localhost:3000'];
+    if (allowed.includes(origin) || env.env === 'development') return cb(null, true);
+    cb(new Error('Not allowed by CORS'));
+  },
+  credentials: true,
+  methods: ['GET','POST','PATCH','PUT','DELETE','OPTIONS']
+}));
+
+// ══════════════════════════════════════════
+// WEBHOOKS — MUST USE RAW BODY (before json parser)
+// ══════════════════════════════════════════
+app.use('/api/payments', paymentRoutes);
+
+// ══════════════════════════════════════════
+// BODY PARSERS
+// ══════════════════════════════════════════
+app.use(express.json({ limit: '10kb' }));
+app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+app.use(cookieParser(env.cookieSecret));
+
+// ══════════════════════════════════════════
+// DATA SANITIZATION
+// ══════════════════════════════════════════
+app.use(mongoSanitize());
+app.use(hpp());
+
+// ══════════════════════════════════════════
+// LOGGING + COMPRESSION
+// ══════════════════════════════════════════
+if (env.env !== 'test') {
+  app.use(morgan(env.env === 'production' ? 'combined' : 'dev', {
+    stream: { write: (msg) => logger.http ? logger.http(msg.trim()) : logger.info(msg.trim()) }
+  }));
+}
+app.use(compression());
+
+// ══════════════════════════════════════════
+// RATE LIMITING
+// ══════════════════════════════════════════
+app.use('/api', globalLimiter);
+
+// ══════════════════════════════════════════
+// HEALTH CHECK
+// ══════════════════════════════════════════
+app.get('/health', (req, res) => {
+  res.json({
+    status: 'ok',
+    app: env.appName,
+    env: env.env,
+    uptime: process.uptime(),
+    timestamp: new Date().toISOString()
+  });
+});
+
+// API info (machine-readable)
+app.get('/api', (req, res) => {
+  res.json({
+    name: env.appName + ' API',
+    version: '1.0.0',
+    docs: '/api/docs',
+    health: '/health',
+    endpoints: ['/api/auth', '/api/wallet', '/api/numbers', '/api/users', '/api/payments', '/api/v1']
+  });
+});
+
+// ══════════════════════════════════════════
+// API ROUTES
+// ══════════════════════════════════════════
+app.use('/api/auth',    authRoutes);
+app.use('/api/wallet',  walletRoutes);
+app.use('/api/numbers', numberRoutes);
+app.use('/api/users',   userRoutes);
+
+// External API (developer endpoints — x-api-key auth)
+app.use('/api/v1',      apiV1Numbers);
+
+// ══════════════════════════════════════════
+// STATIC FRONTEND (DonPeeSMS SPA)
+// ══════════════════════════════════════════
+const path = require('path');
+const publicDir = path.join(__dirname, 'public');
+
+app.use(express.static(publicDir, {
+  maxAge: env.env === 'production' ? '7d' : 0,
+  etag: true,
+  index: 'index.html',
+  setHeaders: (res, filePath) => {
+    if (filePath.endsWith('.html')) {
+      res.setHeader('Cache-Control', 'no-cache, must-revalidate');
+    }
+  }
+}));
+
+// SPA fallback — any non-API, non-file route returns index.html
+app.get(/^(?!\/api|\/health).*/, (req, res, next) => {
+  if (path.extname(req.path)) return next(); // let 404 handle missing static files
+  res.sendFile(path.join(publicDir, 'index.html'));
+});
+
+// ══════════════════════════════════════════
+// 404 + ERROR HANDLERS
+// ══════════════════════════════════════════
+app.use(notFound);
+app.use(errorHandler);
+
+// ══════════════════════════════════════════
+// STARTUP
+// ══════════════════════════════════════════
+const start = async () => {
+  await connectDB();
+
+  const server = app.listen(env.port, () => {
+    logger.info(`╔═══════════════════════════════════════════════╗`);
+    logger.info(`║   ${env.appName} API running                       ║`);
+    logger.info(`║   Env: ${env.env.padEnd(38)} ║`);
+    logger.info(`║   Port: ${String(env.port).padEnd(37)} ║`);
+    logger.info(`║   URL: http://localhost:${env.port}                 ║`);
+    logger.info(`╚═══════════════════════════════════════════════╝`);
+  });
+
+  // Background job: auto-refund expired orders
+  startBackgroundJobs();
+
+  // Graceful shutdown
+  const shutdown = (signal) => {
+    logger.info(`${signal} received — shutting down gracefully`);
+    server.close(() => {
+      logger.info('HTTP server closed');
+      require('./config/db').disconnectDB().then(() => process.exit(0));
+    });
+    setTimeout(() => process.exit(1), 10000).unref();
+  };
+
+  process.on('SIGTERM', () => shutdown('SIGTERM'));
+  process.on('SIGINT', () => shutdown('SIGINT'));
+
+  process.on('unhandledRejection', (err) => {
+    logger.error('UNHANDLED REJECTION:', err);
+  });
+  process.on('uncaughtException', (err) => {
+    logger.error('UNCAUGHT EXCEPTION:', err);
+    shutdown('UNCAUGHT');
+  });
+};
+
+// Background jobs (poll expired orders)
+const startBackgroundJobs = () => {
+  const Order = require('./models/Order');
+  const numberCtrl = require('./controllers/numberController');
+
+  // Every 60 seconds: expire stale active orders and refund
+  setInterval(async () => {
+    try {
+      const expired = await Order.find({
+        status: 'active',
+        expiresAt: { $lt: new Date() }
+      }).limit(50);
+
+      for (const order of expired) {
+        order.status = 'expired';
+        await order.save();
+        await numberCtrl._refundOrder(order, 'No SMS received within window').catch(err =>
+          logger.error(`Auto-refund failed for ${order.orderId}:`, err.message)
+        );
+      }
+
+      if (expired.length) logger.info(`Auto-expired ${expired.length} stale orders`);
+    } catch (err) {
+      logger.error('Background job error:', err.message);
+    }
+  }, 60_000);
+};
+
+if (require.main === module) {
+  start();
+}
+
+module.exports = app;
