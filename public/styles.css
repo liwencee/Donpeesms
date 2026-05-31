@@ -139,6 +139,19 @@ input, select, textarea { font-family: var(--font-body); outline: none; }
 .page { display: none; }
 .page.active { display: block; }
 
+/* ── LANDING SUB-PAGES ── */
+.landing-pg { display: block; }
+.landing-pg.hidden { display: none; }
+
+/* Fade-in animation when switching landing pages */
+@keyframes lpFadeIn {
+  from { opacity: 0; transform: translateY(14px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+.landing-pg.lp-fade {
+  animation: lpFadeIn 0.35s cubic-bezier(0.22, 1, 0.36, 1) both;
+}
+
 /* ── SCROLLBAR ── */
 ::-webkit-scrollbar { width: 6px; height: 6px; }
 ::-webkit-scrollbar-track { background: var(--bg-1); }

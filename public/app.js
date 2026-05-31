@@ -32,60 +32,61 @@ window.addEventListener('scroll', () => {
   if (nav) nav.classList.toggle('scrolled', window.scrollY > 40);
 });
 
-// ── SMOOTH SCROLL TO SECTION (with fixed navbar offset) ──
+// ── LANDING PAGE ROUTER ─────────────────────────────────────
+// Shows one landing sub-page (home/features/howitworks/services/pricing/faq)
+// and hides all others — no scroll, true separate pages.
+function showLandingPage(section) {
+  const pages = ['home','features','howitworks','services','pricing','faq'];
+
+  pages.forEach(id => {
+    const el = document.getElementById('lp-' + id);
+    if (el) el.classList.toggle('hidden', id !== section);
+  });
+
+  // Trigger fade-in on visible page
+  const target = document.getElementById('lp-' + section);
+  if (target) {
+    target.classList.remove('lp-fade');
+    void target.offsetWidth; // force reflow
+    target.classList.add('lp-fade');
+  }
+
+  // Update active nav link
+  document.querySelectorAll('.nav-link[data-section]').forEach(link => {
+    link.classList.toggle('active', link.getAttribute('data-section') === section);
+  });
+
+  // Always scroll to top of page when switching sections
+  window.scrollTo({ top: 0, behavior: 'instant' });
+
+  // Re-init FAQ if switching to that page (in case DOM wasn't ready)
+  if (section === 'faq' && !document.querySelector('#faqList .faq-item')) {
+    buildFAQ();
+  }
+}
+
+// ── SET ACTIVE NAV LINK (kept for compatibility) ───────────
+function setNavActive(sectionId) {
+  document.querySelectorAll('.nav-link[data-section]').forEach(link => {
+    link.classList.toggle('active', link.getAttribute('data-section') === sectionId);
+  });
+}
+
+// ── SMOOTH SCROLL TO SECTION (legacy — kept for in-page use) ─
 function scrollTo(id) {
   const el = document.getElementById(id);
   if (!el) return;
-  const offset = 80; // navbar height compensation
+  const offset = 80;
   const top = el.getBoundingClientRect().top + window.scrollY - offset;
   window.scrollTo({ top, behavior: 'smooth' });
 }
 
-// ── NAV CLICK: scroll + immediately mark active ────────────
-function navScrollTo(id) {
-  scrollTo(id);
-  setNavActive(id);
-}
+function navScrollTo(id) { showLandingPage(id); }
 
-// ── SET ACTIVE NAV LINK ────────────────────────────────────
-function setNavActive(sectionId) {
-  document.querySelectorAll('.nav-link[data-section]').forEach(link => {
-    const active = link.getAttribute('data-section') === sectionId;
-    link.classList.toggle('active', active);
-  });
-}
+function scrollToTop() { showLandingPage('home'); }
 
-// ── INTERSECTION OBSERVER: auto-highlight on scroll ────────
-function initNavObserver() {
-  const sections = ['features', 'howitworks', 'services', 'pricing', 'faq'];
-  const options  = { rootMargin: '-70px 0px -55% 0px', threshold: 0 };
-
-  const observer = new IntersectionObserver((entries) => {
-    entries.forEach(entry => {
-      if (entry.isIntersecting) {
-        setNavActive(entry.target.id);
-      }
-    });
-  }, options);
-
-  sections.forEach(id => {
-    const el = document.getElementById(id);
-    if (el) observer.observe(el);
-  });
-
-  // Clear active when back at top
-  const heroObserver = new IntersectionObserver((entries) => {
-    if (entries[0].isIntersecting) {
-      document.querySelectorAll('.nav-link[data-section]').forEach(l => l.classList.remove('active'));
-    }
-  }, { threshold: 0.1 });
-  const hero = document.getElementById('hero');
-  if (hero) heroObserver.observe(hero);
-}
-
-function scrollToTop() {
-  window.scrollTo({ top: 0, behavior: 'smooth' });
-}
+// ── INTERSECTION OBSERVER (disabled — no longer needed) ────
+function initNavObserver() { /* replaced by showLandingPage() */ }
 
 // ── MOBILE NAV ─────────────────────────────────────────────
 function openMobileNav() {
