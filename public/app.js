@@ -36,7 +36,7 @@ window.addEventListener('scroll', () => {
 // Shows one landing sub-page (home/features/howitworks/services/pricing/faq)
 // and hides all others — no scroll, true separate pages.
 function showLandingPage(section) {
-  const pages = ['home','features','howitworks','services','pricing','faq'];
+  const pages = ['home','features','howitworks','services','pricing','faq','contact'];
 
   pages.forEach(id => {
     const el = document.getElementById('lp-' + id);
@@ -1503,6 +1503,42 @@ function showPage(name) {
   }
 }
 
+// ── CONTACT FORM ───────────────────────────────────────────
+function submitContactForm(e) {
+  e.preventDefault();
+  const name    = document.getElementById('cfName')?.value.trim();
+  const email   = document.getElementById('cfEmail')?.value.trim();
+  const subject = document.getElementById('cfSubject')?.value;
+  const message = document.getElementById('cfMessage')?.value.trim();
+
+  if (!name || !email || !message) {
+    showToast('Please fill in all required fields.', 'error');
+    return;
+  }
+
+  // Build WhatsApp deep-link message as fallback (no backend yet)
+  const text = encodeURIComponent(
+    `*DonPeeSMS Contact Form*\n\nName: ${name}\nEmail: ${email}\nSubject: ${subject || 'General'}\n\nMessage:\n${message}`
+  );
+  window.open(`https://wa.me/2347084869630?text=${text}`, '_blank');
+
+  showToast('Message sent! We will respond shortly.', 'success');
+  e.target.reset();
+}
+
+// ── AVAILABILITY STATUS ─────────────────────────────────────
+function updateAvailability() {
+  const el = document.getElementById('availStatus');
+  if (!el) return;
+  const hour = new Date().getHours(); // local browser time
+  // Business hours: 8 AM – 10 PM WAT (UTC+1)
+  const watHour = (new Date().getUTCHours() + 1) % 24;
+  const online  = watHour >= 8 && watHour < 22;
+  el.textContent = online ? 'We are Online now' : 'Currently Offline — leaves a message';
+  const dot = el.previousElementSibling;
+  if (dot) dot.style.background = online ? 'var(--success)' : 'var(--warning, #f59e0b)';
+}
+
 // ── INIT ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
   initTheme();
@@ -1515,4 +1551,6 @@ document.addEventListener('DOMContentLoaded', () => {
   initNavObserver();
   initPWA();
   updateNotifBadge();
+  updateAvailability();
+  setInterval(updateAvailability, 60_000);
 });

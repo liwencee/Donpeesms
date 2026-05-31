@@ -58,6 +58,7 @@
   <a class="nav-link" data-section="services"   onclick="showLandingPage('services');closeMobileNav()">Services</a>
   <a class="nav-link" data-section="pricing"    onclick="showLandingPage('pricing');closeMobileNav()">Pricing</a>
   <a class="nav-link" data-section="faq"        onclick="showLandingPage('faq');closeMobileNav()">FAQ</a>
+  <a class="nav-link" data-section="contact"    onclick="showLandingPage('contact');closeMobileNav()">Contact</a>
   <div style="margin-top:16px;display:flex;flex-direction:column;gap:10px">
     <button class="btn btn-outline w-full" onclick="showPage('login');closeMobileNav()">Login</button>
     <button class="btn btn-primary w-full" onclick="showPage('register');closeMobileNav()">Get Started</button>
@@ -86,6 +87,7 @@
       <a class="nav-link" data-section="services"    onclick="showLandingPage('services')">Services</a>
       <a class="nav-link" data-section="pricing"     onclick="showLandingPage('pricing')">Pricing</a>
       <a class="nav-link" data-section="faq"         onclick="showLandingPage('faq')">FAQ</a>
+      <a class="nav-link" data-section="contact"     onclick="showLandingPage('contact')">Contact</a>
     </div>
     <div class="navbar-actions">
       <!-- Language Switcher -->
@@ -895,6 +897,187 @@
   </section>
 
   </div><!-- /lp-faq -->
+
+  <!-- ── PAGE: CONTACT ─────────────────────────── -->
+  <div class="landing-pg hidden" id="lp-contact">
+  <section class="section">
+    <div class="container">
+
+      <div class="section-header">
+        <span class="section-label">Get In Touch</span>
+        <h2 class="h2 section-title">We're Here to <span class="text-gradient">Help You</span></h2>
+        <p class="section-desc">Reach us via phone, WhatsApp, Telegram or email. Our team responds within minutes.</p>
+      </div>
+
+      <!-- Contact Cards Row -->
+      <div class="contact-cards">
+
+        <!-- Phone 1 -->
+        <div class="contact-card card-glow">
+          <div class="contact-card-icon" style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(139,92,246,.1));border-color:rgba(139,92,246,.3)">
+            <svg width="26" height="26" fill="none" stroke="var(--p-300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/></svg>
+          </div>
+          <div class="contact-card-label">Phone / WhatsApp</div>
+          <a href="tel:+2347084869630" class="contact-card-value">+234 708 484 9630</a>
+          <div class="contact-card-sub">Mon – Sun · 8 AM – 10 PM WAT</div>
+          <div class="contact-card-actions">
+            <a href="tel:+2347084869630" class="contact-action-btn contact-action-call">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.07 2h3A2 2 0 014.79 3.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L3.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/></svg>
+              Call Now
+            </a>
+            <a href="https://wa.me/2347084869630" target="_blank" rel="noopener noreferrer" class="contact-action-btn contact-action-wa">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              WhatsApp
+            </a>
+          </div>
+        </div>
+
+        <!-- Phone 2 -->
+        <div class="contact-card card-glow">
+          <div class="contact-card-icon" style="background:linear-gradient(135deg,rgba(124,58,237,.25),rgba(139,92,246,.1));border-color:rgba(139,92,246,.3)">
+            <svg width="26" height="26" fill="none" stroke="var(--p-300)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81a19.79 19.79 0 01-3.07-8.67A2 2 0 012 0h3a2 2 0 012 1.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L6.09 7.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/></svg>
+          </div>
+          <div class="contact-card-label">Phone / WhatsApp</div>
+          <a href="tel:+2348165516556" class="contact-card-value">+234 816 551 6556</a>
+          <div class="contact-card-sub">Mon – Sun · 8 AM – 10 PM WAT</div>
+          <div class="contact-card-actions">
+            <a href="tel:+2348165516556" class="contact-action-btn contact-action-call">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.2" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 013.07 9.81 19.79 19.79 0 01.07 2h3A2 2 0 014.79 3.72c.127.96.361 1.903.7 2.81a2 2 0 01-.45 2.11L3.09 9.91a16 16 0 006 6l1.27-1.27a2 2 0 012.11-.45c.907.339 1.85.573 2.81.7A2 2 0 0122 14.92v2z"/></svg>
+              Call Now
+            </a>
+            <a href="https://wa.me/2348165516556" target="_blank" rel="noopener noreferrer" class="contact-action-btn contact-action-wa">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              WhatsApp
+            </a>
+          </div>
+        </div>
+
+        <!-- Telegram -->
+        <div class="contact-card card-glow">
+          <div class="contact-card-icon" style="background:linear-gradient(135deg,rgba(32,162,228,.2),rgba(32,162,228,.06));border-color:rgba(32,162,228,.3)">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="#29b6d8"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.94 8.19l-2.02 9.52c-.15.68-.54.85-1.09.53l-3-2.21-1.45 1.4c-.16.16-.3.3-.61.3l.21-3.02 5.5-4.97c.24-.21-.05-.33-.37-.12L7.07 14.4l-2.96-.92c-.64-.2-.65-.64.14-.95l11.57-4.46c.53-.2 1 .12.82.94z"/></svg>
+          </div>
+          <div class="contact-card-label">Telegram Channel</div>
+          <a href="https://t.me/donpee_logs" target="_blank" rel="noopener noreferrer" class="contact-card-value">@donpee_logs</a>
+          <div class="contact-card-sub">Live OTP alerts · Updates · Deals</div>
+          <div class="contact-card-actions">
+            <a href="https://t.me/donpee_logs" target="_blank" rel="noopener noreferrer" class="contact-action-btn contact-action-tg">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 0C5.37 0 0 5.37 0 12s5.37 12 12 12 12-5.37 12-12S18.63 0 12 0zm5.94 8.19l-2.02 9.52c-.15.68-.54.85-1.09.53l-3-2.21-1.45 1.4c-.16.16-.3.3-.61.3l.21-3.02 5.5-4.97c.24-.21-.05-.33-.37-.12L7.07 14.4l-2.96-.92c-.64-.2-.65-.64.14-.95l11.57-4.46c.53-.2 1 .12.82.94z"/></svg>
+              Open Telegram
+            </a>
+          </div>
+        </div>
+
+        <!-- WhatsApp Community -->
+        <div class="contact-card card-glow">
+          <div class="contact-card-icon" style="background:linear-gradient(135deg,rgba(37,211,102,.2),rgba(37,211,102,.06));border-color:rgba(37,211,102,.3)">
+            <svg width="26" height="26" viewBox="0 0 24 24" fill="#25D366"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+          </div>
+          <div class="contact-card-label">WhatsApp Community</div>
+          <a href="https://chat.whatsapp.com/IZxRdTbxMei0fj87j3LSqE?mode=ac_t" target="_blank" rel="noopener noreferrer" class="contact-card-value">Join Community</a>
+          <div class="contact-card-sub">10,000+ members · Support · Updates</div>
+          <div class="contact-card-actions">
+            <a href="https://chat.whatsapp.com/IZxRdTbxMei0fj87j3LSqE?mode=ac_t" target="_blank" rel="noopener noreferrer" class="contact-action-btn contact-action-wa">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 005.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z"/></svg>
+              Join Now
+            </a>
+          </div>
+        </div>
+
+        <!-- Email -->
+        <div class="contact-card card-glow">
+          <div class="contact-card-icon" style="background:linear-gradient(135deg,rgba(249,115,22,.18),rgba(249,115,22,.06));border-color:rgba(249,115,22,.3)">
+            <svg width="26" height="26" fill="none" stroke="#f97316" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+          </div>
+          <div class="contact-card-label">Email Support</div>
+          <a href="mailto:support@donpeesms.com" class="contact-card-value">support@donpeesms.com</a>
+          <div class="contact-card-sub">Response within 1–3 hours</div>
+          <div class="contact-card-actions">
+            <a href="mailto:support@donpeesms.com" class="contact-action-btn" style="background:rgba(249,115,22,.15);border-color:rgba(249,115,22,.35);color:#f97316">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="2" y="4" width="20" height="16" rx="2"/><path d="M2 7l10 7 10-7"/></svg>
+              Send Email
+            </a>
+          </div>
+        </div>
+
+        <!-- Business Hours -->
+        <div class="contact-card card-glow">
+          <div class="contact-card-icon" style="background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(16,185,129,.06));border-color:rgba(16,185,129,.3)">
+            <svg width="26" height="26" fill="none" stroke="var(--success)" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+          </div>
+          <div class="contact-card-label">Business Hours</div>
+          <div class="contact-card-value" style="cursor:default">Mon – Sun</div>
+          <div class="contact-card-sub">8:00 AM – 10:00 PM (WAT)</div>
+          <div class="contact-availability">
+            <span class="avail-dot"></span>
+            <span id="availStatus">Checking availability…</span>
+          </div>
+        </div>
+
+      </div><!-- /contact-cards -->
+
+      <!-- Contact Form -->
+      <div class="contact-form-wrap">
+        <div class="contact-form-inner">
+          <h3 class="contact-form-title">Send Us a Message</h3>
+          <p class="contact-form-sub">Fill in the form and we'll get back to you within hours.</p>
+          <form class="contact-form" onsubmit="submitContactForm(event)">
+            <div class="contact-form-row">
+              <div class="contact-form-group">
+                <label>Your Name</label>
+                <input type="text" id="cfName" placeholder="e.g. John Doe" required/>
+              </div>
+              <div class="contact-form-group">
+                <label>Email Address</label>
+                <input type="email" id="cfEmail" placeholder="e.g. john@example.com" required/>
+              </div>
+            </div>
+            <div class="contact-form-group">
+              <label>Subject</label>
+              <select id="cfSubject">
+                <option value="">Select a topic…</option>
+                <option value="order">Order / Number Issue</option>
+                <option value="billing">Billing / Wallet</option>
+                <option value="api">API Integration</option>
+                <option value="refund">Refund Request</option>
+                <option value="affiliate">Affiliate Program</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="contact-form-group">
+              <label>Message</label>
+              <textarea id="cfMessage" rows="5" placeholder="Describe your issue or question…" required></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;gap:8px">
+              <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><line x1="22" y1="2" x2="11" y2="13"/><polygon points="22 2 15 22 11 13 2 9 22 2"/></svg>
+              Send Message
+            </button>
+          </form>
+        </div>
+
+        <!-- Map / Location card -->
+        <div class="contact-location">
+          <h3 class="contact-form-title">Find Us</h3>
+          <p class="contact-form-sub" style="margin-bottom:24px">Based in Nigeria · Serving 150+ countries worldwide.</p>
+          <div class="contact-location-map">
+            <div class="map-placeholder">
+              <svg width="48" height="48" fill="none" stroke="var(--p-400)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0118 0z"/><circle cx="12" cy="10" r="3"/></svg>
+              <span>Nigeria 🇳🇬</span>
+              <small>Virtual operations · Global coverage</small>
+            </div>
+          </div>
+          <div class="contact-location-tags">
+            <span class="location-tag">🌍 Africa</span>
+            <span class="location-tag">🌎 Americas</span>
+            <span class="location-tag">🌏 Asia-Pacific</span>
+            <span class="location-tag">🇪🇺 Europe</span>
+          </div>
+        </div>
+      </div><!-- /contact-form-wrap -->
+
+    </div>
+  </section>
+  </div><!-- /lp-contact -->
 
   <!-- COMMUNITY CTA BANNER -->
   <section class="community-banner">
