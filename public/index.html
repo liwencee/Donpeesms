@@ -1,22 +1,46 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="en" data-theme="dark">
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
 <title>DonPeeSMS — Buy International WhatsApp & SMS Numbers | donpeesms.com</title>
 <meta name="description" content="DonPeeSMS — Buy instant international WhatsApp and SMS verification numbers from 150+ countries. Secure, fast, anonymous, and affordable. Pay with crypto, card, or PayPal."/>
-<meta name="keywords" content="donpeesms, virtual phone number, whatsapp verification, sms otp, international sim, temp number, online sms"/>
+<meta name="keywords" content="donpeesms, virtual phone number, whatsapp verification, sms otp, international sim, temp number, online sms, buy virtual number, anonymous verification"/>
+<!-- Open Graph -->
 <meta property="og:title" content="DonPeeSMS — International WhatsApp & SMS Numbers"/>
 <meta property="og:description" content="Get virtual numbers from 150+ countries for verification. Instant delivery, auto-refund guarantee."/>
 <meta property="og:url" content="https://donpeesms.com"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="DonPeeSMS"/>
+<meta property="og:image" content="https://donpeesms.com/og-image.png"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:locale" content="en_US"/>
+<!-- Twitter Card -->
 <meta name="twitter:card" content="summary_large_image"/>
+<meta name="twitter:site" content="@donpeesms"/>
 <meta name="twitter:title" content="DonPeeSMS — Virtual WhatsApp & SMS Numbers"/>
+<meta name="twitter:description" content="Buy virtual phone numbers from 150+ countries. Instant OTP, anonymous, auto-refund."/>
+<meta name="twitter:image" content="https://donpeesms.com/og-image.png"/>
+<!-- PWA -->
 <meta name="theme-color" content="#7C3AED"/>
+<meta name="mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-capable" content="yes"/>
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent"/>
+<meta name="apple-mobile-web-app-title" content="DonPeeSMS"/>
+<link rel="manifest" href="/manifest.json"/>
+<link rel="apple-touch-icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 192 192'><rect width='192' height='192' rx='40' fill='%235B21B6'/><text y='130' x='28' font-size='90' font-weight='900' fill='white' font-family='Arial'>DP</text></svg>"/>
+<!-- SEO -->
 <link rel="canonical" href="https://donpeesms.com/"/>
+<link rel="alternate" hreflang="en" href="https://donpeesms.com/"/>
+<link rel="alternate" hreflang="fr" href="https://donpeesms.com/fr/"/>
+<link rel="alternate" hreflang="es" href="https://donpeesms.com/es/"/>
+<!-- Structured Data -->
+<script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"DonPeeSMS","url":"https://donpeesms.com","description":"Buy instant international WhatsApp and SMS verification numbers from 150+ countries.","potentialAction":{"@type":"SearchAction","target":"https://donpeesms.com/?q={search_term_string}","query-input":"required name=search_term_string"}}</script>
 <link rel="stylesheet" href="styles.css"/>
 <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><defs><linearGradient id='g' x1='0' y1='0' x2='1' y2='1'><stop offset='0' stop-color='%235B21B6'/><stop offset='1' stop-color='%238B5CF6'/></linearGradient></defs><rect width='32' height='32' rx='8' fill='url(%23g)'/><text y='22' x='6' font-size='14' font-weight='900' fill='white' font-family='Arial'>DP</text></svg>"/>
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
 </head>
 <body>
 
@@ -62,8 +86,28 @@
       <a class="nav-link" data-section="faq"         onclick="navScrollTo('faq')">FAQ</a>
     </div>
     <div class="navbar-actions">
-      <button class="btn btn-ghost btn-sm" onclick="showPage('login')">Login</button>
-      <button class="btn btn-primary btn-sm" onclick="showPage('register')">Get Started</button>
+      <!-- Language Switcher -->
+      <div class="lang-switcher" id="langSwitcher">
+        <div class="lang-btn" onclick="toggleLangDropdown()">
+          <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 010 20M12 2a15.3 15.3 0 000 20"/></svg>
+          <span id="langLabel">EN</span>
+          <svg width="10" height="10" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 9l6 6 6-6"/></svg>
+        </div>
+        <div class="lang-dropdown">
+          <div class="lang-option active" onclick="setLang('en')">🇬🇧 English</div>
+          <div class="lang-option" onclick="setLang('fr')">🇫🇷 Français</div>
+          <div class="lang-option" onclick="setLang('es')">🇪🇸 Español</div>
+          <div class="lang-option" onclick="setLang('ar')">🇸🇦 العربية</div>
+          <div class="lang-option" onclick="setLang('pt')">🇧🇷 Português</div>
+        </div>
+      </div>
+      <!-- Theme Toggle -->
+      <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme">
+        <svg class="icon-moon" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+        <svg class="icon-sun"  width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
+      </div>
+      <button class="btn btn-ghost btn-sm" onclick="showPage('login')" data-i18n="nav.login">Login</button>
+      <button class="btn btn-primary btn-sm" onclick="showPage('register')" data-i18n="nav.getStarted">Get Started</button>
       <div class="hamburger" onclick="openMobileNav()">
         <span></span><span></span><span></span>
       </div>
@@ -1107,6 +1151,18 @@
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
             Referral Program
           </div>
+          <div class="sidebar-link" onclick="dashNav('webhooks')">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+            Webhooks
+          </div>
+          <div class="sidebar-link" onclick="dashNav('affiliate')">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
+            Affiliate Program
+          </div>
+          <div class="sidebar-link" onclick="showPage('admin')" style="color:var(--warning)">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+            Admin Panel
+          </div>
           <div class="sidebar-link" onclick="handleLogout()">
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign Out
@@ -1131,10 +1187,72 @@
       <div class="dash-topbar">
         <div class="topbar-title" id="dashTitle">Dashboard Overview</div>
         <div class="topbar-right">
-          <div class="topbar-notif" onclick="showToast('No new notifications','info')">
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
-            <div class="notif-dot"></div>
+          <!-- Theme Toggle -->
+          <div class="theme-toggle" onclick="toggleTheme()" title="Toggle theme" style="margin-right:4px">
+            <svg class="icon-moon" width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+            <svg class="icon-sun"  width="15" height="15" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42M18.36 18.36l1.42 1.42M1 12h2M21 12h2M4.22 19.78l1.42-1.42M18.36 5.64l1.42-1.42"/></svg>
           </div>
+
+          <!-- Notifications Dropdown -->
+          <div class="notif-wrapper" id="notifWrapper">
+            <div class="topbar-notif" onclick="toggleNotifPanel()">
+              <svg width="17" height="17" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
+              <div class="notif-badge" id="notifBadge">3</div>
+            </div>
+            <div class="notif-panel" id="notifPanel">
+              <div class="notif-panel-head">
+                <span>Notifications</span>
+                <span style="font-size:.75rem;color:var(--p-300);cursor:pointer;font-weight:400" onclick="markAllRead()">Mark all read</span>
+              </div>
+              <div id="notifList">
+                <div class="notif-item unread" onclick="markRead(this)">
+                  <div class="notif-icon otp"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.64 12"/></svg></div>
+                  <div style="flex:1">
+                    <div class="notif-text"><strong>OTP Received</strong> — +1 (415) 555-0142</div>
+                    <div class="notif-text">Code: <strong style="color:var(--success)">582903</strong> · WhatsApp</div>
+                    <div class="notif-time">2 minutes ago</div>
+                  </div>
+                  <div class="notif-unread-dot"></div>
+                </div>
+                <div class="notif-item unread" onclick="markRead(this)">
+                  <div class="notif-icon pay"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
+                  <div style="flex:1">
+                    <div class="notif-text"><strong>Wallet Topped Up</strong> · +$25.00</div>
+                    <div class="notif-text">Balance: $49.50 · Via USDT</div>
+                    <div class="notif-time">1 hour ago</div>
+                  </div>
+                  <div class="notif-unread-dot"></div>
+                </div>
+                <div class="notif-item unread" onclick="markRead(this)">
+                  <div class="notif-icon warn"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94"/></svg></div>
+                  <div style="flex:1">
+                    <div class="notif-text"><strong>Order Expired</strong> — +44 7911 123456</div>
+                    <div class="notif-text">Auto-refund of $0.10 issued</div>
+                    <div class="notif-time">3 hours ago</div>
+                  </div>
+                  <div class="notif-unread-dot"></div>
+                </div>
+                <div class="notif-item" onclick="markRead(this)">
+                  <div class="notif-icon info"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
+                  <div style="flex:1">
+                    <div class="notif-text"><strong>Referral Bonus</strong> +$1.25 earned</div>
+                    <div class="notif-text">User johndoe_ref made a deposit</div>
+                    <div class="notif-time">Yesterday</div>
+                  </div>
+                </div>
+                <div class="notif-item" onclick="markRead(this)">
+                  <div class="notif-icon otp"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2"/></svg></div>
+                  <div style="flex:1">
+                    <div class="notif-text"><strong>OTP Received</strong> — +49 152 2345678</div>
+                    <div class="notif-text">Code: <strong style="color:var(--success)">739421</strong> · Telegram</div>
+                    <div class="notif-time">2 days ago</div>
+                  </div>
+                </div>
+              </div>
+              <div class="notif-panel-foot" onclick="dashNav('transactions');toggleNotifPanel()">View all activity →</div>
+            </div>
+          </div>
+
           <div class="topbar-user" onclick="dashNav('profile')">
             <div class="user-avatar">JD</div>
             <div>
@@ -1189,6 +1307,47 @@
               </div>
               <div class="stat-card-icon icon-blue">
                 <svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M3 12a9 9 0 109 9"/><path d="M3 12V6M3 12H9"/></svg>
+              </div>
+            </div>
+          </div>
+
+          <!-- ── CHARTS ── -->
+          <div class="charts-row">
+            <div class="chart-card">
+              <div class="chart-title">Revenue Overview</div>
+              <div class="chart-subtitle">Last 30 days · wallet topups</div>
+              <div class="chart-canvas-wrap" style="height:200px">
+                <canvas id="chartRevenue"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">OTP Success Rate</div>
+              <div class="chart-subtitle">Current billing period</div>
+              <div class="chart-canvas-wrap" style="height:200px;display:flex;align-items:center;justify-content:center">
+                <canvas id="chartSuccess" style="max-width:180px;max-height:180px"></canvas>
+              </div>
+            </div>
+          </div>
+          <div class="charts-row-3">
+            <div class="chart-card">
+              <div class="chart-title">Numbers by Service</div>
+              <div class="chart-subtitle">WhatsApp vs SMS breakdown</div>
+              <div class="chart-canvas-wrap" style="height:160px">
+                <canvas id="chartService"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Top Countries</div>
+              <div class="chart-subtitle">By number of orders</div>
+              <div class="chart-canvas-wrap" style="height:160px">
+                <canvas id="chartCountry"></canvas>
+              </div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">Daily Orders</div>
+              <div class="chart-subtitle">This week</div>
+              <div class="chart-canvas-wrap" style="height:160px">
+                <canvas id="chartDaily"></canvas>
               </div>
             </div>
           </div>
@@ -1644,6 +1803,124 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
           </div>
         </div>
 
+        <!-- ── WEBHOOKS ── -->
+        <div id="dash-webhooks" class="hidden">
+          <h2 class="h3 mb-6" style="font-family:var(--font-head)">Webhook <span class="text-gradient">Configuration</span></h2>
+          <div class="card mb-6">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+              <div>
+                <div style="font-weight:700;margin-bottom:4px">Registered Endpoints</div>
+                <div style="color:var(--txt-4);font-size:.83rem">We'll POST to these URLs when OTP arrives, order expires, or payment confirms.</div>
+              </div>
+              <button class="btn btn-primary btn-sm" onclick="showAddWebhookModal()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                Add Endpoint
+              </button>
+            </div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead><tr><th>URL</th><th>Events</th><th>Status</th><th>Last Delivery</th><th>Actions</th></tr></thead>
+                <tbody>
+                  <tr>
+                    <td><code style="font-size:.8rem;color:var(--p-200)">https://myapp.io/hooks/otp</code></td>
+                    <td><span class="badge badge-purple">otp.received</span> <span class="badge">order.expired</span></td>
+                    <td><span class="webhook-status-pill delivered">Active</span></td>
+                    <td style="color:var(--txt-4);font-size:.82rem">2 min ago · 200 OK</td>
+                    <td style="display:flex;gap:6px">
+                      <button class="btn btn-outline btn-sm" onclick="showToast('Test event sent','success')">Test</button>
+                      <button class="btn btn-outline btn-sm" style="color:var(--error)" onclick="showToast('Endpoint deleted','info')">Delete</button>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td><code style="font-size:.8rem;color:var(--p-200)">https://myapp.io/hooks/payments</code></td>
+                    <td><span class="badge badge-purple">payment.confirmed</span></td>
+                    <td><span class="webhook-status-pill delivered">Active</span></td>
+                    <td style="color:var(--txt-4);font-size:.82rem">1 hr ago · 200 OK</td>
+                    <td style="display:flex;gap:6px">
+                      <button class="btn btn-outline btn-sm" onclick="showToast('Test event sent','success')">Test</button>
+                      <button class="btn btn-outline btn-sm" style="color:var(--error)" onclick="showToast('Endpoint deleted','info')">Delete</button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+          <div class="card">
+            <div style="font-weight:700;margin-bottom:16px">Delivery Logs</div>
+            <div class="webhook-event-row"><span style="color:var(--success);font-family:var(--font-head);font-size:.8rem">200</span><span style="flex:1;font-size:.83rem"><strong>otp.received</strong> → myapp.io/hooks/otp</span><span style="color:var(--txt-4);font-size:.75rem">2 min ago</span><span class="webhook-status-pill delivered">Delivered</span></div>
+            <div class="webhook-event-row"><span style="color:var(--success);font-family:var(--font-head);font-size:.8rem">200</span><span style="flex:1;font-size:.83rem"><strong>payment.confirmed</strong> → myapp.io/hooks/payments</span><span style="color:var(--txt-4);font-size:.75rem">1hr ago</span><span class="webhook-status-pill delivered">Delivered</span></div>
+            <div class="webhook-event-row"><span style="color:var(--error);font-family:var(--font-head);font-size:.8rem">500</span><span style="flex:1;font-size:.83rem"><strong>order.expired</strong> → myapp.io/hooks/otp</span><span style="color:var(--txt-4);font-size:.75rem">3hr ago</span><span class="webhook-status-pill failed">Failed</span><button class="btn btn-outline btn-sm" onclick="showToast('Retrying...','info')">Retry</button></div>
+            <div class="webhook-event-row"><span style="color:var(--success);font-family:var(--font-head);font-size:.8rem">200</span><span style="flex:1;font-size:.83rem"><strong>otp.received</strong> → myapp.io/hooks/otp</span><span style="color:var(--txt-4);font-size:.75rem">Yesterday</span><span class="webhook-status-pill delivered">Delivered</span></div>
+          </div>
+        </div>
+
+        <!-- ── AFFILIATE ── -->
+        <div id="dash-affiliate" class="hidden">
+          <div style="display:flex;align-items:center;gap:14px;margin-bottom:28px">
+            <h2 class="h3" style="font-family:var(--font-head)">Affiliate <span class="text-gradient">Dashboard</span></h2>
+            <span class="affiliate-tier-badge tier-gold">⭐ Gold Affiliate</span>
+          </div>
+
+          <div class="affiliate-overview">
+            <div class="stat-card"><div><div class="stat-card-label">Total Referred</div><div class="stat-card-value">28</div><div class="stat-card-change change-up">+3 this month</div></div><div class="stat-card-icon icon-purple"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div></div>
+            <div class="stat-card"><div><div class="stat-card-label">Total Earnings</div><div class="stat-card-value text-gradient">$48.20</div><div class="stat-card-change change-up">+$6.40 this month</div></div><div class="stat-card-icon icon-green"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div></div>
+            <div class="stat-card"><div><div class="stat-card-label">Commission Rate</div><div class="stat-card-value">10%</div><div class="stat-card-change" style="color:var(--warning)">→ 12% at Platinum</div></div><div class="stat-card-icon icon-amber"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg></div></div>
+            <div class="stat-card"><div><div class="stat-card-label">Pending Payout</div><div class="stat-card-value">$12.40</div><div class="stat-card-change" style="color:var(--txt-4)">Min. $5 to withdraw</div></div><div class="stat-card-icon icon-blue"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/></svg></div></div>
+          </div>
+
+          <!-- Tier Progress -->
+          <div class="card mb-6">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px">
+              <div style="font-weight:700">Tier Progress — Gold → Platinum</div>
+              <span class="affiliate-tier-badge tier-platinum">Platinum: 50+ referrals</span>
+            </div>
+            <div style="background:var(--bg-3);border-radius:var(--radius-full);height:8px;margin-bottom:10px">
+              <div style="width:56%;height:100%;border-radius:var(--radius-full);background:linear-gradient(90deg,var(--p-600),var(--p-300));box-shadow:0 0 10px var(--p-500)"></div>
+            </div>
+            <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--txt-4)"><span>28 referrals</span><span>50 needed for Platinum (12% rate)</span></div>
+          </div>
+
+          <!-- Referral Link -->
+          <div class="card mb-6">
+            <div style="font-weight:700;margin-bottom:6px">Your Referral Links</div>
+            <div style="color:var(--txt-3);font-size:.85rem;margin-bottom:16px">Share these links. You earn 10% of every topup your referrals make — forever.</div>
+            <div style="display:flex;align-items:center;gap:10px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:12px">
+              <span style="font-size:.75rem;color:var(--txt-4);min-width:60px">Landing</span>
+              <code style="font-size:.85rem;color:var(--p-200);flex:1">https://donpeesms.com/?ref=johndoe99</code>
+              <button class="copy-btn" onclick="copyText('https://donpeesms.com/?ref=johndoe99')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md);padding:12px 16px">
+              <span style="font-size:.75rem;color:var(--txt-4);min-width:60px">Register</span>
+              <code style="font-size:.85rem;color:var(--p-200);flex:1">https://donpeesms.com/register?ref=johndoe99</code>
+              <button class="copy-btn" onclick="copyText('https://donpeesms.com/register?ref=johndoe99')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
+            </div>
+          </div>
+
+          <!-- Commission History -->
+          <div class="card">
+            <div style="font-weight:700;margin-bottom:16px">Commission History</div>
+            <div style="overflow-x:auto">
+              <table class="data-table">
+                <thead><tr><th>Date</th><th>Referred User</th><th>Their Deposit</th><th>Your Commission</th><th>Status</th></tr></thead>
+                <tbody>
+                  <tr><td style="color:var(--txt-4)">2025-05-28</td><td>user_7k2m</td><td>$25.00</td><td style="color:var(--success)">+$2.50</td><td><span class="badge badge-success">Paid</span></td></tr>
+                  <tr><td style="color:var(--txt-4)">2025-05-24</td><td>user_9x1r</td><td>$100.00</td><td style="color:var(--success)">+$10.00</td><td><span class="badge badge-success">Paid</span></td></tr>
+                  <tr><td style="color:var(--txt-4)">2025-05-20</td><td>user_4q8s</td><td>$10.00</td><td style="color:var(--success)">+$1.00</td><td><span class="badge badge-success">Paid</span></td></tr>
+                  <tr><td style="color:var(--txt-4)">2025-05-18</td><td>user_2n5t</td><td>$50.00</td><td style="color:var(--warning)">+$5.00</td><td><span class="badge" style="background:rgba(245,158,11,.15);color:var(--warning)">Pending</span></td></tr>
+                  <tr><td style="color:var(--txt-4)">2025-05-15</td><td>user_8f3v</td><td>$25.00</td><td style="color:var(--warning)">+$2.50</td><td><span class="badge" style="background:rgba(245,158,11,.15);color:var(--warning)">Pending</span></td></tr>
+                </tbody>
+              </table>
+            </div>
+            <div style="display:flex;gap:12px;margin-top:20px">
+              <button class="btn btn-primary" onclick="showToast('Withdrawal of $12.40 requested!','success')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                Withdraw $12.40
+              </button>
+              <button class="btn btn-outline" onclick="showToast('Marketing materials downloaded','info')">Get Banners & Materials</button>
+            </div>
+          </div>
+        </div>
+
         <!-- ── REFERRAL ── -->
         <div id="dash-referral" class="hidden">
           <h2 class="h3 mb-6" style="font-family:var(--font-head)">Referral <span class="text-gradient">Program</span></h2>
@@ -1669,6 +1946,263 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
     </main>
   </div>
 </div><!-- end page-dashboard -->
+
+
+<!-- ═══════════════════════════════════════ ADMIN PANEL ═══ -->
+<div id="page-admin" class="page">
+  <div class="admin-wrap">
+    <!-- Admin Sidebar -->
+    <aside class="admin-sidebar">
+      <div class="admin-sidebar-logo">
+        <svg width="18" height="18" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+        <span class="text-gradient">Admin</span>
+        <span class="admin-badge">ROOT</span>
+      </div>
+      <nav>
+        <div class="admin-nav-link active" onclick="adminNav('overview')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
+          Overview
+        </div>
+        <div class="admin-nav-link" onclick="adminNav('users')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
+          Users
+        </div>
+        <div class="admin-nav-link" onclick="adminNav('pricing')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg>
+          Pricing
+        </div>
+        <div class="admin-nav-link" onclick="adminNav('providers')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></svg>
+          Providers
+        </div>
+        <div class="admin-nav-link" onclick="adminNav('orders')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/></svg>
+          All Orders
+        </div>
+        <div class="admin-nav-link" onclick="adminNav('revenue')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>
+          Revenue
+        </div>
+        <div class="admin-nav-link" onclick="adminNav('settings')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+          Settings
+        </div>
+        <div class="admin-nav-link" style="margin-top:auto;color:var(--txt-4)" onclick="showPage('dashboard')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
+          Back to Dashboard
+        </div>
+      </nav>
+    </aside>
+
+    <!-- Admin Main -->
+    <div class="admin-main">
+      <div class="admin-topbar">
+        <div style="font-family:var(--font-head);font-size:.95rem;font-weight:700" id="adminTitle">Admin Overview</div>
+        <div style="display:flex;gap:10px;align-items:center">
+          <div class="theme-toggle" onclick="toggleTheme()">
+            <svg class="icon-moon" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z"/></svg>
+            <svg class="icon-sun"  width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="5"/><path d="M12 1v2M12 21v2M4.22 4.22l1.42 1.42"/></svg>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <div style="width:30px;height:30px;border-radius:50%;background:linear-gradient(135deg,var(--error),#F97316);display:flex;align-items:center;justify-content:center;font-size:.75rem;font-weight:700">AD</div>
+            <span style="font-size:.85rem">Admin</span>
+          </div>
+        </div>
+      </div>
+
+      <div class="admin-content">
+
+        <!-- OVERVIEW -->
+        <div class="admin-section active" id="admin-overview">
+          <div class="admin-stats">
+            <div class="admin-stat"><div class="admin-stat-label">Total Users</div><div class="admin-stat-val text-gradient">124,850</div><div class="admin-stat-change change-up">+342 today</div></div>
+            <div class="admin-stat"><div class="admin-stat-label">Revenue (MTD)</div><div class="admin-stat-val" style="color:var(--success)">$18,240</div><div class="admin-stat-change change-up">+12% vs last month</div></div>
+            <div class="admin-stat"><div class="admin-stat-label">Active Orders</div><div class="admin-stat-val">1,847</div><div class="admin-stat-change" style="color:var(--txt-4)">live right now</div></div>
+            <div class="admin-stat"><div class="admin-stat-label">OTP Success Rate</div><div class="admin-stat-val" style="color:var(--success)">99.2%</div><div class="admin-stat-change change-up">+0.3% this week</div></div>
+          </div>
+          <div style="display:grid;grid-template-columns:2fr 1fr;gap:20px">
+            <div class="chart-card">
+              <div class="chart-title">Platform Revenue (Last 30 Days)</div>
+              <div class="chart-subtitle">Total topups processed</div>
+              <div class="chart-canvas-wrap" style="height:220px"><canvas id="adminChartRevenue"></canvas></div>
+            </div>
+            <div class="chart-card">
+              <div class="chart-title">User Registrations</div>
+              <div class="chart-subtitle">This week</div>
+              <div class="chart-canvas-wrap" style="height:220px"><canvas id="adminChartUsers"></canvas></div>
+            </div>
+          </div>
+        </div>
+
+        <!-- USERS -->
+        <div class="admin-section" id="admin-users">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <h2 style="font-family:var(--font-head);font-size:1.1rem">User Management</h2>
+            <div style="display:flex;gap:10px">
+              <input type="search" class="form-input" placeholder="Search by email / username..." style="width:260px;font-size:.85rem" oninput="filterAdminUsers(this.value)"/>
+              <select class="form-select" style="width:130px;font-size:.85rem"><option>All Status</option><option>Active</option><option>Banned</option><option>Unverified</option></select>
+              <button class="btn btn-outline btn-sm" onclick="showToast('Exported to CSV','success')">Export CSV</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="data-table" id="adminUsersTable">
+              <thead><tr><th><input type="checkbox" style="accent-color:var(--p-500)"/></th><th>User</th><th>Email</th><th>Balance</th><th>Orders</th><th>Joined</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="adminUsersBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PRICING -->
+        <div class="admin-section" id="admin-pricing">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <h2 style="font-family:var(--font-head);font-size:1.1rem">Pricing Management</h2>
+            <div style="display:flex;gap:10px">
+              <input type="search" class="form-input" placeholder="Search country..." style="width:200px;font-size:.85rem"/>
+              <button class="btn btn-primary btn-sm" onclick="showToast('Prices saved','success')">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 01-2-2V5a2 2 0 012-2h11l5 5v11a2 2 0 01-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                Save Changes
+              </button>
+            </div>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead><tr><th>Country</th><th>WhatsApp Price</th><th>SMS Price</th><th>Provider</th><th>Markup %</th><th>Active</th></tr></thead>
+              <tbody id="adminPricingBody"></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- PROVIDERS -->
+        <div class="admin-section" id="admin-providers">
+          <h2 style="font-family:var(--font-head);font-size:1.1rem;margin-bottom:20px">SMS Provider Management</h2>
+          <div class="provider-grid">
+            <div class="provider-card active-provider">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <div style="width:38px;height:38px;background:rgba(16,185,129,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:.8rem;font-weight:700;color:var(--success)">5S</div>
+                <div>
+                  <div style="font-weight:700">5SIM</div>
+                  <div style="font-size:.75rem;color:var(--txt-4)"><span class="provider-status-dot online"></span>Online · 1.2M numbers</div>
+                </div>
+                <div class="provider-toggle on" onclick="this.classList.toggle('on');showToast('5SIM provider toggled','info')"></div>
+              </div>
+              <div style="font-size:.82rem;color:var(--txt-3);margin-bottom:12px">Primary provider. 150+ countries, excellent WhatsApp success rates.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.78rem">
+                <div style="background:var(--bg-3);padding:8px;border-radius:8px;text-align:center"><div style="color:var(--txt-4)">Balance</div><div style="font-weight:700;color:var(--success)">$240.50</div></div>
+                <div style="background:var(--bg-3);padding:8px;border-radius:8px;text-align:center"><div style="color:var(--txt-4)">Success Rate</div><div style="font-weight:700">99.1%</div></div>
+              </div>
+              <button class="btn btn-outline btn-sm w-full" style="margin-top:12px" onclick="showToast('5SIM settings opened','info')">Configure</button>
+            </div>
+            <div class="provider-card">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <div style="width:38px;height:38px;background:rgba(59,130,246,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:.8rem;font-weight:700;color:var(--info)">SA</div>
+                <div>
+                  <div style="font-weight:700">SMS-Activate</div>
+                  <div style="font-size:.75rem;color:var(--txt-4)"><span class="provider-status-dot online"></span>Online · 980K numbers</div>
+                </div>
+                <div class="provider-toggle on" onclick="this.classList.toggle('on');showToast('SMS-Activate toggled','info')"></div>
+              </div>
+              <div style="font-size:.82rem;color:var(--txt-3);margin-bottom:12px">Secondary provider. Strong coverage in Eastern Europe and CIS regions.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.78rem">
+                <div style="background:var(--bg-3);padding:8px;border-radius:8px;text-align:center"><div style="color:var(--txt-4)">Balance</div><div style="font-weight:700;color:var(--success)">$118.20</div></div>
+                <div style="background:var(--bg-3);padding:8px;border-radius:8px;text-align:center"><div style="color:var(--txt-4)">Success Rate</div><div style="font-weight:700">97.8%</div></div>
+              </div>
+              <button class="btn btn-outline btn-sm w-full" style="margin-top:12px" onclick="showToast('SMS-Activate settings opened','info')">Configure</button>
+            </div>
+            <div class="provider-card">
+              <div style="display:flex;align-items:center;gap:10px;margin-bottom:12px">
+                <div style="width:38px;height:38px;background:rgba(239,68,68,.15);border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:var(--font-head);font-size:.8rem;font-weight:700;color:var(--error)">TW</div>
+                <div>
+                  <div style="font-weight:700">Twilio</div>
+                  <div style="font-size:.75rem;color:var(--txt-4)"><span class="provider-status-dot offline"></span>Standby · US/CA focus</div>
+                </div>
+                <div class="provider-toggle" onclick="this.classList.toggle('on');showToast('Twilio toggled','info')"></div>
+              </div>
+              <div style="font-size:.82rem;color:var(--txt-3);margin-bottom:12px">Fallback for US/Canada premium numbers. Higher cost but 100% delivery guarantee.</div>
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;font-size:.78rem">
+                <div style="background:var(--bg-3);padding:8px;border-radius:8px;text-align:center"><div style="color:var(--txt-4)">Balance</div><div style="font-weight:700;color:var(--warning)">$45.00</div></div>
+                <div style="background:var(--bg-3);padding:8px;border-radius:8px;text-align:center"><div style="color:var(--txt-4)">Success Rate</div><div style="font-weight:700">100%</div></div>
+              </div>
+              <button class="btn btn-outline btn-sm w-full" style="margin-top:12px" onclick="showToast('Twilio settings opened','info')">Configure</button>
+            </div>
+          </div>
+          <!-- Failover Rules -->
+          <div class="card" style="margin-top:24px">
+            <div style="font-weight:700;margin-bottom:16px">Failover Rules</div>
+            <div style="display:flex;flex-direction:column;gap:10px;font-size:.85rem">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-3);border-radius:var(--radius-md)">
+                <span>Primary: <strong>5SIM</strong> → Fallback: <strong>SMS-Activate</strong></span>
+                <span style="color:var(--txt-4)">Trigger on 3 consecutive failures</span>
+                <div class="provider-toggle on" style="position:static"></div>
+              </div>
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:12px;background:var(--bg-3);border-radius:var(--radius-md)">
+                <span>US/CA: <strong>5SIM</strong> → Fallback: <strong>Twilio</strong></span>
+                <span style="color:var(--txt-4)">For premium US numbers only</span>
+                <div class="provider-toggle on" style="position:static"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- ORDERS -->
+        <div class="admin-section" id="admin-orders">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px">
+            <h2 style="font-family:var(--font-head);font-size:1.1rem">All Platform Orders</h2>
+            <div style="display:flex;gap:10px">
+              <input type="search" class="form-input" placeholder="Order ID / number..." style="width:220px;font-size:.85rem"/>
+              <select class="form-select" style="width:130px;font-size:.85rem"><option>All Status</option><option>Active</option><option>Completed</option><option>Expired</option><option>Refunded</option></select>
+              <button class="btn btn-outline btn-sm" onclick="showToast('Orders exported','success')">Export</button>
+            </div>
+          </div>
+          <div style="overflow-x:auto"><table class="data-table"><thead><tr><th>Order ID</th><th>User</th><th>Service</th><th>Number</th><th>Country</th><th>Cost</th><th>Provider</th><th>Status</th><th>Date</th></tr></thead><tbody id="adminOrdersBody"></tbody></table></div>
+        </div>
+
+        <!-- REVENUE -->
+        <div class="admin-section" id="admin-revenue">
+          <h2 style="font-family:var(--font-head);font-size:1.1rem;margin-bottom:20px">Revenue Analytics</h2>
+          <div class="admin-stats" style="grid-template-columns:repeat(4,1fr)">
+            <div class="admin-stat"><div class="admin-stat-label">Today</div><div class="admin-stat-val" style="color:var(--success)">$842</div><div class="admin-stat-change change-up">+8% vs yesterday</div></div>
+            <div class="admin-stat"><div class="admin-stat-label">This Week</div><div class="admin-stat-val" style="color:var(--success)">$5,240</div><div class="admin-stat-change change-up">+15% vs last week</div></div>
+            <div class="admin-stat"><div class="admin-stat-label">This Month</div><div class="admin-stat-val" style="color:var(--success)">$18,240</div><div class="admin-stat-change change-up">+12% vs last month</div></div>
+            <div class="admin-stat"><div class="admin-stat-label">All Time</div><div class="admin-stat-val text-gradient">$284,120</div><div class="admin-stat-change" style="color:var(--txt-4)">Since launch</div></div>
+          </div>
+          <div class="chart-card" style="margin-top:20px">
+            <div class="chart-title">Monthly Revenue Breakdown</div>
+            <div class="chart-subtitle">WhatsApp vs SMS revenue split</div>
+            <div class="chart-canvas-wrap" style="height:280px"><canvas id="adminChartMonthly"></canvas></div>
+          </div>
+        </div>
+
+        <!-- SETTINGS -->
+        <div class="admin-section" id="admin-settings">
+          <h2 style="font-family:var(--font-head);font-size:1.1rem;margin-bottom:20px">Platform Settings</h2>
+          <div class="card mb-6">
+            <div style="font-weight:700;margin-bottom:20px">General Configuration</div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+              <div class="form-group"><label class="form-label">Platform Name</label><input type="text" class="form-input" value="DonPeeSMS"/></div>
+              <div class="form-group"><label class="form-label">Support Email</label><input type="email" class="form-input" value="support@donpeesms.com"/></div>
+              <div class="form-group"><label class="form-label">Default WhatsApp Markup %</label><input type="number" class="form-input" value="35"/></div>
+              <div class="form-group"><label class="form-label">Default SMS Markup %</label><input type="number" class="form-input" value="40"/></div>
+              <div class="form-group"><label class="form-label">Minimum Deposit ($)</label><input type="number" class="form-input" value="1"/></div>
+              <div class="form-group"><label class="form-label">Referral Commission %</label><input type="number" class="form-input" value="10"/></div>
+            </div>
+            <button class="btn btn-primary" style="margin-top:16px" onclick="showToast('Settings saved!','success')">Save Settings</button>
+          </div>
+          <div class="card">
+            <div style="font-weight:700;margin-bottom:20px">Maintenance Mode</div>
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--bg-3);border-radius:var(--radius-md)">
+              <div>
+                <div style="font-weight:600;margin-bottom:4px">Enable Maintenance Mode</div>
+                <div style="font-size:.83rem;color:var(--txt-4)">Disables all purchases while keeping the site visible.</div>
+              </div>
+              <div class="provider-toggle" onclick="this.classList.toggle('on');showToast('Maintenance mode toggled','warning')"></div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div><!-- end page-admin -->
 
 
 <!-- ═══════════════════════════════════════ TOPUP MODAL ═══ -->
@@ -1726,6 +2260,27 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
       Proceed to Payment
     </button>
   </div>
+</div>
+
+<!-- ── PWA Install Banner ── -->
+<div class="pwa-banner" id="pwaBanner">
+  <div style="width:42px;height:42px;background:linear-gradient(135deg,var(--p-600),var(--p-400));border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0">
+    <svg width="22" height="22" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01M9 7h6M9 11h6"/></svg>
+  </div>
+  <div class="pwa-banner-text">
+    <strong>Install DonPeeSMS</strong>
+    <span>Add to home screen for instant access</span>
+  </div>
+  <button class="btn btn-primary btn-sm" id="pwaInstallBtn">Install</button>
+  <button class="btn btn-ghost btn-sm" onclick="document.getElementById('pwaBanner').classList.remove('visible')" style="padding:6px 8px">
+    <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+  </button>
+</div>
+
+<!-- ── Live Chat FAB (Tawk.to style) ── -->
+<div class="chat-fab" id="chatFab" onclick="openLiveChat()" title="Live Support">
+  <div class="chat-fab-badge">1</div>
+  <svg width="24" height="24" fill="none" stroke="white" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>
 </div>
 
 <script src="app.js"></script>

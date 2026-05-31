@@ -110,7 +110,7 @@ function closeSidebar() {
 }
 
 // ── DASHBOARD NAVIGATION ───────────────────────────────────
-const dashSections = ['overview','buy-whatsapp','buy-sms','orders','wallet','transactions','profile','api','referral'];
+const dashSections = ['overview','buy-whatsapp','buy-sms','orders','wallet','transactions','profile','api','referral','webhooks','affiliate'];
 const dashTitles = {
   'overview':       'Dashboard Overview',
   'buy-whatsapp':   'Buy WhatsApp Number',
@@ -120,7 +120,9 @@ const dashTitles = {
   'transactions':   'Transactions',
   'profile':        'Profile Settings',
   'api':            'API Access',
-  'referral':       'Referral Program'
+  'referral':       'Referral Program',
+  'webhooks':       'Webhooks',
+  'affiliate':      'Affiliate Program'
 };
 
 function dashNav(section) {
@@ -868,8 +870,641 @@ function initVerifyStageInteraction() {
   requestAnimationFrame(tick);
 }
 
+// ══════════════════════════════════════════
+// THEME TOGGLE (Light / Dark)
+// ══════════════════════════════════════════
+function toggleTheme() {
+  const html = document.documentElement;
+  const isDark = html.getAttribute('data-theme') === 'dark';
+  const next = isDark ? 'light' : 'dark';
+  html.setAttribute('data-theme', next);
+  localStorage.setItem('dps-theme', next);
+  // Re-draw charts so their background updates
+  if (window._charts) window._charts.forEach(c => { try { c.update(); } catch(e){} });
+}
+function initTheme() {
+  const saved = localStorage.getItem('dps-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+}
+
+// ══════════════════════════════════════════
+// i18n — MULTI-LANGUAGE SUPPORT
+// ══════════════════════════════════════════
+const translations = {
+  en: {
+    'nav.features':'Features','nav.howitworks':'How It Works','nav.services':'Services',
+    'nav.pricing':'Pricing','nav.faq':'FAQ','nav.login':'Login','nav.getStarted':'Get Started',
+    'hero.badge':'Live — 150+ Countries Available',
+    'hero.title1':'Buy Instant','hero.title2':'WhatsApp & SMS','hero.title3':'Virtual Numbers',
+    'hero.desc':'Get real international phone numbers for verification, OTP bypass, and privacy. Instant delivery, no ID required.',
+    'hero.cta1':'Get a Number Now','hero.cta2':'See How It Works',
+    'features.label':'Why DonPeeSMS','features.title':'Built for Speed &','features.title2':'Privacy',
+    'pricing.label':'Pricing Plans','pricing.title':'Simple,','pricing.title2':'Transparent Pricing',
+    'faq.label':'FAQ','faq.title':'Frequently Asked','faq.title2':'Questions',
+  },
+  fr: {
+    'nav.features':'Fonctionnalités','nav.howitworks':'Comment ça marche','nav.services':'Services',
+    'nav.pricing':'Tarifs','nav.faq':'FAQ','nav.login':'Connexion','nav.getStarted':'Commencer',
+    'hero.badge':'En direct — 150+ pays disponibles',
+    'hero.title1':'Achetez Instantanément','hero.title2':'WhatsApp & SMS','hero.title3':'Numéros Virtuels',
+    'hero.desc':'Obtenez de vrais numéros internationaux pour la vérification. Livraison instantanée, sans pièce d\'identité.',
+    'hero.cta1':'Obtenir un numéro','hero.cta2':'Voir comment ça marche',
+    'features.label':'Pourquoi DonPeeSMS','features.title':'Conçu pour la vitesse &','features.title2':'la confidentialité',
+    'pricing.label':'Plans tarifaires','pricing.title':'Simple,','pricing.title2':'Tarification transparente',
+    'faq.label':'FAQ','faq.title':'Questions fréquemment','faq.title2':'posées',
+  },
+  es: {
+    'nav.features':'Características','nav.howitworks':'Cómo funciona','nav.services':'Servicios',
+    'nav.pricing':'Precios','nav.faq':'FAQ','nav.login':'Iniciar sesión','nav.getStarted':'Comenzar',
+    'hero.badge':'En vivo — 150+ países disponibles',
+    'hero.title1':'Compra al Instante','hero.title2':'WhatsApp & SMS','hero.title3':'Números Virtuales',
+    'hero.desc':'Obtén números internacionales reales para verificación. Entrega instantánea, sin ID requerida.',
+    'hero.cta1':'Obtener número ahora','hero.cta2':'Ver cómo funciona',
+    'features.label':'Por qué DonPeeSMS','features.title':'Construido para velocidad &','features.title2':'privacidad',
+    'pricing.label':'Planes de precios','pricing.title':'Precios simples y','pricing.title2':'transparentes',
+    'faq.label':'FAQ','faq.title':'Preguntas frecuentes','faq.title2':'',
+  },
+  ar: {
+    'nav.features':'المميزات','nav.howitworks':'كيف يعمل','nav.services':'الخدمات',
+    'nav.pricing':'الأسعار','nav.faq':'الأسئلة الشائعة','nav.login':'تسجيل الدخول','nav.getStarted':'ابدأ الآن',
+    'hero.badge':'مباشر — أكثر من 150 دولة متاحة',
+    'hero.title1':'اشتر فوراً','hero.title2':'واتساب و SMS','hero.title3':'أرقام افتراضية',
+    'hero.desc':'احصل على أرقام هواتف دولية حقيقية للتحقق. تسليم فوري، لا هوية مطلوبة.',
+    'hero.cta1':'احصل على رقم الآن','hero.cta2':'كيف يعمل',
+    'features.label':'لماذا DonPeeSMS','features.title':'مبني للسرعة و','features.title2':'الخصوصية',
+    'pricing.label':'خطط الأسعار','pricing.title':'أسعار بسيطة و','pricing.title2':'شفافة',
+    'faq.label':'الأسئلة الشائعة','faq.title':'الأسئلة المتكررة','faq.title2':'',
+  },
+  pt: {
+    'nav.features':'Recursos','nav.howitworks':'Como funciona','nav.services':'Serviços',
+    'nav.pricing':'Preços','nav.faq':'FAQ','nav.login':'Entrar','nav.getStarted':'Começar',
+    'hero.badge':'Ao vivo — 150+ países disponíveis',
+    'hero.title1':'Compre Instantaneamente','hero.title2':'WhatsApp & SMS','hero.title3':'Números Virtuais',
+    'hero.desc':'Obtenha números internacionais reais para verificação. Entrega instantânea, sem ID necessário.',
+    'hero.cta1':'Obter um número agora','hero.cta2':'Ver como funciona',
+    'features.label':'Por que DonPeeSMS','features.title':'Construído para velocidade &','features.title2':'privacidade',
+    'pricing.label':'Planos de preços','pricing.title':'Preços simples e','pricing.title2':'transparentes',
+    'faq.label':'FAQ','faq.title':'Perguntas frequentes','faq.title2':'',
+  }
+};
+
+let currentLang = localStorage.getItem('dps-lang') || 'en';
+
+function t(key) {
+  return (translations[currentLang] && translations[currentLang][key]) ||
+         (translations['en'][key]) || key;
+}
+
+function setLang(lang) {
+  currentLang = lang;
+  localStorage.setItem('dps-lang', lang);
+  document.documentElement.lang = lang;
+  // Update all data-i18n elements
+  document.querySelectorAll('[data-i18n]').forEach(el => {
+    const key = el.getAttribute('data-i18n');
+    if (t(key) !== key) el.textContent = t(key);
+  });
+  // Update lang label
+  const labels = { en:'EN', fr:'FR', es:'ES', ar:'AR', pt:'PT' };
+  const label = document.getElementById('langLabel');
+  if (label) label.textContent = labels[lang] || 'EN';
+  // Active state
+  document.querySelectorAll('.lang-option').forEach(el => {
+    el.classList.toggle('active', el.textContent.trim().includes(lang.toUpperCase()) ||
+      el.getAttribute('onclick')?.includes(`'${lang}'`));
+  });
+  // RTL for Arabic
+  document.documentElement.dir = lang === 'ar' ? 'rtl' : 'ltr';
+  // Close dropdown
+  document.getElementById('langSwitcher')?.classList.remove('open');
+  showToast(`Language changed to ${labels[lang]}`, 'info', 2000);
+}
+
+function toggleLangDropdown() {
+  document.getElementById('langSwitcher')?.classList.toggle('open');
+}
+
+// Close lang dropdown on outside click
+document.addEventListener('click', (e) => {
+  const ls = document.getElementById('langSwitcher');
+  if (ls && !ls.contains(e.target)) ls.classList.remove('open');
+});
+
+// ══════════════════════════════════════════
+// NOTIFICATIONS DROPDOWN
+// ══════════════════════════════════════════
+let unreadCount = 3;
+
+function toggleNotifPanel() {
+  const wrapper = document.getElementById('notifWrapper');
+  if (wrapper) wrapper.classList.toggle('open');
+}
+
+function markRead(item) {
+  if (item.classList.contains('unread')) {
+    item.classList.remove('unread');
+    const dot = item.querySelector('.notif-unread-dot');
+    if (dot) dot.remove();
+    unreadCount = Math.max(0, unreadCount - 1);
+    updateNotifBadge();
+  }
+}
+
+function markAllRead() {
+  document.querySelectorAll('.notif-item.unread').forEach(item => {
+    item.classList.remove('unread');
+    const dot = item.querySelector('.notif-unread-dot');
+    if (dot) dot.remove();
+  });
+  unreadCount = 0;
+  updateNotifBadge();
+  showToast('All notifications marked as read', 'success', 2000);
+}
+
+function updateNotifBadge() {
+  const badge = document.getElementById('notifBadge');
+  if (!badge) return;
+  if (unreadCount === 0) {
+    badge.style.display = 'none';
+  } else {
+    badge.style.display = 'flex';
+    badge.textContent = unreadCount;
+  }
+}
+
+// Close notifications on outside click
+document.addEventListener('click', (e) => {
+  const nw = document.getElementById('notifWrapper');
+  if (nw && !nw.contains(e.target)) nw.classList.remove('open');
+});
+
+// ══════════════════════════════════════════
+// LIVE CHAT
+// ══════════════════════════════════════════
+function openLiveChat() {
+  // Tawk.to integration — replace YOUR_PROPERTY_ID with actual id
+  if (window.Tawk_API) {
+    window.Tawk_API.toggle();
+  } else {
+    showToast('Live chat coming online...', 'info');
+    // Load Tawk.to on demand
+    const s = document.createElement('script');
+    s.async = true;
+    s.src = 'https://embed.tawk.to/YOUR_PROPERTY_ID/default';
+    s.charset = 'UTF-8';
+    s.setAttribute('crossorigin', '*');
+    document.head.appendChild(s);
+    // Remove FAB badge after opening
+    const badge = document.querySelector('.chat-fab-badge');
+    if (badge) badge.remove();
+  }
+}
+
+// ══════════════════════════════════════════
+// PWA — SERVICE WORKER + INSTALL PROMPT
+// ══════════════════════════════════════════
+let _pwaPrompt = null;
+
+function initPWA() {
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('/sw.js').then(reg => {
+      console.log('[PWA] SW registered:', reg.scope);
+    }).catch(err => console.log('[PWA] SW error:', err));
+  }
+  window.addEventListener('beforeinstallprompt', (e) => {
+    e.preventDefault();
+    _pwaPrompt = e;
+    const banner = document.getElementById('pwaBanner');
+    if (banner) banner.classList.add('visible');
+  });
+  const installBtn = document.getElementById('pwaInstallBtn');
+  if (installBtn) {
+    installBtn.addEventListener('click', async () => {
+      if (!_pwaPrompt) return;
+      _pwaPrompt.prompt();
+      const { outcome } = await _pwaPrompt.userChoice;
+      if (outcome === 'accepted') {
+        document.getElementById('pwaBanner').classList.remove('visible');
+        showToast('DonPeeSMS installed!', 'success');
+      }
+      _pwaPrompt = null;
+    });
+  }
+  window.addEventListener('appinstalled', () => {
+    document.getElementById('pwaBanner')?.classList.remove('visible');
+    showToast('App installed successfully!', 'success');
+  });
+}
+
+// ══════════════════════════════════════════
+// CHART.JS DASHBOARD CHARTS
+// ══════════════════════════════════════════
+window._charts = [];
+
+function getChartColors() {
+  const dark = document.documentElement.getAttribute('data-theme') !== 'light';
+  return {
+    grid:   dark ? 'rgba(30,27,75,.5)' : 'rgba(139,92,246,.1)',
+    tick:   dark ? '#64748B' : '#7B78A8',
+    bg:     dark ? '#0D0D1F'  : '#ffffff',
+    purple: 'rgba(139,92,246,',
+    green:  'rgba(16,185,129,',
+    amber:  'rgba(245,158,11,',
+    blue:   'rgba(59,130,246,',
+  };
+}
+
+function destroyChart(id) {
+  const idx = window._charts.findIndex(c => c.canvas?.id === id);
+  if (idx !== -1) { window._charts[idx].destroy(); window._charts.splice(idx, 1); }
+}
+
+function initDashboardCharts() {
+  const c = getChartColors();
+  Chart.defaults.font.family = "'Exo 2', sans-serif";
+  Chart.defaults.color = c.tick;
+
+  // 1. Revenue line chart (30 days)
+  destroyChart('chartRevenue');
+  const revEl = document.getElementById('chartRevenue');
+  if (revEl) {
+    const labels = Array.from({length:30},(_,i)=>{
+      const d=new Date(); d.setDate(d.getDate()-29+i);
+      return d.toLocaleDateString('en',{month:'short',day:'numeric'});
+    });
+    const data = labels.map(()=>Math.floor(Math.random()*80+20));
+    const ch = new Chart(revEl, {
+      type:'line',
+      data:{
+        labels,
+        datasets:[{
+          label:'Revenue ($)',
+          data,
+          borderColor:'rgba(139,92,246,1)',
+          backgroundColor:'rgba(139,92,246,.12)',
+          borderWidth:2,
+          fill:true,
+          tension:.4,
+          pointRadius:0,
+          pointHoverRadius:5,
+          pointHoverBackgroundColor:'rgba(139,92,246,1)'
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
+        scales:{
+          x:{ grid:{color:c.grid}, ticks:{color:c.tick,maxTicksLimit:6} },
+          y:{ grid:{color:c.grid}, ticks:{color:c.tick,callback:v=>'$'+v} }
+        }
+      }
+    });
+    window._charts.push(ch);
+  }
+
+  // 2. OTP Success doughnut
+  destroyChart('chartSuccess');
+  const sucEl = document.getElementById('chartSuccess');
+  if (sucEl) {
+    const ch = new Chart(sucEl, {
+      type:'doughnut',
+      data:{
+        labels:['Received','Expired','Refunded'],
+        datasets:[{
+          data:[93.6, 4.2, 2.2],
+          backgroundColor:['rgba(16,185,129,.85)','rgba(245,158,11,.85)','rgba(239,68,68,.85)'],
+          borderWidth:0, hoverOffset:4
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        cutout:'72%',
+        plugins:{
+          legend:{position:'bottom', labels:{color:c.tick,boxWidth:10,padding:14}},
+          tooltip:{callbacks:{label:ctx=>`${ctx.label}: ${ctx.parsed}%`}}
+        }
+      }
+    });
+    window._charts.push(ch);
+  }
+
+  // 3. Service bar (WA vs SMS)
+  destroyChart('chartService');
+  const svcEl = document.getElementById('chartService');
+  if (svcEl) {
+    const ch = new Chart(svcEl, {
+      type:'bar',
+      data:{
+        labels:['Jan','Feb','Mar','Apr','May','Jun'],
+        datasets:[
+          { label:'WhatsApp', data:[28,35,42,39,47,55], backgroundColor:'rgba(37,211,102,.75)', borderRadius:4 },
+          { label:'SMS',      data:[14,18,22,20,28,31], backgroundColor:'rgba(139,92,246,.75)', borderRadius:4 }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{ labels:{color:c.tick,boxWidth:10} } },
+        scales:{
+          x:{ grid:{display:false}, ticks:{color:c.tick} },
+          y:{ grid:{color:c.grid}, ticks:{color:c.tick} }
+        }
+      }
+    });
+    window._charts.push(ch);
+  }
+
+  // 4. Country bar
+  destroyChart('chartCountry');
+  const cntEl = document.getElementById('chartCountry');
+  if (cntEl) {
+    const ch = new Chart(cntEl, {
+      type:'bar',
+      data:{
+        labels:['US','IN','NG','GB','BR','PK','DE'],
+        datasets:[{
+          label:'Orders',
+          data:[182,147,96,84,72,68,54],
+          backgroundColor:'rgba(59,130,246,.75)',
+          borderRadius:4
+        }]
+      },
+      options:{
+        indexAxis:'y',
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{ grid:{color:c.grid}, ticks:{color:c.tick} },
+          y:{ grid:{display:false}, ticks:{color:c.tick} }
+        }
+      }
+    });
+    window._charts.push(ch);
+  }
+
+  // 5. Daily orders sparkline
+  destroyChart('chartDaily');
+  const dayEl = document.getElementById('chartDaily');
+  if (dayEl) {
+    const ch = new Chart(dayEl, {
+      type:'line',
+      data:{
+        labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+        datasets:[{
+          label:'Orders',
+          data:[24,38,29,45,52,48,37],
+          borderColor:'rgba(245,158,11,1)',
+          backgroundColor:'rgba(245,158,11,.12)',
+          borderWidth:2, fill:true, tension:.4, pointRadius:3,
+          pointBackgroundColor:'rgba(245,158,11,1)'
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{ grid:{display:false}, ticks:{color:c.tick} },
+          y:{ grid:{color:c.grid}, ticks:{color:c.tick} }
+        }
+      }
+    });
+    window._charts.push(ch);
+  }
+}
+
+// Admin charts
+function initAdminCharts() {
+  const c = getChartColors();
+  Chart.defaults.color = c.tick;
+
+  // Admin revenue chart
+  destroyChart('adminChartRevenue');
+  const el1 = document.getElementById('adminChartRevenue');
+  if (el1) {
+    const labels = Array.from({length:30},(_,i)=>{
+      const d=new Date(); d.setDate(d.getDate()-29+i);
+      return d.toLocaleDateString('en',{month:'short',day:'numeric'});
+    });
+    const ch = new Chart(el1, {
+      type:'line',
+      data:{
+        labels,
+        datasets:[
+          { label:'Revenue', data:labels.map(()=>Math.floor(Math.random()*800+400)),
+            borderColor:'rgba(139,92,246,1)', backgroundColor:'rgba(139,92,246,.1)',
+            borderWidth:2, fill:true, tension:.4, pointRadius:0 },
+          { label:'Profit',  data:labels.map(()=>Math.floor(Math.random()*300+150)),
+            borderColor:'rgba(16,185,129,1)', backgroundColor:'rgba(16,185,129,.07)',
+            borderWidth:2, fill:true, tension:.4, pointRadius:0 }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:c.tick,boxWidth:10}}, tooltip:{mode:'index',intersect:false} },
+        scales:{
+          x:{ grid:{color:c.grid}, ticks:{color:c.tick,maxTicksLimit:8} },
+          y:{ grid:{color:c.grid}, ticks:{color:c.tick,callback:v=>'$'+v} }
+        }
+      }
+    });
+    window._charts.push(ch);
+  }
+
+  // Admin user registrations
+  destroyChart('adminChartUsers');
+  const el2 = document.getElementById('adminChartUsers');
+  if (el2) {
+    const ch = new Chart(el2, {
+      type:'bar',
+      data:{
+        labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
+        datasets:[{
+          label:'New Users',
+          data:[48,62,55,78,91,84,60],
+          backgroundColor:'rgba(139,92,246,.75)', borderRadius:6
+        }]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{legend:{display:false}},
+        scales:{
+          x:{ grid:{display:false}, ticks:{color:c.tick} },
+          y:{ grid:{color:c.grid}, ticks:{color:c.tick} }
+        }
+      }
+    });
+    window._charts.push(ch);
+  }
+
+  // Admin monthly stacked bar
+  destroyChart('adminChartMonthly');
+  const el3 = document.getElementById('adminChartMonthly');
+  if (el3) {
+    const ch = new Chart(el3, {
+      type:'bar',
+      data:{
+        labels:['Dec','Jan','Feb','Mar','Apr','May'],
+        datasets:[
+          { label:'WhatsApp', data:[8200,9400,11200,13100,15800,18200],
+            backgroundColor:'rgba(37,211,102,.8)', borderRadius:4 },
+          { label:'SMS',      data:[3100,4200,5800,6400,7200,8400],
+            backgroundColor:'rgba(139,92,246,.8)', borderRadius:4 }
+        ]
+      },
+      options:{
+        responsive:true, maintainAspectRatio:false,
+        plugins:{ legend:{labels:{color:c.tick,boxWidth:10}}, tooltip:{mode:'index',intersect:false} },
+        scales:{
+          x:{ grid:{display:false}, ticks:{color:c.tick}, stacked:true },
+          y:{ grid:{color:c.grid}, ticks:{color:c.tick,callback:v=>'$'+v.toLocaleString()}, stacked:true }
+        }
+      }
+    });
+    window._charts.push(ch);
+  }
+}
+
+// ══════════════════════════════════════════
+// ADMIN PANEL
+// ══════════════════════════════════════════
+const adminSections = ['overview','users','pricing','providers','orders','revenue','settings'];
+const adminTitles = {
+  'overview':'Admin Overview','users':'User Management','pricing':'Pricing Management',
+  'providers':'Provider Management','orders':'All Orders','revenue':'Revenue Analytics','settings':'Platform Settings'
+};
+
+function adminNav(section) {
+  adminSections.forEach(s => {
+    const el = document.getElementById('admin-' + s);
+    if (el) el.classList.toggle('active', s === section);
+  });
+  document.querySelectorAll('.admin-nav-link').forEach(el => {
+    el.classList.toggle('active', el.getAttribute('onclick')?.includes(`'${section}'`));
+  });
+  const title = document.getElementById('adminTitle');
+  if (title) title.textContent = adminTitles[section] || 'Admin';
+
+  if (section === 'overview') { setTimeout(initAdminCharts, 50); }
+  if (section === 'users')    buildAdminUsers();
+  if (section === 'pricing')  buildAdminPricing();
+  if (section === 'orders')   buildAdminOrders();
+  if (section === 'revenue')  setTimeout(()=>{ destroyChart('adminChartMonthly'); initAdminCharts(); }, 50);
+}
+
+const mockUsers = [
+  { id:'USR001', name:'James Mitchell', email:'james@example.com', balance:24.50, orders:47, joined:'2024-12-01', status:'active' },
+  { id:'USR002', name:'Amir Khalil',    email:'amir@example.com',  balance:102.00, orders:218, joined:'2024-09-15', status:'active' },
+  { id:'USR003', name:'Sofia Carvalho', email:'sofia@example.com', balance:8.20,  orders:31,  joined:'2025-01-20', status:'active' },
+  { id:'USR004', name:'Nguyen Van An',  email:'nguyen@example.com',balance:0.00,  orders:5,   joined:'2025-04-10', status:'unverified' },
+  { id:'USR005', name:'Ahmed Hassan',   email:'ahmed@example.com', balance:45.80, orders:92,  joined:'2024-11-05', status:'active' },
+  { id:'USR006', name:'Maria Garcia',   email:'maria@example.com', balance:0.00,  orders:2,   joined:'2025-05-01', status:'banned' },
+  { id:'USR007', name:'Chen Wei',       email:'chen@example.com',  balance:67.30, orders:154, joined:'2024-08-22', status:'active' },
+];
+
+function buildAdminUsers(filter='') {
+  const tbody = document.getElementById('adminUsersBody');
+  if (!tbody) return;
+  const users = filter ? mockUsers.filter(u=>u.name.toLowerCase().includes(filter.toLowerCase())||u.email.includes(filter.toLowerCase())) : mockUsers;
+  tbody.innerHTML = users.map(u => {
+    const stBadge = u.status==='active' ? '<span class="badge badge-success">Active</span>'
+      : u.status==='banned' ? '<span class="badge" style="background:rgba(239,68,68,.15);color:var(--error)">Banned</span>'
+      : '<span class="badge">Unverified</span>';
+    return `<tr>
+      <td><input type="checkbox" style="accent-color:var(--p-500)"/></td>
+      <td><div style="font-weight:600">${u.name}</div><div style="font-size:.75rem;color:var(--txt-4)">${u.id}</div></td>
+      <td style="color:var(--txt-3)">${u.email}</td>
+      <td style="color:${u.balance>0?'var(--success)':'var(--txt-4)'}">$${u.balance.toFixed(2)}</td>
+      <td>${u.orders}</td>
+      <td style="color:var(--txt-4);font-size:.82rem">${u.joined}</td>
+      <td>${stBadge}</td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" onclick="showToast('Viewing ${u.name}','info')">View</button>
+        <button class="btn btn-outline btn-sm" style="color:${u.status==='banned'?'var(--success)':'var(--error)'}" onclick="showToast('${u.status==='banned'?'User unbanned':'User banned'}','${u.status==='banned'?'success':'warning'}')">${u.status==='banned'?'Unban':'Ban'}</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function filterAdminUsers(val) { buildAdminUsers(val); }
+
+const pricingRows = [
+  { country:'🇺🇸 United States', wa:0.12, sms:0.08, provider:'5SIM',        markup:35 },
+  { country:'🇬🇧 United Kingdom', wa:0.10, sms:0.07, provider:'5SIM',        markup:40 },
+  { country:'🇩🇪 Germany',        wa:0.10, sms:0.07, provider:'SMS-Activate', markup:38 },
+  { country:'🇮🇳 India',          wa:0.08, sms:0.05, provider:'5SIM',        markup:30 },
+  { country:'🇧🇷 Brazil',         wa:0.09, sms:0.06, provider:'5SIM',        markup:32 },
+  { country:'🇳🇬 Nigeria',        wa:0.08, sms:0.05, provider:'SMS-Activate', markup:28 },
+  { country:'🇷🇺 Russia',         wa:0.09, sms:0.06, provider:'SMS-Activate', markup:35 },
+  { country:'🇫🇷 France',         wa:0.11, sms:0.07, provider:'5SIM',        markup:40 },
+];
+
+function buildAdminPricing() {
+  const tbody = document.getElementById('adminPricingBody');
+  if (!tbody) return;
+  tbody.innerHTML = pricingRows.map(r => `
+    <tr>
+      <td>${r.country}</td>
+      <td><input type="number" class="form-input" value="${r.wa}" step="0.01" style="width:80px;padding:6px 8px;font-size:.82rem"/></td>
+      <td><input type="number" class="form-input" value="${r.sms}" step="0.01" style="width:80px;padding:6px 8px;font-size:.82rem"/></td>
+      <td style="color:var(--txt-4)">${r.provider}</td>
+      <td><input type="number" class="form-input" value="${r.markup}" style="width:70px;padding:6px 8px;font-size:.82rem"/>%</td>
+      <td><div class="provider-toggle on" style="position:static" onclick="this.classList.toggle('on')"></div></td>
+    </tr>`).join('');
+}
+
+function buildAdminOrders() {
+  const tbody = document.getElementById('adminOrdersBody');
+  if (!tbody) return;
+  const sample = [
+    { id:'ORD-4892', user:'james@example.com', svc:'WhatsApp', num:'+12025550142', country:'US', cost:0.12, prov:'5SIM',   status:'completed' },
+    { id:'ORD-4891', user:'amir@example.com',  svc:'SMS',      num:'+447700900142', country:'GB', cost:0.07, prov:'5SIM',   status:'active' },
+    { id:'ORD-4890', user:'sofia@example.com', svc:'SMS',      num:'+4915221234567',country:'DE', cost:0.07, prov:'SA',     status:'expired' },
+    { id:'ORD-4889', user:'chen@example.com',  svc:'WhatsApp', num:'+919876543210', country:'IN', cost:0.08, prov:'5SIM',   status:'completed' },
+    { id:'ORD-4888', user:'ahmed@example.com', svc:'SMS',      num:'+5511987654321',country:'BR', cost:0.06, prov:'5SIM',   status:'refunded' },
+  ];
+  const statusMap = { completed:'badge-success', active:'badge-purple', expired:'', refunded:'' };
+  const colorMap  = { completed:'var(--success)', active:'var(--p-300)', expired:'var(--txt-4)', refunded:'var(--warning)' };
+  tbody.innerHTML = sample.map(o => `<tr>
+    <td style="font-family:var(--font-head);font-size:.78rem">${o.id}</td>
+    <td style="color:var(--txt-3);font-size:.82rem">${o.user}</td>
+    <td>${o.svc}</td>
+    <td style="font-family:var(--font-head);font-size:.82rem;color:var(--p-200)">${o.num}</td>
+    <td>${o.country}</td>
+    <td>$${o.cost.toFixed(2)}</td>
+    <td style="color:var(--txt-4)">${o.prov}</td>
+    <td><span class="badge ${statusMap[o.status]||''}" style="color:${colorMap[o.status]||'var(--txt-4)'}">${o.status.charAt(0).toUpperCase()+o.status.slice(1)}</span></td>
+    <td style="color:var(--txt-4);font-size:.78rem">Just now</td>
+  </tr>`).join('');
+}
+
+// Add webhook dialog
+function showAddWebhookModal() {
+  const url = prompt('Enter your endpoint URL (must be HTTPS):');
+  if (url && url.startsWith('https://')) {
+    showToast('Webhook endpoint added: ' + url, 'success');
+  } else if (url) {
+    showToast('URL must start with https://', 'error');
+  }
+}
+
+// ══════════════════════════════════════════
+// OVERRIDE showPage to also handle admin
+// ══════════════════════════════════════════
+const _origShowPage = showPage;
+function showPage(name) {
+  _origShowPage(name);
+  if (name === 'admin') {
+    setTimeout(() => {
+      initAdminCharts();
+      buildAdminUsers();
+      buildAdminPricing();
+      buildAdminOrders();
+    }, 100);
+  }
+}
+
 // ── INIT ───────────────────────────────────────────────────
 document.addEventListener('DOMContentLoaded', () => {
+  initTheme();
   buildCountriesScroll();
   buildAppChips();
   buildFAQ();
@@ -877,4 +1512,6 @@ document.addEventListener('DOMContentLoaded', () => {
   updateTopupSummary(10);
   initVerifyStageInteraction();
   initNavObserver();
+  initPWA();
+  updateNotifBadge();
 });

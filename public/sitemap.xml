@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9"
+        xmlns:xhtml="http://www.w3.org/1999/xhtml"
+        xmlns:image="http://www.google.com/schemas/sitemap-image/1.1">
+
+  <!-- Home / Landing Page -->
+  <url>
+    <loc>https://donpeesms.com/</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>1.0</priority>
+    <xhtml:link rel="alternate" hreflang="en" href="https://donpeesms.com/"/>
+    <xhtml:link rel="alternate" hreflang="fr" href="https://donpeesms.com/?lang=fr"/>
+    <xhtml:link rel="alternate" hreflang="es" href="https://donpeesms.com/?lang=es"/>
+    <xhtml:link rel="alternate" hreflang="ar" href="https://donpeesms.com/?lang=ar"/>
+    <xhtml:link rel="alternate" hreflang="pt" href="https://donpeesms.com/?lang=pt"/>
+    <xhtml:link rel="alternate" hreflang="x-default" href="https://donpeesms.com/"/>
+    <image:image>
+      <image:loc>https://donpeesms.com/og/og-home.png</image:loc>
+      <image:title>DonPeeSMS – Virtual Phone Numbers for OTP Verification</image:title>
+    </image:image>
+  </url>
+
+  <!-- Features Section -->
+  <url>
+    <loc>https://donpeesms.com/#features</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- How It Works Section -->
+  <url>
+    <loc>https://donpeesms.com/#howitworks</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Services Section -->
+  <url>
+    <loc>https://donpeesms.com/#services</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- Pricing Section -->
+  <url>
+    <loc>https://donpeesms.com/#pricing</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>weekly</changefreq>
+    <priority>0.9</priority>
+  </url>
+
+  <!-- FAQ Section -->
+  <url>
+    <loc>https://donpeesms.com/#faq</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+  <!-- Login Page -->
+  <url>
+    <loc>https://donpeesms.com/?page=login</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <!-- Register / Sign Up Page -->
+  <url>
+    <loc>https://donpeesms.com/?page=register</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <!-- API Documentation -->
+  <url>
+    <loc>https://donpeesms.com/?page=dashboard&amp;section=api</loc>
+    <lastmod>2026-05-31</lastmod>
+    <changefreq>monthly</changefreq>
+    <priority>0.6</priority>
+  </url>
+
+</urlset>

@@ -1,0 +1,22 @@
+User-agent: *
+Allow: /
+
+# Disallow admin and private API routes
+Disallow: /api/
+Disallow: /admin/
+Disallow: /dashboard/
+Disallow: /*.json$
+
+# Allow important assets
+Allow: /manifest.json
+Allow: /icons/
+Allow: /og/
+
+# Crawl-delay for polite bots
+Crawl-delay: 10
+
+# Sitemap location
+Sitemap: https://donpeesms.com/sitemap.xml
+
+# Google Search Console verification (replace with actual code)
+# Google: google-site-verification: <your-code-here>
