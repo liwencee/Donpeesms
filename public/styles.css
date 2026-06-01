@@ -1199,6 +1199,56 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
 .auth-footer-text { text-align: center; font-size: .88rem; color: var(--txt-3); margin-top: 20px; }
 .auth-footer-text a { color: var(--p-300); font-weight: 600; }
 
+/* Auth tab switcher */
+.auth-tabs {
+  display: flex;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 4px;
+  margin-bottom: 28px;
+  gap: 4px;
+}
+.auth-tab {
+  flex: 1;
+  padding: 10px 0;
+  border: none;
+  border-radius: 9px;
+  font-size: .92rem;
+  font-weight: 600;
+  cursor: pointer;
+  background: transparent;
+  color: var(--txt-3);
+  transition: all .2s ease;
+}
+.auth-tab:hover:not(.active) {
+  color: var(--txt-1);
+  background: var(--bg-3);
+}
+.auth-tab.active {
+  background: linear-gradient(135deg, var(--p-600), var(--p-400));
+  color: #fff;
+  box-shadow: 0 2px 12px rgba(124,58,237,.35);
+}
+
+/* New-user welcome banner on login page */
+.auth-new-user-banner {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: rgba(124,58,237,.1);
+  border: 1px solid rgba(124,58,237,.2);
+  border-radius: 10px;
+  padding: 11px 14px;
+  font-size: .84rem;
+  color: var(--p-300);
+  margin-bottom: 18px;
+  cursor: pointer;
+  transition: background .2s;
+}
+.auth-new-user-banner:hover { background: rgba(124,58,237,.18); }
+.auth-new-user-banner strong { color: var(--p-200); }
+
 /* ══════════════════════════════════════════
    DASHBOARD LAYOUT
 ══════════════════════════════════════════ */

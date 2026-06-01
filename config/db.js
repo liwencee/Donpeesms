@@ -1,42 +1,32 @@
 /**
- * MongoDB connection (Mongoose)
+ * PostgreSQL connection via Prisma Client
  */
-const mongoose = require('mongoose');
-const env = require('./env');
+const { PrismaClient } = require('@prisma/client');
 const logger = require('../utils/logger');
 
-let connection = null;
+const prisma = new PrismaClient({
+  log: process.env.NODE_ENV === 'development'
+    ? [{ emit: 'event', level: 'warn' }, { emit: 'event', level: 'error' }]
+    : [{ emit: 'event', level: 'error' }]
+});
+
+prisma.$on('warn',  (e) => logger.warn('Prisma:', e.message));
+prisma.$on('error', (e) => logger.error('Prisma:', e.message));
 
 const connectDB = async () => {
-  if (connection) return connection;
-
   try {
-    mongoose.set('strictQuery', true);
-
-    connection = await mongoose.connect(env.mongoUri, {
-      maxPoolSize: 50,
-      serverSelectionTimeoutMS: 10000,
-      socketTimeoutMS: 45000,
-      family: 4
-    });
-
-    logger.info(`✓ MongoDB connected: ${connection.connection.host}/${connection.connection.name}`);
-
-    mongoose.connection.on('error', (err) => logger.error('MongoDB error:', err));
-    mongoose.connection.on('disconnected', () => logger.warn('MongoDB disconnected'));
-
-    return connection;
+    await prisma.$connect();
+    logger.info('✓ PostgreSQL connected (Prisma)');
+    return prisma;
   } catch (err) {
-    logger.error('MongoDB connection failed:', err.message);
+    logger.error('PostgreSQL connection failed:', err.message);
     process.exit(1);
   }
 };
 
 const disconnectDB = async () => {
-  if (mongoose.connection.readyState !== 0) {
-    await mongoose.disconnect();
-    logger.info('MongoDB disconnected');
-  }
+  await prisma.$disconnect();
+  logger.info('PostgreSQL disconnected');
 };
 
-module.exports = { connectDB, disconnectDB };
+module.exports = { prisma, connectDB, disconnectDB };

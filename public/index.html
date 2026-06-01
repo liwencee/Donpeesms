@@ -1206,8 +1206,21 @@
           <span style="font-family:var(--font-head);font-size:1.2rem;font-weight:700" class="text-gradient">DonPeeSMS</span>
         </div>
       </div>
+
+      <!-- Tab switcher -->
+      <div class="auth-tabs">
+        <button class="auth-tab active" onclick="showPage('login')">Login</button>
+        <button class="auth-tab" onclick="showPage('register')">Register</button>
+      </div>
+
       <div class="auth-title">Welcome Back</div>
       <div class="auth-subtitle">Sign in to your account to continue</div>
+
+      <!-- New user nudge -->
+      <div class="auth-new-user-banner" onclick="showPage('register')">
+        <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+        <span>New here? <strong>Create a free account</strong> — takes 60 seconds →</span>
+      </div>
 
       <form class="auth-form" onsubmit="handleLogin(event)">
         <div class="form-group">
@@ -1243,11 +1256,8 @@
         </button>
       </div>
 
-      <div class="auth-footer-text">
-        Don't have an account? <a onclick="showPage('register')">Create one free</a>
-      </div>
-      <div style="text-align:center;margin-top:10px">
-        <a onclick="showPage('landing')" style="font-size:.82rem;color:var(--txt-4);display:inline-flex;align-items:center;gap:5px">
+      <div style="text-align:center;margin-top:16px">
+        <a onclick="showPage('landing')" style="font-size:.82rem;color:var(--txt-4);display:inline-flex;align-items:center;justify-content:center;gap:5px">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
           Back to home
         </a>
@@ -1269,6 +1279,13 @@
           <span style="font-family:var(--font-head);font-size:1.2rem;font-weight:700" class="text-gradient">DonPeeSMS</span>
         </div>
       </div>
+
+      <!-- Tab switcher -->
+      <div class="auth-tabs">
+        <button class="auth-tab" onclick="showPage('login')">Login</button>
+        <button class="auth-tab active" onclick="showPage('register')">Register</button>
+      </div>
+
       <div class="auth-title">Create Account</div>
       <div class="auth-subtitle">Start getting virtual numbers in 60 seconds</div>
 
@@ -1325,11 +1342,8 @@
         </button>
       </div>
 
-      <div class="auth-footer-text">
-        Already have an account? <a onclick="showPage('login')">Sign in</a>
-      </div>
-      <div style="text-align:center;margin-top:10px">
-        <a onclick="showPage('landing')" style="font-size:.82rem;color:var(--txt-4);display:inline-flex;align-items:center;gap:5px">
+      <div style="text-align:center;margin-top:16px">
+        <a onclick="showPage('landing')" style="font-size:.82rem;color:var(--txt-4);display:inline-flex;align-items:center;justify-content:center;gap:5px">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
           Back to home
         </a>

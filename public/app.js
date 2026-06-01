@@ -881,7 +881,7 @@ function toggleTheme() {
   html.setAttribute('data-theme', next);
   localStorage.setItem('dps-theme', next);
   // Re-draw charts so their background updates
-  if (window._charts) window._charts.forEach(c => { try { c.update(); } catch(e){} });
+  if (window._charts) window._charts.forEach(c => { try { c.update(); } catch (_e) { /* ignore chart update error */ } });
 }
 function initTheme() {
   const saved = localStorage.getItem('dps-theme') || 'dark';
@@ -1530,7 +1530,6 @@ function submitContactForm(e) {
 function updateAvailability() {
   const el = document.getElementById('availStatus');
   if (!el) return;
-  const hour = new Date().getHours(); // local browser time
   // Business hours: 8 AM – 10 PM WAT (UTC+1)
   const watHour = (new Date().getUTCHours() + 1) % 24;
   const online  = watHour >= 8 && watHour < 22;

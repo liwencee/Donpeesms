@@ -2,7 +2,7 @@
  * Wallet routes — /api/wallet/*
  */
 const router = require('express').Router();
-const { body, query } = require('express-validator');
+const { body } = require('express-validator');
 const validate = require('../middleware/validate');
 const { protect, requireEmailVerified } = require('../middleware/auth');
 const c = require('../controllers/walletController');

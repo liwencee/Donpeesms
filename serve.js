@@ -1,6 +1,6 @@
 /**
  * DonPeeSMS — Local Dev Server (no MongoDB required)
- * Serves the /public folder as a SPA on http://localhost:3000
+ * Serves the /public folder as a SPA on http://localhost:8080
  * Run with:  node serve.js
  */
 
@@ -8,7 +8,7 @@ const http = require('http');
 const fs   = require('fs');
 const path = require('path');
 
-const PORT   = 3000;
+const PORT   = process.env.PORT || 8080;
 const PUBLIC = path.join(__dirname, 'public');
 
 const MIME = {
@@ -46,7 +46,7 @@ function log(method, url, status) {
 const server = http.createServer((req, res) => {
   // Strip query strings for file lookup
   const urlPath  = req.url.split('?')[0];
-  let   filePath = path.join(PUBLIC, urlPath === '/' ? 'index.html' : urlPath);
+  const filePath = path.join(PUBLIC, urlPath === '/' ? 'index.html' : urlPath);
   const ext      = path.extname(filePath).toLowerCase();
 
   // Security: prevent path traversal

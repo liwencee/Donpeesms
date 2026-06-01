@@ -2,7 +2,7 @@
  * Number routes — /api/numbers/*
  */
 const router = require('express').Router();
-const { body, param, query } = require('express-validator');
+const { body, query } = require('express-validator');
 const validate = require('../middleware/validate');
 const { protect, requireEmailVerified, apiKeyAuth } = require('../middleware/auth');
 const { purchaseLimiter } = require('../middleware/rateLimiter');

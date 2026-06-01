@@ -20,10 +20,11 @@ const verifyAccessToken = (token) => jwt.verify(token, env.jwt.secret);
 const verifyRefreshToken = (token) => jwt.verify(token, env.jwt.refreshSecret);
 
 const generateTokenPair = (user) => {
-  const payload = { id: user._id.toString(), email: user.email, role: user.role };
+  // Prisma uses `id` (UUID string) — no .toString() needed but safe to keep
+  const payload = { id: user.id, email: user.email, role: user.role };
   return {
-    accessToken: signAccessToken(payload),
-    refreshToken: signRefreshToken({ id: user._id.toString() })
+    accessToken:  signAccessToken(payload),
+    refreshToken: signRefreshToken({ id: user.id })
   };
 };
 

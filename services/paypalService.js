@@ -3,7 +3,6 @@
  */
 const paypal = require('@paypal/checkout-server-sdk');
 const env = require('../config/env');
-const logger = require('../utils/logger');
 const ApiError = require('../utils/apiError');
 
 let client = null;

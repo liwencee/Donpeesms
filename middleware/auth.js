@@ -1,10 +1,11 @@
 /**
- * Auth middleware — verifies JWT, attaches user to req
+ * Auth middleware — verifies JWT or API key, attaches user to req
  */
+const crypto       = require('crypto');
 const { verifyAccessToken } = require('../utils/jwt');
-const User = require('../models/User');
-const ApiKey = require('../models/ApiKey');
-const ApiError = require('../utils/apiError');
+const { prisma }   = require('../config/db');
+const { USER_PUBLIC } = require('../models/User');
+const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 
 const extractToken = (req) => {
@@ -16,7 +17,7 @@ const extractToken = (req) => {
 };
 
 /**
- * Protect — requires valid JWT (browser session)
+ * protect — requires valid JWT (browser session)
  */
 const protect = asyncHandler(async (req, res, next) => {
   const token = extractToken(req);
@@ -31,37 +32,33 @@ const protect = asyncHandler(async (req, res, next) => {
     );
   }
 
-  const user = await User.findById(decoded.id);
+  const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: USER_PUBLIC });
   if (!user) throw ApiError.unauthorized('User no longer exists');
   if (user.status !== 'active') throw ApiError.forbidden(`Account ${user.status}`);
 
-  req.user = user;
-  req.userId = user._id;
+  req.user   = user;
+  req.userId = user.id;
   next();
 });
 
 /**
- * Require email-verified
+ * requireEmailVerified
  */
-const requireEmailVerified = (req, res, next) => {
-  if (!req.user?.emailVerified) {
-    throw ApiError.forbidden('Email verification required');
-  }
+const requireEmailVerified = (req, _res, next) => {
+  if (!req.user?.emailVerified) throw ApiError.forbidden('Email verification required');
   next();
 };
 
 /**
- * Role-based access
+ * requireRole — role-based access control
  */
-const requireRole = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role)) {
-    throw ApiError.forbidden('Insufficient permissions');
-  }
+const requireRole = (...roles) => (req, _res, next) => {
+  if (!roles.includes(req.user.role)) throw ApiError.forbidden('Insufficient permissions');
   next();
 };
 
 /**
- * API Key auth — for developer endpoints
+ * apiKeyAuth — for developer endpoints (/api/v1/*)
  */
 const apiKeyAuth = asyncHandler(async (req, res, next) => {
   const rawKey = req.headers['x-api-key'] ||
@@ -69,19 +66,24 @@ const apiKeyAuth = asyncHandler(async (req, res, next) => {
 
   if (!rawKey) throw ApiError.unauthorized('API key required');
 
-  const key = await ApiKey.findByKey(rawKey).populate('user');
-  if (!key) throw ApiError.unauthorized('Invalid API key');
-  if (key.expiresAt && key.expiresAt < Date.now()) throw ApiError.unauthorized('API key expired');
-  if (!key.user || key.user.status !== 'active') throw ApiError.forbidden('User account inactive');
+  const hash = crypto.createHash('sha256').update(rawKey).digest('hex');
+  const key  = await prisma.apiKey.findFirst({
+    where:   { keyHash: hash, active: true },
+    include: { user: { select: USER_PUBLIC } }
+  });
 
-  // Update usage stats (fire and forget)
-  ApiKey.updateOne(
-    { _id: key._id },
-    { $inc: { usageCount: 1 }, $set: { lastUsedAt: new Date(), lastUsedIp: req.ip } }
-  ).exec();
+  if (!key)                                            throw ApiError.unauthorized('Invalid API key');
+  if (key.expiresAt && key.expiresAt < new Date())    throw ApiError.unauthorized('API key expired');
+  if (!key.user || key.user.status !== 'active')      throw ApiError.forbidden('User account inactive');
 
-  req.user = key.user;
-  req.userId = key.user._id;
+  // Fire-and-forget usage stats
+  prisma.apiKey.update({
+    where: { id: key.id },
+    data:  { usageCount: { increment: 1 }, lastUsedAt: new Date(), lastUsedIp: req.ip }
+  }).catch(() => {});
+
+  req.user   = key.user;
+  req.userId = key.user.id;
   req.apiKey = key;
   next();
 });

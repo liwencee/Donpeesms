@@ -1,0 +1,18 @@
+# Hostinger shared hosting — route all requests through Node.js app
+# (Only needed if Hostinger uses Apache with Passenger)
+
+PassengerNodejs /usr/bin/node
+PassengerStartupFile server.js
+PassengerAppRoot /home/u[YOUR_ID]/domains/[YOUR_DOMAIN]/public_html
+
+# Block direct access to sensitive files
+<FilesMatch "\.(env|json|prisma|md|sh|log)$">
+    Order allow,deny
+    Deny from all
+</FilesMatch>
+
+# Allow these specific JSON files
+<FilesMatch "^(package\.json|manifest\.json)$">
+    Order allow,deny
+    Allow from all
+</FilesMatch>

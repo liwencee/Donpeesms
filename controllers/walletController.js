@@ -1,14 +1,13 @@
 /**
  * Wallet controller — balance, top-up initiation, transaction history
  */
-const mongoose = require('mongoose');
-const User = require('../models/User');
-const Transaction = require('../models/Transaction');
-const ApiError = require('../utils/apiError');
+const { prisma }   = require('../config/db');
+const { USER_PUBLIC } = require('../models/User');
+const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
-const stripe = require('../services/stripeService');
-const nowpay = require('../services/nowPaymentsService');
-const paypal = require('../services/paypalService');
+const stripe       = require('../services/stripeService');
+const nowpay       = require('../services/nowPaymentsService');
+const paypal       = require('../services/paypalService');
 
 // Bonus tiers
 const calculateBonus = (amount) => {
@@ -22,7 +21,10 @@ const calculateBonus = (amount) => {
 // GET /api/wallet
 // ═════════════════════════════════════════════
 exports.getWallet = asyncHandler(async (req, res) => {
-  const user = await User.findById(req.userId).select('walletBalance');
+  const user = await prisma.user.findUnique({
+    where:  { id: req.userId },
+    select: { walletBalance: true }
+  });
   res.json({ success: true, balance: user.walletBalance, currency: 'USD' });
 });
 
@@ -34,23 +36,25 @@ exports.initiateTopup = asyncHandler(async (req, res) => {
   const { amount, method, payCurrency } = req.body;
   const amt = parseFloat(amount);
 
-  if (!amt || amt < 1) throw ApiError.badRequest('Minimum top-up is $1');
-  if (amt > 10000) throw ApiError.badRequest('Maximum top-up is $10,000');
+  if (!amt || amt < 1)    throw ApiError.badRequest('Minimum top-up is $1');
+  if (amt > 10000)         throw ApiError.badRequest('Maximum top-up is $10,000');
 
   const bonus = calculateBonus(amt);
 
-  // Create a pending transaction
-  const tx = await Transaction.create({
-    user: req.userId,
-    type: 'topup',
-    amount: amt,
-    bonusAmount: bonus,
-    balanceAfter: req.user.walletBalance, // not yet credited
-    method,
-    status: 'pending',
-    description: `Top-up via ${method}`,
-    ipAddress: req.ip,
-    userAgent: req.get('User-Agent')
+  // Pending transaction (not yet credited)
+  const tx = await prisma.transaction.create({
+    data: {
+      userId:      req.userId,
+      type:        'topup',
+      amount:      amt,
+      bonusAmount: bonus,
+      balanceAfter: req.user.walletBalance, // not yet credited
+      method,
+      status:      'pending',
+      description: `Top-up via ${method}`,
+      ipAddress:   req.ip,
+      userAgent:   req.get('User-Agent')
+    }
   });
 
   let paymentData;
@@ -59,34 +63,40 @@ exports.initiateTopup = asyncHandler(async (req, res) => {
     case 'stripe': {
       const session = await stripe.createCheckoutSession({
         userId: req.userId,
-        email: req.user.email,
+        email:  req.user.email,
         amount: amt,
         bonus
       });
-      tx.externalId = session.sessionId;
-      await tx.save();
+      await prisma.transaction.update({
+        where: { id: tx.id },
+        data:  { externalId: session.sessionId }
+      });
       paymentData = { url: session.url, sessionId: session.sessionId };
       break;
     }
 
     case 'nowpayments': {
       const payment = await nowpay.createPayment({
-        userId: req.userId,
-        amount: amt,
+        userId:      req.userId,
+        amount:      amt,
         bonus,
         payCurrency: payCurrency || 'usdttrc20'
       });
-      tx.externalId = String(payment.paymentId);
-      tx.cryptoCurrency = payment.payCurrency;
-      tx.cryptoAmount = payment.payAmount;
-      tx.cryptoAddress = payment.payAddress;
-      await tx.save();
+      await prisma.transaction.update({
+        where: { id: tx.id },
+        data: {
+          externalId:     String(payment.paymentId),
+          cryptoCurrency: payment.payCurrency,
+          cryptoAmount:   payment.payAmount,
+          cryptoAddress:  payment.payAddress
+        }
+      });
       paymentData = {
-        paymentId: payment.paymentId,
-        payAddress: payment.payAddress,
-        payAmount: payment.payAmount,
+        paymentId:   payment.paymentId,
+        payAddress:  payment.payAddress,
+        payAmount:   payment.payAmount,
         payCurrency: payment.payCurrency,
-        expiresAt: payment.expiresAt
+        expiresAt:   payment.expiresAt
       };
       break;
     }
@@ -97,8 +107,10 @@ exports.initiateTopup = asyncHandler(async (req, res) => {
         amount: amt,
         bonus
       });
-      tx.externalId = order.orderId;
-      await tx.save();
+      await prisma.transaction.update({
+        where: { id: tx.id },
+        data:  { externalId: order.orderId }
+      });
       paymentData = { orderId: order.orderId, approvalUrl: order.approvalUrl };
       break;
     }
@@ -108,132 +120,144 @@ exports.initiateTopup = asyncHandler(async (req, res) => {
   }
 
   res.status(201).json({
-    success: true,
-    transactionId: tx._id,
-    amount: amt,
+    success:       true,
+    transactionId: tx.id,
+    amount:        amt,
     bonus,
-    total: amt + bonus,
+    total:         amt + bonus,
     method,
-    payment: paymentData
+    payment:       paymentData
   });
 });
 
 // ═════════════════════════════════════════════
-// POST /api/wallet/credit (internal — used by webhooks)
+// creditWallet  (internal — used by webhooks)
 // ═════════════════════════════════════════════
 exports.creditWallet = async ({ userId, amount, bonus = 0, externalId, method, description, refundFor }) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
+  const total = +(amount + bonus).toFixed(2);
 
-  try {
-    const user = await User.findById(userId).session(session);
+  const result = await prisma.$transaction(async (ctx) => {
+    const user = await ctx.user.findUnique({ where: { id: userId } });
     if (!user) throw ApiError.notFound('User not found');
 
-    const total = amount + bonus;
-    user.walletBalance = +(user.walletBalance + total).toFixed(2);
-    await user.save({ session });
+    const newBalance = +(user.walletBalance + total).toFixed(2);
 
-    const tx = await Transaction.create([{
-      user: userId,
-      type: refundFor ? 'refund' : 'topup',
-      amount: total,
-      bonusAmount: bonus,
-      balanceAfter: user.walletBalance,
-      method,
-      externalId,
-      status: 'success',
-      description: description || `Credited ${total}`,
-      order: refundFor
-    }], { session });
+    const updatedUser = await ctx.user.update({
+      where:  { id: userId },
+      data:   { walletBalance: newBalance },
+      select: USER_PUBLIC
+    });
 
-    // Referral commission (10% for first-time top-ups)
-    if (!refundFor && user.referredBy && method !== 'bonus') {
-      const referrer = await User.findById(user.referredBy).session(session);
+    const tx = await ctx.transaction.create({
+      data: {
+        userId,
+        type:         refundFor ? 'refund' : 'topup',
+        amount:       total,
+        bonusAmount:  bonus,
+        balanceAfter: newBalance,
+        method,
+        externalId,
+        status:       'success',
+        description:  description || `Credited $${total}`,
+        orderId:      refundFor || undefined
+      }
+    });
+
+    // Referral commission (10% for first top-up, not for refunds/bonuses)
+    if (!refundFor && user.referredById && method !== 'bonus') {
+      const referrer = await ctx.user.findUnique({ where: { id: user.referredById } });
       if (referrer) {
-        const commission = +(amount * 0.10).toFixed(2);
-        referrer.walletBalance = +(referrer.walletBalance + commission).toFixed(2);
-        referrer.referralEarnings = +(referrer.referralEarnings + commission).toFixed(2);
-        await referrer.save({ session });
+        const commission         = +(amount * 0.10).toFixed(2);
+        const referrerNewBalance = +(referrer.walletBalance + commission).toFixed(2);
 
-        await Transaction.create([{
-          user: referrer._id,
-          type: 'referral_payout',
-          amount: commission,
-          balanceAfter: referrer.walletBalance,
-          method: 'system',
-          status: 'success',
-          description: `Referral commission from ${user.username}`
-        }], { session });
+        await ctx.user.update({
+          where: { id: referrer.id },
+          data: {
+            walletBalance:    referrerNewBalance,
+            referralEarnings: +(referrer.referralEarnings + commission).toFixed(2)
+          }
+        });
+
+        await ctx.transaction.create({
+          data: {
+            userId:      referrer.id,
+            type:        'referral_payout',
+            amount:      commission,
+            balanceAfter: referrerNewBalance,
+            method:      'system',
+            status:      'success',
+            description: `Referral commission from ${user.username}`
+          }
+        });
       }
     }
 
-    await session.commitTransaction();
-    return { user, tx: tx[0] };
-  } catch (err) {
-    await session.abortTransaction();
-    throw err;
-  } finally {
-    session.endSession();
-  }
+    return { user: updatedUser, tx };
+  });
+
+  return result;
 };
 
 // ═════════════════════════════════════════════
-// POST /api/wallet/debit (internal — used by purchase controller)
+// debitWallet  (internal — used by purchase controller)
 // ═════════════════════════════════════════════
 exports.debitWallet = async ({ userId, amount, orderId, description }) => {
-  const session = await mongoose.startSession();
-  session.startTransaction();
-
-  try {
-    const user = await User.findById(userId).session(session);
+  const result = await prisma.$transaction(async (ctx) => {
+    const user = await ctx.user.findUnique({ where: { id: userId } });
     if (!user) throw ApiError.notFound('User not found');
-    if (user.walletBalance < amount) {
-      throw ApiError.badRequest('Insufficient wallet balance');
-    }
+    if (user.walletBalance < amount) throw ApiError.badRequest('Insufficient wallet balance');
 
-    user.walletBalance = +(user.walletBalance - amount).toFixed(2);
-    await user.save({ session });
+    const newBalance = +(user.walletBalance - amount).toFixed(2);
 
-    const tx = await Transaction.create([{
-      user: userId,
-      type: 'purchase',
-      amount: -amount,
-      balanceAfter: user.walletBalance,
-      method: 'wallet',
-      status: 'success',
-      order: orderId,
-      description: description || 'Number purchase'
-    }], { session });
+    const updatedUser = await ctx.user.update({
+      where:  { id: userId },
+      data:   { walletBalance: newBalance },
+      select: USER_PUBLIC
+    });
 
-    await session.commitTransaction();
-    return { user, tx: tx[0] };
-  } catch (err) {
-    await session.abortTransaction();
-    throw err;
-  } finally {
-    session.endSession();
-  }
+    const tx = await ctx.transaction.create({
+      data: {
+        userId,
+        type:        'purchase',
+        amount:      -amount,
+        balanceAfter: newBalance,
+        method:      'wallet',
+        status:      'success',
+        orderId:     orderId || undefined,
+        description: description || 'Number purchase'
+      }
+    });
+
+    return { user: updatedUser, tx };
+  });
+
+  return result;
 };
 
 // ═════════════════════════════════════════════
 // GET /api/wallet/transactions
 // ═════════════════════════════════════════════
 exports.getTransactions = asyncHandler(async (req, res) => {
-  const page  = Math.max(1, parseInt(req.query.page, 10) || 1);
+  const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
   const skip  = (page - 1) * limit;
 
-  const filter = { user: req.userId };
-  if (req.query.type) filter.type = req.query.type;
-  if (req.query.status) filter.status = req.query.status;
+  const where = { userId: req.userId };
+  if (req.query.type)   where.type   = req.query.type;
+  if (req.query.status) where.status = req.query.status;
 
   const [transactions, total] = await Promise.all([
-    Transaction.find(filter).sort({ createdAt: -1 }).skip(skip).limit(limit).lean(),
-    Transaction.countDocuments(filter)
+    prisma.transaction.findMany({
+      where,
+      orderBy: { createdAt: 'desc' },
+      skip,
+      take: limit
+    }),
+    prisma.transaction.count({ where })
   ]);
 
   res.json({
-    success: true,
+    success:    true,
     page,
     limit,
     total,
@@ -246,7 +270,10 @@ exports.getTransactions = asyncHandler(async (req, res) => {
 // GET /api/wallet/transactions/:id
 // ═════════════════════════════════════════════
 exports.getTransaction = asyncHandler(async (req, res) => {
-  const tx = await Transaction.findOne({ _id: req.params.id, user: req.userId }).populate('order');
+  const tx = await prisma.transaction.findFirst({
+    where:   { id: req.params.id, userId: req.userId },
+    include: { order: true }
+  });
   if (!tx) throw ApiError.notFound('Transaction not found');
   res.json({ success: true, transaction: tx });
 });

@@ -1,0 +1,219 @@
+// DonPeeSMS — Prisma schema (PostgreSQL)
+// Run: npx prisma migrate dev --name init
+//      npx prisma generate
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ──────────────────────────────────────────────
+// USER
+// ──────────────────────────────────────────────
+model User {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  firstName String @db.VarChar(50)
+  lastName  String @db.VarChar(50)
+  username  String @unique @db.VarChar(30)
+  email     String @unique @db.VarChar(255)
+  password  String
+
+  role   String @default("user")   // user | admin | support
+  status String @default("active") // active | suspended | banned
+
+  // ── Email verification ──
+  emailVerified            Boolean   @default(false)
+  emailVerificationToken   String?
+  emailVerificationExpires DateTime?
+
+  // ── Password reset ──
+  passwordResetToken   String?
+  passwordResetExpires DateTime?
+  passwordChangedAt    DateTime?
+
+  // ── 2FA (TOTP) ──
+  twoFactorEnabled     Boolean  @default(false)
+  twoFactorSecret      String?
+  twoFactorBackupCodes String[]
+
+  // ── Wallet ──
+  walletBalance Float @default(0)
+
+  // ── Referral (self-relation) ──
+  referralCode     String? @unique
+  referredById     String?
+  referredBy       User?   @relation("Referral", fields: [referredById], references: [id], onDelete: SetNull)
+  referrals        User[]  @relation("Referral")
+  referralEarnings Float   @default(0)
+
+  // ── Profile ──
+  telegram  String?
+  avatarUrl String?
+
+  // ── Security ──
+  lastLogin     DateTime?
+  lastLoginIp   String?
+  loginAttempts Int       @default(0)
+  lockUntil     DateTime?
+
+  // ── Relations ──
+  transactions Transaction[]
+  orders       Order[]
+  apiKeys      ApiKey[]
+
+  @@index([email])
+  @@index([username])
+  @@index([referralCode])
+  @@index([createdAt])
+}
+
+// ──────────────────────────────────────────────
+// TRANSACTION  (all wallet inflows/outflows)
+// ──────────────────────────────────────────────
+model Transaction {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // topup | purchase | refund | referral_payout | admin_adjustment
+  type         String
+  amount       Float          // signed: + credit, – debit
+  currency     String @default("USD")
+  balanceAfter Float
+
+  // stripe | paypal | nowpayments | wallet | bonus | manual | system
+  method String
+
+  // ── External references ──
+  externalId     String?
+  externalStatus String?
+
+  // ── Related order (purchases / refunds) ──
+  orderId String?
+  order   Order?  @relation("TransactionOrder", fields: [orderId], references: [id], onDelete: SetNull)
+
+  // ── Crypto-specific ──
+  cryptoCurrency String?
+  cryptoAmount   Float?
+  cryptoAddress  String?
+  cryptoTxHash   String?
+
+  // ── Bonus ──
+  bonusAmount Float  @default(0)
+
+  // pending | processing | success | failed | cancelled
+  status      String @default("pending")
+  description String?
+  metadata    Json   @default("{}")
+
+  ipAddress String?
+  userAgent String?
+
+  @@index([userId, createdAt])
+  @@index([type, status])
+  @@index([externalId])
+}
+
+// ──────────────────────────────────────────────
+// ORDER  (a single virtual-number purchase)
+// ──────────────────────────────────────────────
+model Order {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  orderId String @unique  // human-readable: NV123456…
+
+  // ── Provider ──
+  // fivesim | smsactivate | twilio | manual
+  provider        String
+  providerOrderId String?
+
+  // ── Service ──
+  // whatsapp | sms
+  serviceType String
+  service     String?     // telegram | google | any …
+  country     String      @db.VarChar(4)
+  operator    String?
+
+  // ── Number ──
+  phoneNumber String
+
+  // ── Pricing ──
+  providerCost Float
+  userCost     Float
+  currency     String @default("USD")
+
+  // ── SMS / OTP — stored as JSON array of { text, sender, code, receivedAt } ──
+  smsMessages Json    @default("[]")
+  otpCode     String?
+
+  // pending | active | received | expired | cancelled | refunded | failed
+  status String @default("pending")
+
+  // ── Lifecycle ──
+  expiresAt   DateTime?
+  activatedAt DateTime?
+  completedAt DateTime?
+  cancelledAt DateTime?
+  refundedAt  DateTime?
+
+  // ── Refund ──
+  refundReason String?
+  refundTxId   String?   // plain reference to Transaction.id (not a Prisma relation)
+
+  // ── Audit ──
+  ipAddress String?
+  userAgent String?
+  metadata  Json    @default("{}")
+
+  // ── Relations ──
+  transactions Transaction[] @relation("TransactionOrder")
+
+  @@index([userId, createdAt])
+  @@index([status, expiresAt])
+  @@index([provider, providerOrderId])
+  @@index([phoneNumber])
+}
+
+// ──────────────────────────────────────────────
+// API KEY  (developer REST API access)
+// ──────────────────────────────────────────────
+model ApiKey {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  name      String @db.VarChar(50)
+  keyPrefix String
+  keyHash   String  // sha256 of the raw key
+
+  scopes String[]  // read | write | admin
+
+  lastUsedAt DateTime?
+  lastUsedIp String?
+  usageCount Int       @default(0)
+
+  active    Boolean   @default(true)
+  expiresAt DateTime?
+
+  @@index([userId])
+  @@index([keyPrefix])
+  @@index([keyHash])
+}
