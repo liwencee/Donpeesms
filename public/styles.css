@@ -2990,6 +2990,68 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
 .chat-send-btn:hover { transform: scale(1.08); box-shadow: var(--glow-sm); }
 .chat-footer-note { font-size: .68rem; color: var(--txt-4); text-align: center; margin-top: 6px; }
 
+/* WhatsApp header icon button */
+.chat-wa-header-btn {
+  width: 30px; height: 30px;
+  border-radius: 8px;
+  background: rgba(37,211,102,.2);
+  border: 1px solid rgba(37,211,102,.35);
+  display: flex; align-items: center; justify-content: center;
+  transition: background .15s;
+  text-decoration: none;
+}
+.chat-wa-header-btn:hover { background: rgba(37,211,102,.38); }
+
+/* Quick reply chips */
+.chat-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  padding: 10px 14px 4px;
+  border-top: 1px solid var(--border);
+}
+.chat-chip {
+  padding: 6px 12px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: var(--bg-2);
+  color: var(--txt-2);
+  font-size: .78rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all .15s;
+  font-family: var(--font-body);
+  white-space: nowrap;
+}
+.chat-chip:hover {
+  border-color: var(--p-500);
+  color: var(--p-300);
+  background: rgba(124,58,237,.12);
+}
+
+/* WhatsApp CTA bar */
+.chat-wa-bar {
+  padding: 10px 14px 6px;
+  border-top: 1px solid var(--border);
+}
+.chat-wa-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 10px 0;
+  border-radius: 12px;
+  background: linear-gradient(135deg, #25d366, #128c7e);
+  color: #fff;
+  font-size: .88rem;
+  font-weight: 700;
+  text-decoration: none;
+  transition: opacity .15s, transform .15s;
+  box-shadow: 0 4px 14px rgba(37,211,102,.3);
+}
+.chat-wa-btn:hover { opacity: .9; transform: translateY(-1px); }
+
 /* ── Mobile: full-width bottom sheet ── */
 @media (max-width: 600px) {
   .chat-panel {

@@ -1048,60 +1048,194 @@ document.addEventListener('click', (e) => {
 // ══════════════════════════════════════════
 // LIVE CHAT
 // ══════════════════════════════════════════
-// ── LIVE CHAT PANEL ────────────────────────────────────────
-let _chatOpen = false;
+// ══════════════════════════════════════════
+// LIVE CHAT PANEL — smart bot + WhatsApp CTA
+// ══════════════════════════════════════════
+const CHAT_WA_URL = 'https://wa.me/2347084869630?text=Hi%20DonPeeSMS%2C%20I%20need%20support';
+let _chatOpen      = false;
+let _chatGreeted   = false;
 
+// ── Knowledge base ──────────────────────────────────────────
+const CHAT_KB = [
+  {
+    keys: ['price','pricing','cost','how much','cheap','expensive','fee','rate','plan'],
+    reply: `Our numbers start from as low as <strong>$0.10 per use</strong>! 🎉<br><br>
+      • <strong>Basic SMS</strong> – from $0.10<br>
+      • <strong>WhatsApp numbers</strong> – from $0.25<br>
+      • <strong>Premium countries (US/UK)</strong> – from $0.50<br><br>
+      No subscriptions — pay only for what you use. Top up your wallet and go! 💳`,
+    wa: 'Hi DonPeeSMS, I want to know more about pricing'
+  },
+  {
+    keys: ['country','countries','nation','available','which country','usa','uk','nigeria','india','germany','france','canada'],
+    reply: `We cover <strong>150+ countries</strong> including 🇺🇸 USA, 🇬🇧 UK, 🇩🇪 Germany, 🇮🇳 India, 🇧🇷 Brazil, 🇳🇬 Nigeria, 🇨🇦 Canada, 🇫🇷 France and many more.<br><br>
+      Simply select your target country in the dashboard and pick a number instantly. New countries are added every week! 🌍`,
+    wa: 'Hi DonPeeSMS, I want to check available countries'
+  },
+  {
+    keys: ['how','work','start','begin','step','process','use','get number','buy number'],
+    reply: `Getting your number takes <strong>under 60 seconds</strong>! ⚡<br><br>
+      <strong>1.</strong> Create a free account<br>
+      <strong>2.</strong> Top up your wallet (from $1)<br>
+      <strong>3.</strong> Pick a country + service<br>
+      <strong>4.</strong> Receive your OTP instantly<br><br>
+      No ID, no KYC, no waiting — just instant delivery! 🚀`,
+    wa: 'Hi DonPeeSMS, I want to understand how it works'
+  },
+  {
+    keys: ['pay','payment','crypto','bitcoin','btc','card','paypal','usdt','ethereum','deposit','fund','wallet','top up'],
+    reply: `We accept multiple payment methods: 💳<br><br>
+      • <strong>Crypto</strong> – Bitcoin, USDT, Ethereum & more<br>
+      • <strong>Debit/Credit Card</strong> – Visa, Mastercard<br>
+      • <strong>PayPal</strong><br>
+      • <strong>Bank Transfer</strong><br><br>
+      All payments are secure and instant. Your wallet is credited immediately! 🔒`,
+    wa: 'Hi DonPeeSMS, I have a payment question'
+  },
+  {
+    keys: ['refund','money back','return','cancel','didn\'t work','not work','expire','expired','no sms received'],
+    reply: `We have a <strong>100% Auto-Refund Policy</strong>! 🛡️<br><br>
+      If you don't receive an SMS within the active window, your balance is <strong>automatically refunded</strong> — no questions asked.<br><br>
+      Manual refund requests? Our team processes them within 24 hours. ✅`,
+    wa: 'Hi DonPeeSMS, I want to request a refund'
+  },
+  {
+    keys: ['not receiving','no message','no otp','sms not coming','not getting','problem','issue','broken','error','fail','stuck'],
+    reply: `Sorry to hear that! 😟 Let's fix this fast:<br><br>
+      <strong>Quick checks:</strong><br>
+      1. Make sure the number is still <strong>active</strong> (not expired)<br>
+      2. Try requesting the OTP again on the service<br>
+      3. Some services take up to <strong>2 minutes</strong> to deliver<br>
+      4. Try a <strong>different number</strong> from the same country<br><br>
+      Still stuck? Chat our team on WhatsApp for live help 👇`,
+    wa: 'Hi DonPeeSMS, I am not receiving SMS on my number'
+  },
+  {
+    keys: ['account','login','register','password','sign in','sign up','email','forgot','reset','2fa','verify','verification'],
+    reply: `Account help — we've got you! 🔐<br><br>
+      • <strong>Forgot password?</strong> Use the "Forgot Password" link on the login page<br>
+      • <strong>2FA issues?</strong> Contact support with your registered email<br>
+      • <strong>Account locked?</strong> Email us at <strong>support@donpeesms.com</strong><br><br>
+      For urgent account issues, WhatsApp is the fastest option 👇`,
+    wa: 'Hi DonPeeSMS, I have an account issue'
+  },
+  {
+    keys: ['whatsapp','wa','wapp','whats app','whatsapp number','whatsapp verification'],
+    reply: `Yes, we support <strong>WhatsApp verification</strong> numbers! 📱✅<br><br>
+      Our WhatsApp numbers work for:<br>
+      • New WhatsApp account registration<br>
+      • Re-verifying existing accounts<br>
+      • Business WhatsApp setup<br><br>
+      Pick a number, enter it in WhatsApp, and the OTP arrives in seconds. Works with 150+ countries! 🌍`,
+    wa: 'Hi DonPeeSMS, I want a WhatsApp verification number'
+  },
+  {
+    keys: ['safe','secure','anonymous','privacy','id','kyc','identity','data','trust','legit','real'],
+    reply: `Your privacy is our priority! 🔒<br><br>
+      • <strong>No KYC</strong> — zero ID verification required<br>
+      • <strong>Anonymous numbers</strong> — never linked to your identity<br>
+      • <strong>Encrypted</strong> — all transactions secured with SSL<br>
+      • <strong>120,000+ users</strong> trust us worldwide<br><br>
+      We never share or sell your data. Period. ✅`,
+    wa: 'Hi DonPeeSMS, I want to know about security and privacy'
+  },
+  {
+    keys: ['human','agent','person','staff','talk','speak','call','live','real person','support team'],
+    reply: `Of course! Our team is always ready to help. 🧑‍💼<br><br>
+      The fastest way to reach a human agent is via <strong>WhatsApp</strong> — we typically respond in under 3 minutes.<br><br>
+      You can also reach us at:<br>
+      📧 support@donpeesms.com<br>
+      📱 WhatsApp: +234 708 486 9630<br><br>
+      Tap the button below to connect now 👇`,
+    wa: 'Hi DonPeeSMS, I would like to speak with a human agent'
+  }
+];
+
+function _chatGetReply(text) {
+  const lower = text.toLowerCase();
+  for (const item of CHAT_KB) {
+    if (item.keys.some(k => lower.includes(k))) return item;
+  }
+  return null;
+}
+
+// ── Core toggle ─────────────────────────────────────────────
 function toggleChatPanel() {
   _chatOpen = !_chatOpen;
-  const panel  = document.getElementById('chatPanel');
-  const fab    = document.getElementById('chatFab');
-  const badge  = document.getElementById('chatFabBadge');
-  const icoO   = document.getElementById('chatIconOpen');
-  const icoC   = document.getElementById('chatIconClose');
-
+  const panel = document.getElementById('chatPanel');
+  const fab   = document.getElementById('chatFab');
+  const badge = document.getElementById('chatFabBadge');
+  const icoO  = document.getElementById('chatIconOpen');
+  const icoC  = document.getElementById('chatIconClose');
   if (!panel) return;
 
   panel.classList.toggle('is-open', _chatOpen);
   panel.setAttribute('aria-hidden', String(!_chatOpen));
   fab.classList.toggle('is-open', _chatOpen);
+  if (icoO) icoO.style.display = _chatOpen ? 'none' : '';
+  if (icoC) icoC.style.display = _chatOpen ? ''     : 'none';
+  if (badge) badge.style.display = 'none';
 
-  if (icoO) icoO.style.display = _chatOpen ? 'none'  : '';
-  if (icoC) icoC.style.display = _chatOpen ? ''      : 'none';
-  if (badge) badge.style.display = 'none'; // dismiss badge on first open
+  if (_chatOpen && !_chatGreeted) {
+    _chatGreeted = true;
+    _chatDeliverAgent(
+      `Hey there! 👋 Welcome to <strong>DonPeeSMS</strong>!<br><br>
+      I can help you with pricing, how it works, payments, refunds, and more.<br>
+      Or tap <strong>Continue on WhatsApp</strong> below to chat with a real human instantly. 🚀`,
+      800
+    );
+  }
 
   if (_chatOpen) {
     setTimeout(() => {
-      const input = document.getElementById('chatInput');
-      if (input) input.focus();
-    }, 250);
+      const inp = document.getElementById('chatInput');
+      if (inp) inp.focus();
+    }, 280);
   }
 }
 
-function handleChatKey(e) {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendChatMessage();
-  }
+// ── Quick-reply chips ────────────────────────────────────────
+function chatQuickReply(topic) {
+  const labels = {
+    pricing:    '💰 What are your prices?',
+    countries:  '🌍 Which countries do you support?',
+    howitworks: '📱 How does it work?',
+    payment:    '💳 What payment methods do you accept?',
+    refund:     '🔄 What is your refund policy?',
+    human:      '🧑 I want to talk to a human agent'
+  };
+  const text = labels[topic] || topic;
+  const input = document.getElementById('chatInput');
+  if (input) { input.value = text; }
+  sendChatMessage();
+
+  // Hide chips after first use so they don't clutter
+  const chips = document.getElementById('chatChips');
+  if (chips) chips.style.display = 'none';
 }
 
+// ── Send message ─────────────────────────────────────────────
 function sendChatMessage() {
   const input = document.getElementById('chatInput');
   const msgs  = document.getElementById('chatMessages');
   if (!input || !msgs) return;
-
   const text = input.value.trim();
   if (!text) return;
 
-  // Append user bubble
-  const userMsg = document.createElement('div');
-  userMsg.className = 'chat-msg chat-msg--user';
-  userMsg.innerHTML = `<div class="chat-bubble">${escapeHTML(text)}</div>
-    <div class="chat-time">You · now</div>`;
-  msgs.appendChild(userMsg);
+  // User bubble
+  const userDiv = document.createElement('div');
+  userDiv.className = 'chat-msg chat-msg--user';
+  userDiv.innerHTML = `<div class="chat-bubble">${escapeHTML(text)}</div>
+    <div class="chat-time">You</div>`;
+  msgs.appendChild(userDiv);
 
   input.value = '';
   autoResizeChatInput(input);
   msgs.scrollTop = msgs.scrollHeight;
+
+  // Hide chips
+  const chips = document.getElementById('chatChips');
+  if (chips) chips.style.display = 'none';
 
   // Typing indicator
   const typing = document.createElement('div');
@@ -1114,41 +1248,60 @@ function sendChatMessage() {
   msgs.appendChild(typing);
   msgs.scrollTop = msgs.scrollHeight;
 
-  // Auto-reply after delay
   setTimeout(() => {
     typing.remove();
-    const replies = [
-      "Thanks for reaching out! Our support team will get back to you shortly. 🙌",
-      "Got it! A support agent will respond within a few minutes.",
-      "Thanks! For urgent issues please also email us at support@donpeesms.com.",
-      "We've received your message and will reply soon. You can also check our FAQ page!"
-    ];
-    const reply = replies[Math.floor(Math.random() * replies.length)];
-    const agentMsg = document.createElement('div');
-    agentMsg.className = 'chat-msg chat-msg--agent';
-    agentMsg.innerHTML = `<div class="chat-bubble">${reply}</div>
-      <div class="chat-time">Support Team · now</div>`;
-    msgs.appendChild(agentMsg);
-    msgs.scrollTop = msgs.scrollHeight;
-  }, 1600);
+
+    const match = _chatGetReply(text);
+    let replyHTML, waParam;
+
+    if (match) {
+      replyHTML = match.reply;
+      waParam   = encodeURIComponent(match.wa);
+    } else {
+      replyHTML = `Great question! 🤔 Our support team will give you the best answer.<br><br>
+        Tap <strong>Continue on WhatsApp</strong> below and a real agent will reply in under 3 minutes. ⚡`;
+      waParam = encodeURIComponent('Hi DonPeeSMS, I have a question: ' + text);
+    }
+
+    // Update WA bar link with context
+    const waBtn = document.querySelector('.chat-wa-btn');
+    if (waBtn) waBtn.href = `https://wa.me/2347084869630?text=${waParam}`;
+
+    _chatDeliverAgent(replyHTML, 0);
+  }, 1400);
 }
 
+function _chatDeliverAgent(html, delay = 0) {
+  const msgs = document.getElementById('chatMessages');
+  if (!msgs) return;
+  const fn = () => {
+    const div = document.createElement('div');
+    div.className = 'chat-msg chat-msg--agent';
+    div.innerHTML = `<div class="chat-bubble">${html}</div>
+      <div class="chat-time">DonPeeSMS Bot</div>`;
+    msgs.appendChild(div);
+    msgs.scrollTop = msgs.scrollHeight;
+  };
+  if (delay) setTimeout(fn, delay); else fn();
+}
+
+// ── Helpers ──────────────────────────────────────────────────
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); sendChatMessage(); }
+}
 function autoResizeChatInput(el) {
   el.style.height = 'auto';
   el.style.height = Math.min(el.scrollHeight, 100) + 'px';
 }
-
 function escapeHTML(str) {
   return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 }
-
-// Keep input auto-height in sync while typing
 document.addEventListener('DOMContentLoaded', () => {
-  const input = document.getElementById('chatInput');
-  if (input) input.addEventListener('input', () => autoResizeChatInput(input));
+  const inp = document.getElementById('chatInput');
+  if (inp) inp.addEventListener('input', () => autoResizeChatInput(inp));
 });
 
-// Legacy alias kept for any old onclick="openLiveChat()" links in the page
+// Legacy alias
 function openLiveChat() { toggleChatPanel(); }
 
 // ══════════════════════════════════════════
