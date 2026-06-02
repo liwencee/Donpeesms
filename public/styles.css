@@ -1271,28 +1271,28 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
   z-index: 100;
   transition: var(--transition-slow);
 }
-.sidebar-logo { display: flex; align-items: center; gap: 10px; padding: 8px 12px; margin-bottom: 28px; }
-.sidebar-logo .logo-icon { width: 34px; height: 34px; background: linear-gradient(135deg, var(--p-600), var(--p-400)); border-radius: 9px; display: flex; align-items: center; justify-content: center; box-shadow: var(--glow-sm); }
-.sidebar-logo span { font-family: var(--font-head); font-size: 1.1rem; font-weight: 700; }
+.sidebar-logo { display: flex; align-items: center; gap: 9px; padding: 6px 12px; margin-bottom: 16px; }
+.sidebar-logo .logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, var(--p-600), var(--p-400)); border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: var(--glow-sm); flex-shrink: 0; }
+.sidebar-logo span { font-family: var(--font-head); font-size: .95rem; font-weight: 700; }
 
-.sidebar-section { margin-bottom: 28px; }
+.sidebar-section { margin-bottom: 14px; }
 .sidebar-section-label {
-  font-size: .68rem;
+  font-size: .62rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .12em;
   color: var(--txt-4);
   padding: 0 12px;
-  margin-bottom: 8px;
+  margin-bottom: 4px;
 }
-.sidebar-nav { display: flex; flex-direction: column; gap: 2px; }
+.sidebar-nav { display: flex; flex-direction: column; gap: 1px; }
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 12px;
-  padding: 11px 14px;
+  gap: 10px;
+  padding: 8px 12px;
   border-radius: var(--radius-md);
-  font-size: .9rem;
+  font-size: .82rem;
   font-weight: 500;
   color: var(--txt-3);
   cursor: pointer;
@@ -1306,7 +1306,7 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
   border: 1px solid rgba(124,58,237,.25);
 }
 .sidebar-link.active svg { color: var(--p-400); }
-.sidebar-link svg { color: var(--txt-4); transition: var(--transition); }
+.sidebar-link svg { color: var(--txt-4); transition: var(--transition); width: 15px; height: 15px; flex-shrink: 0; }
 .sidebar-link:hover svg { color: var(--p-400); }
 .sidebar-badge {
   margin-left: auto;
