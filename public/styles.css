@@ -1761,7 +1761,12 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
   .navbar-actions .lang-switcher,
   .navbar-actions .theme-toggle { display: none; }
 
-  /* Show only: Logo + Get Started + Hamburger */
+  /* Shrink logo — hide brand text, keep icon only */
+  .navbar-logo span { display: none; }
+  .navbar-logo .logo-icon { width: 28px; height: 28px; border-radius: 8px; }
+  .navbar-logo .logo-icon svg { width: 16px; height: 16px; }
+
+  /* Show only: Logo icon + Get Started + Hamburger */
   .navbar-actions .btn.btn-primary {
     padding: 7px 14px;
     font-size: .8rem;
