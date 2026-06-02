@@ -1755,7 +1755,17 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
 }
 
 @media (max-width: 768px) {
-  .navbar-nav, .navbar-actions .btn:not(.btn-primary) { display: none; }
+  /* Hide nav links, login btn, lang switcher and theme toggle on mobile */
+  .navbar-nav,
+  .navbar-actions .btn:not(.btn-primary),
+  .navbar-actions .lang-switcher,
+  .navbar-actions .theme-toggle { display: none; }
+
+  /* Show only: Logo + Get Started + Hamburger */
+  .navbar-actions .btn.btn-primary {
+    padding: 7px 14px;
+    font-size: .8rem;
+  }
   .hamburger { display: flex; }
 
   .sidebar { transform: translateX(-100%); }
