@@ -21,8 +21,14 @@ function showPage(name) {
     target.classList.add('active');
     window.scrollTo(0, 0);
   }
-  if (name === 'dashboard') {
-    initDashboard();
+  if (name === 'dashboard') initDashboard();
+  if (name === 'admin') {
+    setTimeout(() => {
+      initAdminCharts();
+      buildAdminUsers();
+      buildAdminPricing();
+      buildAdminOrders();
+    }, 100);
   }
 }
 
@@ -1487,21 +1493,6 @@ function showAddWebhookModal() {
   }
 }
 
-// ══════════════════════════════════════════
-// OVERRIDE showPage to also handle admin
-// ══════════════════════════════════════════
-const _origShowPage = showPage;
-function showPage(name) {
-  _origShowPage(name);
-  if (name === 'admin') {
-    setTimeout(() => {
-      initAdminCharts();
-      buildAdminUsers();
-      buildAdminPricing();
-      buildAdminOrders();
-    }, 100);
-  }
-}
 
 // ── CONTACT FORM ───────────────────────────────────────────
 function submitContactForm(e) {
