@@ -5,6 +5,7 @@
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
+    "build": "echo No build step needed",
     "dev": "nodemon server.js",
     "seed": "node utils/seed.js",
     "test": "jest --detectOpenHandles",
