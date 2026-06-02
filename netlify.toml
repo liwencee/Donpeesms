@@ -3,7 +3,6 @@
 [build]
   command       = "npm run build"
   publish       = "public"
-  functions     = "netlify/functions"
 
 [build.environment]
   NODE_VERSION  = "20"
@@ -20,8 +19,9 @@
 # ── SPA fallback – all routes serve index.html ─────────────────
 [[redirects]]
   from   = "/api/*"
-  to     = "/.netlify/functions/api/:splat"
+  to     = "https://donpeesms.com/api/:splat"
   status = 200
+  force  = true
 
 [[redirects]]
   from   = "/*"
