@@ -19,7 +19,7 @@
 # ── SPA fallback – all routes serve index.html ─────────────────
 [[redirects]]
   from   = "/api/*"
-  to     = "https://api.donpeesms.com/api/:splat"
+  to     = "https://donpeesms.com/api/:splat"
   status = 200
   force  = true
 

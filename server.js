@@ -49,7 +49,8 @@ app.use(cors({
       'http://localhost:3000',
       'https://donpeesms.com',
       'https://www.donpeesms.com',
-      'https://donpeesms.netlify.app'
+      'https://donpeesms.netlify.app',
+      'https://comforting-hotteok-f88aff.netlify.app'
     ];
     if (allowed.includes(origin) || env.env === 'development') return cb(null, true);
     cb(new Error('Not allowed by CORS'));
