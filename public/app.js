@@ -1048,24 +1048,108 @@ document.addEventListener('click', (e) => {
 // ══════════════════════════════════════════
 // LIVE CHAT
 // ══════════════════════════════════════════
-function openLiveChat() {
-  // Tawk.to integration — replace YOUR_PROPERTY_ID with actual id
-  if (window.Tawk_API) {
-    window.Tawk_API.toggle();
-  } else {
-    showToast('Live chat coming online...', 'info');
-    // Load Tawk.to on demand
-    const s = document.createElement('script');
-    s.async = true;
-    s.src = 'https://embed.tawk.to/YOUR_PROPERTY_ID/default';
-    s.charset = 'UTF-8';
-    s.setAttribute('crossorigin', '*');
-    document.head.appendChild(s);
-    // Remove FAB badge after opening
-    const badge = document.querySelector('.chat-fab-badge');
-    if (badge) badge.remove();
+// ── LIVE CHAT PANEL ────────────────────────────────────────
+let _chatOpen = false;
+
+function toggleChatPanel() {
+  _chatOpen = !_chatOpen;
+  const panel  = document.getElementById('chatPanel');
+  const fab    = document.getElementById('chatFab');
+  const badge  = document.getElementById('chatFabBadge');
+  const icoO   = document.getElementById('chatIconOpen');
+  const icoC   = document.getElementById('chatIconClose');
+
+  if (!panel) return;
+
+  panel.classList.toggle('is-open', _chatOpen);
+  panel.setAttribute('aria-hidden', String(!_chatOpen));
+  fab.classList.toggle('is-open', _chatOpen);
+
+  if (icoO) icoO.style.display = _chatOpen ? 'none'  : '';
+  if (icoC) icoC.style.display = _chatOpen ? ''      : 'none';
+  if (badge) badge.style.display = 'none'; // dismiss badge on first open
+
+  if (_chatOpen) {
+    setTimeout(() => {
+      const input = document.getElementById('chatInput');
+      if (input) input.focus();
+    }, 250);
   }
 }
+
+function handleChatKey(e) {
+  if (e.key === 'Enter' && !e.shiftKey) {
+    e.preventDefault();
+    sendChatMessage();
+  }
+}
+
+function sendChatMessage() {
+  const input = document.getElementById('chatInput');
+  const msgs  = document.getElementById('chatMessages');
+  if (!input || !msgs) return;
+
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Append user bubble
+  const userMsg = document.createElement('div');
+  userMsg.className = 'chat-msg chat-msg--user';
+  userMsg.innerHTML = `<div class="chat-bubble">${escapeHTML(text)}</div>
+    <div class="chat-time">You · now</div>`;
+  msgs.appendChild(userMsg);
+
+  input.value = '';
+  autoResizeChatInput(input);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Typing indicator
+  const typing = document.createElement('div');
+  typing.className = 'chat-msg chat-msg--agent chat-typing';
+  typing.innerHTML = `<div class="chat-bubble">
+    <span class="chat-typing-dot"></span>
+    <span class="chat-typing-dot"></span>
+    <span class="chat-typing-dot"></span>
+  </div>`;
+  msgs.appendChild(typing);
+  msgs.scrollTop = msgs.scrollHeight;
+
+  // Auto-reply after delay
+  setTimeout(() => {
+    typing.remove();
+    const replies = [
+      "Thanks for reaching out! Our support team will get back to you shortly. 🙌",
+      "Got it! A support agent will respond within a few minutes.",
+      "Thanks! For urgent issues please also email us at support@donpeesms.com.",
+      "We've received your message and will reply soon. You can also check our FAQ page!"
+    ];
+    const reply = replies[Math.floor(Math.random() * replies.length)];
+    const agentMsg = document.createElement('div');
+    agentMsg.className = 'chat-msg chat-msg--agent';
+    agentMsg.innerHTML = `<div class="chat-bubble">${reply}</div>
+      <div class="chat-time">Support Team · now</div>`;
+    msgs.appendChild(agentMsg);
+    msgs.scrollTop = msgs.scrollHeight;
+  }, 1600);
+}
+
+function autoResizeChatInput(el) {
+  el.style.height = 'auto';
+  el.style.height = Math.min(el.scrollHeight, 100) + 'px';
+}
+
+function escapeHTML(str) {
+  return str.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+// Keep input auto-height in sync while typing
+document.addEventListener('DOMContentLoaded', () => {
+  const input = document.getElementById('chatInput');
+  if (input) input.addEventListener('input', () => autoResizeChatInput(input));
+});
+
+// Legacy alias kept for any old onclick="openLiveChat()" links in the page
+function openLiveChat() { toggleChatPanel(); }
 
 // ══════════════════════════════════════════
 // PWA — SERVICE WORKER + INSTALL PROMPT
