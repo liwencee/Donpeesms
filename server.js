@@ -43,7 +43,14 @@ app.use(helmet({
 app.use(cors({
   origin: (origin, cb) => {
     if (!origin) return cb(null, true);
-    const allowed = [env.frontendUrl, 'http://localhost:5173', 'http://localhost:3000'];
+    const allowed = [
+      env.frontendUrl,
+      'http://localhost:5173',
+      'http://localhost:3000',
+      'https://donpeesms.com',
+      'https://www.donpeesms.com',
+      'https://donpeesms.netlify.app'
+    ];
     if (allowed.includes(origin) || env.env === 'development') return cb(null, true);
     cb(new Error('Not allowed by CORS'));
   },
