@@ -19,21 +19,27 @@ const state = {
 const API_BASE = '/api';
 let _token = localStorage.getItem('donpee_token') || null;
 
-async function api(method, path, body) {
+async function api(method, path, body, timeoutMs = 15000) {
   const headers = { 'Content-Type': 'application/json' };
   if (_token) headers['Authorization'] = 'Bearer ' + _token;
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(API_BASE + path, {
       method,
       headers,
       credentials: 'include',
+      signal: controller.signal,
       body: body ? JSON.stringify(body) : undefined
     });
+    clearTimeout(timer);
     const data = await res.json().catch(() => ({}));
     if (res.status === 401) { _handleUnauth(); return null; }
     if (!res.ok) throw new Error(data.message || data.error || 'Request failed (' + res.status + ')');
     return data;
   } catch (err) {
+    clearTimeout(timer);
+    if (err.name === 'AbortError') throw new Error('Request timed out. Check your connection or try again.');
     if (err.message !== 'UNAUTHENTICATED') throw err;
     return null;
   }
