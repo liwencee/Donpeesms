@@ -639,7 +639,7 @@ function selectPayMethod(el) {
   el.classList.add('selected');
 }
 
-function processTopup() {
+async function processTopup() {
   const amount = state.selectedTopup === 'custom'
     ? parseFloat(document.getElementById('customAmount')?.value || 10)
     : parseFloat(state.selectedTopup);
