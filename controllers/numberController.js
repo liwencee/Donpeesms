@@ -13,60 +13,97 @@ const logger       = require('../utils/logger');
 // ═════════════════════════════════════════════
 // GET /api/numbers/countries
 // ═════════════════════════════════════════════
+const FALLBACK_COUNTRIES = [
+  { code: 'US', name: 'United States',  flag: '🇺🇸' },
+  { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
+  { code: 'DE', name: 'Germany',        flag: '🇩🇪' },
+  { code: 'FR', name: 'France',         flag: '🇫🇷' },
+  { code: 'IN', name: 'India',          flag: '🇮🇳' },
+  { code: 'BR', name: 'Brazil',         flag: '🇧🇷' },
+  { code: 'CA', name: 'Canada',         flag: '🇨🇦' },
+  { code: 'AU', name: 'Australia',      flag: '🇦🇺' },
+  { code: 'RU', name: 'Russia',         flag: '🇷🇺' },
+  { code: 'NG', name: 'Nigeria',        flag: '🇳🇬' },
+  { code: 'PK', name: 'Pakistan',       flag: '🇵🇰' },
+  { code: 'ID', name: 'Indonesia',      flag: '🇮🇩' },
+  { code: 'TR', name: 'Turkey',         flag: '🇹🇷' },
+  { code: 'MX', name: 'Mexico',         flag: '🇲🇽' },
+  { code: 'PH', name: 'Philippines',    flag: '🇵🇭' },
+  { code: 'VN', name: 'Vietnam',        flag: '🇻🇳' },
+  { code: 'UA', name: 'Ukraine',        flag: '🇺🇦' },
+  { code: 'ZA', name: 'South Africa',   flag: '🇿🇦' },
+  { code: 'EG', name: 'Egypt',          flag: '🇪🇬' },
+  { code: 'SA', name: 'Saudi Arabia',   flag: '🇸🇦' },
+  { code: 'AE', name: 'UAE',            flag: '🇦🇪' },
+  { code: 'KE', name: 'Kenya',          flag: '🇰🇪' },
+  { code: 'GH', name: 'Ghana',          flag: '🇬🇭' },
+  { code: 'JP', name: 'Japan',          flag: '🇯🇵' },
+  { code: 'KR', name: 'South Korea',    flag: '🇰🇷' },
+  { code: 'MY', name: 'Malaysia',       flag: '🇲🇾' },
+  { code: 'SG', name: 'Singapore',      flag: '🇸🇬' },
+  { code: 'TH', name: 'Thailand',       flag: '🇹🇭' }
+];
+
 exports.listCountries = asyncHandler(async (_req, res) => {
-  const countries = [
-    { code: 'US', name: 'United States',  flag: '🇺🇸' },
-    { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
-    { code: 'DE', name: 'Germany',        flag: '🇩🇪' },
-    { code: 'FR', name: 'France',         flag: '🇫🇷' },
-    { code: 'IN', name: 'India',          flag: '🇮🇳' },
-    { code: 'BR', name: 'Brazil',         flag: '🇧🇷' },
-    { code: 'CA', name: 'Canada',         flag: '🇨🇦' },
-    { code: 'AU', name: 'Australia',      flag: '🇦🇺' },
-    { code: 'RU', name: 'Russia',         flag: '🇷🇺' },
-    { code: 'NG', name: 'Nigeria',        flag: '🇳🇬' },
-    { code: 'PK', name: 'Pakistan',       flag: '🇵🇰' },
-    { code: 'ID', name: 'Indonesia',      flag: '🇮🇩' },
-    { code: 'TR', name: 'Turkey',         flag: '🇹🇷' },
-    { code: 'MX', name: 'Mexico',         flag: '🇲🇽' },
-    { code: 'PH', name: 'Philippines',    flag: '🇵🇭' },
-    { code: 'VN', name: 'Vietnam',        flag: '🇻🇳' },
-    { code: 'UA', name: 'Ukraine',        flag: '🇺🇦' },
-    { code: 'ZA', name: 'South Africa',   flag: '🇿🇦' },
-    { code: 'EG', name: 'Egypt',          flag: '🇪🇬' },
-    { code: 'SA', name: 'Saudi Arabia',   flag: '🇸🇦' },
-    { code: 'AE', name: 'UAE',            flag: '🇦🇪' },
-    { code: 'KE', name: 'Kenya',          flag: '🇰🇪' },
-    { code: 'GH', name: 'Ghana',          flag: '🇬🇭' },
-    { code: 'JP', name: 'Japan',          flag: '🇯🇵' },
-    { code: 'KR', name: 'South Korea',    flag: '🇰🇷' },
-    { code: 'MY', name: 'Malaysia',       flag: '🇲🇾' },
-    { code: 'SG', name: 'Singapore',      flag: '🇸🇬' },
-    { code: 'TH', name: 'Thailand',       flag: '🇹🇭' }
-  ];
-  res.json({ success: true, count: countries.length, countries });
+  const provider = getProvider();
+  if (typeof provider.getCountries === 'function') {
+    try {
+      const raw = await provider.getCountries();
+      // Normalise: provider may return array of strings or objects
+      const countries = raw.map(c => {
+        if (typeof c === 'string') return { code: c.toUpperCase(), name: c, flag: '' };
+        return {
+          code: (c.code || c.iso || c.country || '').toUpperCase(),
+          name: c.name || c.country_name || c.code || '',
+          flag: c.flag || ''
+        };
+      }).filter(c => c.code);
+      return res.json({ success: true, count: countries.length, countries, source: 'live' });
+    } catch (err) {
+      logger.warn('Live countries fetch failed, using fallback:', err.message);
+    }
+  }
+  res.json({ success: true, count: FALLBACK_COUNTRIES.length, countries: FALLBACK_COUNTRIES, source: 'static' });
 });
 
 // ═════════════════════════════════════════════
 // GET /api/numbers/services
 // ═════════════════════════════════════════════
+const FALLBACK_SERVICES = [
+  { code: 'whatsapp',  name: 'WhatsApp',    icon: 'whatsapp'  },
+  { code: 'telegram',  name: 'Telegram',    icon: 'telegram'  },
+  { code: 'google',    name: 'Google',      icon: 'google'    },
+  { code: 'facebook',  name: 'Facebook',    icon: 'facebook'  },
+  { code: 'instagram', name: 'Instagram',   icon: 'instagram' },
+  { code: 'twitter',   name: 'Twitter / X', icon: 'twitter'   },
+  { code: 'tiktok',    name: 'TikTok',      icon: 'tiktok'    },
+  { code: 'uber',      name: 'Uber',        icon: 'uber'      },
+  { code: 'amazon',    name: 'Amazon',      icon: 'amazon'    },
+  { code: 'paypal',    name: 'PayPal',      icon: 'paypal'    },
+  { code: 'microsoft', name: 'Microsoft',   icon: 'microsoft' },
+  { code: 'discord',   name: 'Discord',     icon: 'discord'   },
+  { code: 'any',       name: 'Any Service', icon: 'any'       }
+];
+
 exports.listServices = asyncHandler(async (_req, res) => {
-  const services = [
-    { code: 'whatsapp',  name: 'WhatsApp',    icon: 'whatsapp'  },
-    { code: 'telegram',  name: 'Telegram',    icon: 'telegram'  },
-    { code: 'google',    name: 'Google',      icon: 'google'    },
-    { code: 'facebook',  name: 'Facebook',    icon: 'facebook'  },
-    { code: 'instagram', name: 'Instagram',   icon: 'instagram' },
-    { code: 'twitter',   name: 'Twitter / X', icon: 'twitter'   },
-    { code: 'tiktok',    name: 'TikTok',      icon: 'tiktok'    },
-    { code: 'uber',      name: 'Uber',        icon: 'uber'      },
-    { code: 'amazon',    name: 'Amazon',      icon: 'amazon'    },
-    { code: 'paypal',    name: 'PayPal',      icon: 'paypal'    },
-    { code: 'microsoft', name: 'Microsoft',   icon: 'microsoft' },
-    { code: 'discord',   name: 'Discord',     icon: 'discord'   },
-    { code: 'any',       name: 'Any Service', icon: 'any'       }
-  ];
-  res.json({ success: true, services });
+  const provider = getProvider();
+  if (typeof provider.getServices === 'function') {
+    try {
+      const raw = await provider.getServices('server1');
+      const services = raw.map(s => {
+        if (typeof s === 'string') return { code: s.toLowerCase(), name: s, icon: s.toLowerCase() };
+        return {
+          code: (s.code || s.service || s.name || '').toLowerCase(),
+          name: s.name || s.service || s.code || '',
+          icon: (s.icon || s.code || s.name || '').toLowerCase()
+        };
+      }).filter(s => s.code);
+      return res.json({ success: true, services, source: 'live' });
+    } catch (err) {
+      logger.warn('Live services fetch failed, using fallback:', err.message);
+    }
+  }
+  res.json({ success: true, services: FALLBACK_SERVICES, source: 'static' });
 });
 
 // ═════════════════════════════════════════════

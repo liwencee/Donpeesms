@@ -178,6 +178,179 @@ class TwilioProvider {
 }
 
 // ═════════════════════════════════════════════
+// SureVerifications Provider
+// Docs: https://sureverifications.com/api/v1
+// ═════════════════════════════════════════════
+class SureVerificationsProvider {
+  constructor() {
+    this.name   = 'sureverifications';
+    this.client = axios.create({
+      baseURL: env.sms.sureVerifications.baseUrl,
+      headers: {
+        'x-api-key': env.sms.sureVerifications.apiKey,
+        'Accept':    'application/json',
+        'Content-Type': 'application/json'
+      },
+      timeout: 15000
+    });
+  }
+
+  // ── GET /api/v1/balance ──────────────────────
+  async getBalance() {
+    try {
+      const { data } = await this.client.get('/balance');
+      return {
+        balance:  data.balance ?? data.data?.balance ?? 0,
+        currency: data.currency ?? 'USD'
+      };
+    } catch (err) {
+      logger.error('SureVerifications getBalance:', err.response?.data || err.message);
+      throw ApiError.internal('Failed to fetch SureVerifications balance');
+    }
+  }
+
+  // ── GET /api/v1/countries ────────────────────
+  async getCountries() {
+    try {
+      const { data } = await this.client.get('/countries');
+      return Array.isArray(data) ? data : (data.countries || data.data || []);
+    } catch (err) {
+      logger.error('SureVerifications getCountries:', err.response?.data || err.message);
+      throw ApiError.internal('Failed to fetch countries');
+    }
+  }
+
+  // ── GET /api/v1/server1/services ─────────────
+  async getServices(server = 'server1') {
+    try {
+      const { data } = await this.client.get(`/${server}/services`);
+      return Array.isArray(data) ? data : (data.services || data.data || []);
+    } catch (err) {
+      logger.error('SureVerifications getServices:', err.response?.data || err.message);
+      throw ApiError.internal('Failed to fetch services');
+    }
+  }
+
+  // ── GET /api/v1/server1/price?country=&service= ──
+  async getPrice(country, service = 'whatsapp', server = 'server1') {
+    try {
+      const { data } = await this.client.get(`/${server}/price`, {
+        params: { country: country.toLowerCase(), service: service.toLowerCase() }
+      });
+      const price = data.price ?? data.cost ?? data.data?.price ?? 0;
+      const count = data.count ?? data.quantity ?? data.data?.count ?? 0;
+      return { cost: parseFloat(price), count: parseInt(count, 10), currency: 'USD' };
+    } catch (err) {
+      // Fallback to server2 if server1 fails
+      if (server === 'server1') {
+        logger.warn('SureVerifications server1 price failed, trying server2');
+        return this.getPrice(country, service, 'server2');
+      }
+      logger.error('SureVerifications getPrice:', err.response?.data || err.message);
+      throw ApiError.notFound('Pricing unavailable for this country/service combo');
+    }
+  }
+
+  // ── POST /api/v1/server1/purchase ───────────
+  async buyNumber(country, service = 'whatsapp', server = 'server1') {
+    try {
+      const { data } = await this.client.post(`/${server}/purchase`, {
+        country: country.toLowerCase(),
+        service: service.toLowerCase()
+      });
+      const orderId = data.id ?? data.order_id ?? data.data?.id;
+      const phone   = data.phone ?? data.number ?? data.data?.phone;
+      const cost    = data.price ?? data.cost ?? data.data?.price ?? 0;
+      if (!orderId || !phone) throw new Error('Invalid purchase response from provider');
+      return {
+        providerOrderId: String(orderId),
+        phoneNumber:     phone.startsWith('+') ? phone : '+' + phone,
+        cost:            parseFloat(cost),
+        expiresAt:       new Date(Date.now() + 20 * 60 * 1000),
+        status:          'active',
+        server
+      };
+    } catch (err) {
+      // Fallback to server2 if server1 has no numbers
+      if (server === 'server1') {
+        const errMsg = String(err.response?.data?.message || err.message).toLowerCase();
+        if (errMsg.includes('no number') || errMsg.includes('not available') || errMsg.includes('out of stock')) {
+          logger.warn(`SureVerifications server1 no numbers for ${country}/${service}, trying server2`);
+          return this.buyNumber(country, service, 'server2');
+        }
+      }
+      const msg = err.response?.data?.message || err.message;
+      logger.error('SureVerifications buyNumber:', msg);
+      if (String(msg).toLowerCase().includes('balance')) throw ApiError.badRequest('Insufficient provider balance');
+      throw ApiError.notFound('No numbers available for selected country/service');
+    }
+  }
+
+  // ── GET /api/v1/{server}/sms/{id} ───────────
+  async checkOrder(providerOrderId, server = 'server1') {
+    try {
+      const { data } = await this.client.get(`/${server}/sms/${providerOrderId}`);
+      const raw   = data.status ?? data.data?.status ?? 'pending';
+      const smsList = data.sms ?? data.messages ?? data.data?.sms ?? [];
+      const mapped = Array.isArray(smsList)
+        ? smsList.map(m => ({
+            text:       m.text || m.message || '',
+            sender:     m.sender || m.from || '',
+            code:       m.code || this._extractOtp(m.text || m.message || ''),
+            receivedAt: m.created_at ? new Date(m.created_at) : new Date()
+          }))
+        : [];
+      return {
+        status:   this._mapStatus(raw),
+        sms:      mapped,
+        otpCode:  mapped[0]?.code || null
+      };
+    } catch (err) {
+      logger.error('SureVerifications checkOrder:', err.response?.data || err.message);
+      return { status: 'pending', sms: [], otpCode: null };
+    }
+  }
+
+  // ── GET /api/v1/{server}/cancel/{id} ────────
+  async cancelOrder(providerOrderId, server = 'server1') {
+    try {
+      await this.client.get(`/${server}/cancel/${providerOrderId}`);
+      return { cancelled: true };
+    } catch (err) {
+      logger.warn('SureVerifications cancelOrder:', err.response?.data || err.message);
+      return { cancelled: false };
+    }
+  }
+
+  // ── GET /api/v1/{server}/finish/{id} ────────
+  async finishOrder(providerOrderId, server = 'server1') {
+    try {
+      await this.client.get(`/${server}/finish/${providerOrderId}`);
+      return { finished: true };
+    } catch (err) {
+      logger.warn('SureVerifications finishOrder:', err.response?.data || err.message);
+      return { finished: false };
+    }
+  }
+
+  _mapStatus(s) {
+    const map = {
+      pending:   'pending', waiting: 'pending', active:    'pending',
+      received:  'received', success: 'received', completed: 'received',
+      cancelled: 'cancelled', canceled: 'cancelled',
+      expired:   'expired',  timeout:  'expired',
+      failed:    'failed',   error:    'failed'
+    };
+    return map[String(s).toLowerCase()] || 'pending';
+  }
+
+  _extractOtp(text) {
+    const match = text.match(/\b\d{4,8}\b/);
+    return match ? match[0] : null;
+  }
+}
+
+// ═════════════════════════════════════════════
 // Provider Factory
 // ═════════════════════════════════════════════
 const providers = {};
@@ -186,9 +359,10 @@ const getProvider = (name = env.sms.provider) => {
   if (providers[name]) return providers[name];
 
   switch (name) {
-    case 'fivesim':     providers[name] = new FiveSimProvider(); break;
-    case 'smsactivate': providers[name] = new SmsActivateProvider(); break;
-    case 'twilio':      providers[name] = new TwilioProvider(); break;
+    case 'fivesim':           providers[name] = new FiveSimProvider(); break;
+    case 'smsactivate':       providers[name] = new SmsActivateProvider(); break;
+    case 'twilio':            providers[name] = new TwilioProvider(); break;
+    case 'sureverifications': providers[name] = new SureVerificationsProvider(); break;
     default: throw ApiError.internal(`Unknown SMS provider: ${name}`);
   }
   return providers[name];
@@ -197,4 +371,4 @@ const getProvider = (name = env.sms.provider) => {
 const calculateUserPrice = (providerCost) =>
   Math.round((providerCost * env.priceMarkup) * 100) / 100;
 
-module.exports = { getProvider, calculateUserPrice, FiveSimProvider, SmsActivateProvider, TwilioProvider };
+module.exports = { getProvider, calculateUserPrice, FiveSimProvider, SmsActivateProvider, TwilioProvider, SureVerificationsProvider };

@@ -43,7 +43,7 @@ module.exports = {
   },
 
   sms: {
-    provider: process.env.SMS_PROVIDER || 'fivesim',
+    provider: process.env.SMS_PROVIDER || 'sureverifications',
     fivesim: {
       apiKey:  process.env.FIVESIM_API_KEY,
       baseUrl: process.env.FIVESIM_BASE_URL || 'https://5sim.net/v1'
@@ -56,6 +56,10 @@ module.exports = {
       sid:   process.env.TWILIO_ACCOUNT_SID,
       token: process.env.TWILIO_AUTH_TOKEN,
       from:  process.env.TWILIO_FROM_NUMBER
+    },
+    sureVerifications: {
+      apiKey:  process.env.SURE_VERIFICATIONS_API_KEY || '',
+      baseUrl: process.env.SURE_VERIFICATIONS_BASE_URL || 'https://sureverifications.com/api/v1'
     }
   },
 
