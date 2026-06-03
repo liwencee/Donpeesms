@@ -4,7 +4,7 @@
    Theme: OLED Black + Deep Purple AI
    ============================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Exo+2:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;1,400&family=Orbitron:wght@400;500;600;700;800;900&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Poppins:ital,wght@0,300;0,400;0,500;0,600;0,700;0,800;0,900;1,400&display=swap');
 
 /* ── DESIGN TOKENS ── */
 :root {
@@ -48,8 +48,8 @@
   --radius-xl:   24px;
   --radius-full: 9999px;
 
-  --font-head:   'Orbitron', sans-serif;
-  --font-body:   'Exo 2', sans-serif;
+  --font-head:   'Poppins', sans-serif;
+  --font-body:   'Poppins', sans-serif;
 
   --transition:  all 0.22s cubic-bezier(.4,0,.2,1);
   --transition-slow: all 0.45s cubic-bezier(.4,0,.2,1);
