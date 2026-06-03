@@ -1259,40 +1259,41 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
 
 /* ── SIDEBAR ── */
 .sidebar {
-  width: 260px;
+  width: 240px;
   min-height: 100vh;
   background: var(--bg-1);
   border-right: 1px solid var(--border);
   display: flex;
   flex-direction: column;
-  padding: 24px 16px;
+  padding: 14px 12px;
   position: fixed;
   top: 0; left: 0;
   z-index: 100;
+  overflow-y: auto;
   transition: var(--transition-slow);
 }
-.sidebar-logo { display: flex; align-items: center; gap: 9px; padding: 6px 12px; margin-bottom: 16px; }
-.sidebar-logo .logo-icon { width: 28px; height: 28px; background: linear-gradient(135deg, var(--p-600), var(--p-400)); border-radius: 8px; display: flex; align-items: center; justify-content: center; box-shadow: var(--glow-sm); flex-shrink: 0; }
-.sidebar-logo span { font-family: var(--font-head); font-size: .95rem; font-weight: 700; }
+.sidebar-logo { display: flex; align-items: center; gap: 8px; padding: 4px 10px; margin-bottom: 12px; }
+.sidebar-logo .logo-icon { width: 26px; height: 26px; background: linear-gradient(135deg, var(--p-600), var(--p-400)); border-radius: 7px; display: flex; align-items: center; justify-content: center; box-shadow: var(--glow-sm); flex-shrink: 0; }
+.sidebar-logo span { font-family: var(--font-head); font-size: .88rem; font-weight: 700; }
 
-.sidebar-section { margin-bottom: 14px; }
+.sidebar-section { margin-bottom: 8px; }
 .sidebar-section-label {
-  font-size: .62rem;
+  font-size: .58rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: .12em;
   color: var(--txt-4);
-  padding: 0 12px;
-  margin-bottom: 4px;
+  padding: 0 10px;
+  margin-bottom: 3px;
 }
 .sidebar-nav { display: flex; flex-direction: column; gap: 1px; }
 .sidebar-link {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 8px 12px;
+  gap: 9px;
+  padding: 7px 10px;
   border-radius: var(--radius-md);
-  font-size: .82rem;
+  font-size: .79rem;
   font-weight: 500;
   color: var(--txt-3);
   cursor: pointer;
@@ -1306,7 +1307,7 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
   border: 1px solid rgba(124,58,237,.25);
 }
 .sidebar-link.active svg { color: var(--p-400); }
-.sidebar-link svg { color: var(--txt-4); transition: var(--transition); width: 15px; height: 15px; flex-shrink: 0; }
+.sidebar-link svg { color: var(--txt-4); transition: var(--transition); width: 14px; height: 14px; flex-shrink: 0; }
 .sidebar-link:hover svg { color: var(--p-400); }
 .sidebar-badge {
   margin-left: auto;
@@ -1331,7 +1332,7 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
 /* ── DASHBOARD MAIN ── */
 .dash-main {
   flex: 1;
-  margin-left: 260px;
+  margin-left: 240px;
   min-height: 100vh;
   background: var(--bg-0);
 }
