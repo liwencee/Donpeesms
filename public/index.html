@@ -1293,26 +1293,26 @@
         <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
           <div class="form-group">
             <label class="form-label">First Name</label>
-            <input type="text" class="form-input" placeholder="John" required/>
+            <input type="text" class="form-input" id="regFirstName" placeholder="John" required/>
           </div>
           <div class="form-group">
             <label class="form-label">Last Name</label>
-            <input type="text" class="form-input" placeholder="Doe" required/>
+            <input type="text" class="form-input" id="regLastName" placeholder="Doe"/>
           </div>
         </div>
         <div class="form-group">
           <label class="form-label">Email Address</label>
-          <input type="email" class="form-input" placeholder="you@example.com" required/>
+          <input type="email" class="form-input" id="regEmail" placeholder="you@example.com" required/>
         </div>
         <div class="form-group">
           <label class="form-label">Username</label>
-          <input type="text" class="form-input" placeholder="cooluser123" required/>
+          <input type="text" class="form-input" id="regUsername" placeholder="cooluser123" required/>
         </div>
         <div class="form-group">
           <label class="form-label">Password</label>
           <div style="position:relative">
-            <input type="password" class="form-input" placeholder="Min. 8 characters" id="regPass" required style="padding-right:46px"/>
-            <button type="button" onclick="togglePass('regPass')" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;color:var(--txt-4);cursor:pointer;padding:4px">
+            <input type="password" class="form-input" placeholder="Min. 8 characters" id="regPassword" required style="padding-right:46px"/>
+            <button type="button" onclick="togglePass('regPassword')" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;color:var(--txt-4);cursor:pointer;padding:4px">
               <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
             </button>
           </div>
@@ -1451,7 +1451,7 @@
       <!-- Wallet Widget -->
       <div class="sidebar-wallet">
         <div class="sw-label">Wallet Balance</div>
-        <div class="sw-balance"><span>$</span><span id="sidebarBalance">24.50</span></div>
+        <div class="sw-balance"><span>$</span><span id="sidebarBalance">0.00</span></div>
         <button class="btn btn-primary btn-sm w-full" onclick="openTopupModal()">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           Add Funds
@@ -1532,10 +1532,10 @@
           </div>
 
           <div class="topbar-user" onclick="dashNav('profile')">
-            <div class="user-avatar">JD</div>
+            <div class="user-avatar" id="topbarAvatar">--</div>
             <div>
-              <div class="user-name">John Doe</div>
-              <div class="user-email">john@example.com</div>
+              <div class="user-name" id="topbarName">Loading...</div>
+              <div class="user-email" id="topbarEmail"></div>
             </div>
           </div>
         </div>
@@ -2014,36 +2014,36 @@
             <div>
               <div class="card mb-6">
                 <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px">
-                  <div style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--p-600),var(--p-400));display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;box-shadow:var(--glow-md)">JD</div>
+                  <div id="profileAvatar" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--p-600),var(--p-400));display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;box-shadow:var(--glow-md)">--</div>
                   <div>
-                    <div style="font-weight:700;font-size:1.1rem">John Doe</div>
-                    <div style="color:var(--txt-4);font-size:.85rem">john@example.com</div>
-                    <div style="margin-top:6px"><span class="badge badge-success">Verified Account</span></div>
+                    <div id="profileFullName" style="font-weight:700;font-size:1.1rem"></div>
+                    <div id="profileEmailDisplay" style="color:var(--txt-4);font-size:.85rem"></div>
+                    <div style="margin-top:6px"><span class="badge badge-success" id="profileVerifiedBadge"></span></div>
                   </div>
                 </div>
                 <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
                   <div class="form-group">
                     <label class="form-label">First Name</label>
-                    <input type="text" class="form-input" value="John"/>
+                    <input type="text" class="form-input" id="profileFirstName"/>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Last Name</label>
-                    <input type="text" class="form-input" value="Doe"/>
+                    <input type="text" class="form-input" id="profileLastName"/>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Email</label>
-                    <input type="email" class="form-input" value="john@example.com"/>
+                    <input type="email" class="form-input" id="profileEmail" readonly/>
                   </div>
                   <div class="form-group">
                     <label class="form-label">Username</label>
-                    <input type="text" class="form-input" value="johndoe99"/>
+                    <input type="text" class="form-input" id="profileUsername"/>
                   </div>
                   <div class="form-group" style="grid-column:1/-1">
                     <label class="form-label">Telegram Handle (optional)</label>
                     <input type="text" class="form-input" placeholder="@yourtelegram"/>
                   </div>
                 </div>
-                <button class="btn btn-primary" onclick="showToast('Profile updated successfully!','success')">Save Changes</button>
+                <button class="btn btn-primary" id="saveProfileBtn" onclick="saveProfile()">Save Changes</button>
               </div>
             </div>
           </div>

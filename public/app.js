@@ -6,12 +6,52 @@
 
 // ── STATE ──────────────────────────────────────────────────
 const state = {
-  walletBalance: 24.50,
+  walletBalance: 0,
   selectedTopup: 10,
   activeDashSection: 'overview',
   orders: [],
-  transactions: []
+  transactions: [],
+  currentUser: null,
+  activePollers: {}
 };
+
+// ── API CLIENT ──────────────────────────────────────────────
+const API_BASE = '/api';
+let _token = localStorage.getItem('donpee_token') || null;
+
+async function api(method, path, body) {
+  const headers = { 'Content-Type': 'application/json' };
+  if (_token) headers['Authorization'] = 'Bearer ' + _token;
+  try {
+    const res = await fetch(API_BASE + path, {
+      method,
+      headers,
+      credentials: 'include',
+      body: body ? JSON.stringify(body) : undefined
+    });
+    const data = await res.json().catch(() => ({}));
+    if (res.status === 401) { _handleUnauth(); return null; }
+    if (!res.ok) throw new Error(data.message || data.error || 'Request failed (' + res.status + ')');
+    return data;
+  } catch (err) {
+    if (err.message !== 'UNAUTHENTICATED') throw err;
+    return null;
+  }
+}
+
+function _handleUnauth() {
+  _token = null;
+  state.currentUser = null;
+  localStorage.removeItem('donpee_token');
+  showPage('login');
+  showToast('Session expired. Please sign in again.', 'warning');
+}
+
+function _setToken(token) {
+  _token = token;
+  if (token) localStorage.setItem('donpee_token', token);
+  else localStorage.removeItem('donpee_token');
+}
 
 // ── PAGE ROUTER ────────────────────────────────────────────
 function showPage(name) {
@@ -160,43 +200,161 @@ function dashNav(section) {
 }
 
 // ── AUTH HANDLERS ──────────────────────────────────────────
-function handleLogin(e) {
+async function handleLogin(e) {
   e.preventDefault();
   const btn = document.getElementById('loginBtn');
+  const email    = document.getElementById('loginEmail')?.value?.trim();
+  const password = document.getElementById('loginPassword')?.value;
+  if (!email || !password) return showToast('Please fill in all fields', 'warning');
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Signing in...';
-  setTimeout(() => {
+  try {
+    const data = await api('POST', '/auth/login', { email, password });
+    if (!data) return;
+    _setToken(data.token || data.accessToken);
+    state.currentUser = data.user;
+    await _loadAndRenderUser();
+    showPage('dashboard');
+    showToast('Welcome back, ' + (data.user?.firstName || 'there') + '! 👋', 'success');
+  } catch (err) {
+    showToast(err.message || 'Login failed. Check your credentials.', 'error');
+  } finally {
     btn.disabled = false;
     btn.textContent = 'Sign In to Account';
-    showPage('dashboard');
-    showToast('Welcome back, John!', 'success');
-  }, 1400);
+  }
 }
 
-function handleRegister(e) {
+async function handleRegister(e) {
   e.preventDefault();
   const btn = document.getElementById('regBtn');
+  const firstName = document.getElementById('regFirstName')?.value?.trim();
+  const lastName  = document.getElementById('regLastName')?.value?.trim();
+  const username  = document.getElementById('regUsername')?.value?.trim();
+  const email     = document.getElementById('regEmail')?.value?.trim();
+  const password  = document.getElementById('regPassword')?.value;
+  if (!firstName || !email || !password) return showToast('Please fill in all required fields', 'warning');
+
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Creating account...';
-  setTimeout(() => {
-    btn.disabled = false;
-    btn.textContent = 'Create Free Account';
+  try {
+    const data = await api('POST', '/auth/register', { firstName, lastName: lastName || '', username: username || email.split('@')[0], email, password });
+    if (!data) return;
+    _setToken(data.token || data.accessToken);
+    state.currentUser = data.user;
+    await _loadAndRenderUser();
     showPage('dashboard');
     showToast('Account created! Welcome to DonPeeSMS 🎉', 'success');
-  }, 1600);
+  } catch (err) {
+    showToast(err.message || 'Registration failed. Try again.', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Create Free Account';
+  }
 }
 
 function socialLogin(provider) {
-  showToast(`Connecting to ${provider}...`, 'info');
-  setTimeout(() => {
-    showPage('dashboard');
-    showToast(`Signed in with ${provider}!`, 'success');
-  }, 1200);
+  showToast(`${provider} login coming soon!`, 'info');
 }
 
-function handleLogout() {
+async function handleLogout() {
+  try { await api('POST', '/auth/logout'); } catch (_e) {}
+  _setToken(null);
+  state.currentUser = null;
+  state.orders = [];
+  state.transactions = [];
+  state.walletBalance = 0;
+  showPage('landing');
+  showLandingPage('home');
   showToast('Signed out successfully', 'info');
-  setTimeout(() => showPage('landing'), 800);
+}
+
+// ── USER PROFILE ────────────────────────────────────────────
+async function _loadAndRenderUser() {
+  try {
+    if (!state.currentUser) {
+      const data = await api('GET', '/auth/me');
+      if (!data) return;
+      state.currentUser = data.user || data;
+    }
+    const u = state.currentUser;
+    const initials = ((u.firstName?.[0] || '') + (u.lastName?.[0] || '') || u.email?.[0] || '?').toUpperCase();
+    const fullName = [u.firstName, u.lastName].filter(Boolean).join(' ') || u.username || u.email;
+
+    // Topbar
+    const av = document.getElementById('topbarAvatar');
+    const nm = document.getElementById('topbarName');
+    const em = document.getElementById('topbarEmail');
+    if (av) av.textContent = initials;
+    if (nm) nm.textContent = fullName;
+    if (em) em.textContent = u.email;
+
+    // Profile page
+    const pAv = document.getElementById('profileAvatar');
+    const pFN = document.getElementById('profileFullName');
+    const pED = document.getElementById('profileEmailDisplay');
+    const pVB = document.getElementById('profileVerifiedBadge');
+    if (pAv) pAv.textContent = initials;
+    if (pFN) pFN.textContent = fullName;
+    if (pED) pED.textContent = u.email;
+    if (pVB) pVB.textContent = u.isEmailVerified ? 'Verified Account' : 'Email Not Verified';
+
+    const pfn = document.getElementById('profileFirstName');
+    const pln = document.getElementById('profileLastName');
+    const pe  = document.getElementById('profileEmail');
+    const pun = document.getElementById('profileUsername');
+    if (pfn) pfn.value = u.firstName || '';
+    if (pln) pln.value = u.lastName  || '';
+    if (pe)  pe.value  = u.email     || '';
+    if (pun) pun.value = u.username  || '';
+
+    // Wallet balance
+    state.walletBalance = parseFloat(u.walletBalance || 0);
+    updateWalletDisplay();
+  } catch (err) {
+    console.error('_loadAndRenderUser:', err.message);
+  }
+}
+
+async function saveProfile() {
+  const btn = document.getElementById('saveProfileBtn');
+  const firstName = document.getElementById('profileFirstName')?.value?.trim();
+  const lastName  = document.getElementById('profileLastName')?.value?.trim();
+  const username  = document.getElementById('profileUsername')?.value?.trim();
+  if (!firstName) return showToast('First name is required', 'warning');
+
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    const data = await api('PATCH', '/users/me', { firstName, lastName, username });
+    if (!data) return;
+    state.currentUser = { ...state.currentUser, firstName, lastName, username };
+    await _loadAndRenderUser();
+    showToast('Profile updated successfully!', 'success');
+  } catch (err) {
+    showToast(err.message || 'Failed to save profile', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Changes';
+  }
+}
+
+// ── AUTO-AUTH ON LOAD ────────────────────────────────────────
+async function initAuth() {
+  if (!_token) return;
+  try {
+    const data = await api('GET', '/auth/me');
+    if (!data) return;
+    state.currentUser = data.user || data;
+    await _loadAndRenderUser();
+    // If user lands directly on the page and is already logged in, go to dashboard
+    const activePage = document.querySelector('.page.active');
+    if (!activePage || activePage.id === 'page-landing') {
+      showPage('dashboard');
+    }
+  } catch (_e) {
+    _setToken(null);
+  }
 }
 
 // ── TOGGLE PASSWORD ────────────────────────────────────────
@@ -239,14 +397,14 @@ function copyText(text) {
 
 // ── BUY NUMBER (Quick Panel) ───────────────────────────────
 const phoneNumbers = {
-  US: ['+12025550142', '+13105550187', '+16465550234'],
-  GB: ['+447700900142', '+447911123456'],
-  DE: ['+4915221234567', '+4917612345678'],
-  IN: ['+919876543210', '+918765432109'],
-  BR: ['+5511987654321', '+5521976543210'],
-  NG: ['+2348012345678', '+2349087654321'],
-  RU: ['+79261234567', '+79031234567'],
-  FR: ['+33612345678', '+33712345678'],
+  US: [],
+  GB: [],
+  DE: [],
+  IN: [],
+  BR: [],
+  NG: [],
+  RU: [],
+  FR: [],
   CA: ['+14165550123', '+16045550199'],
   AU: ['+61412345678', '+61498765432'],
   PK: ['+923001234567', '+923121234567'],
@@ -269,34 +427,29 @@ function pickNumber(country) {
   return pool[Math.floor(Math.random() * pool.length)];
 }
 
-function buyNumber(type) {
+async function buyNumber(type) {
+  if (!_token) { showPage('login'); showToast('Please sign in first', 'warning'); return; }
   const countrySelect = document.getElementById(type === 'whatsapp' ? 'waCountry' : 'smsCountry');
-  const resultDiv = document.getElementById(type === 'whatsapp' ? 'waResult' : 'smsResult');
-  const btn = document.getElementById(type === 'whatsapp' ? 'buyWABtn' : 'buySMSBtn');
-
-  if (!countrySelect.value) {
-    showToast('Please select a country first', 'warning');
-    return;
-  }
-
-  const country = countrySelect.value;
-  const prices = { US:0.12, GB:0.10, DE:0.10, IN:0.08, BR:0.09, NG:0.08, RU:0.09, FR:0.11, CA:0.12, AU:0.13 };
-  const price = type === 'whatsapp' ? (prices[country] || 0.08) : (prices[country] || 0.05) * 0.7;
-
-  if (state.walletBalance < price) {
-    showToast('Insufficient wallet balance. Please top up.', 'error');
-    openTopupModal();
-    return;
-  }
+  const resultDiv     = document.getElementById(type === 'whatsapp' ? 'waResult'  : 'smsResult');
+  const btn           = document.getElementById(type === 'whatsapp' ? 'buyWABtn'  : 'buySMSBtn');
+  if (!countrySelect?.value) { showToast('Please select a country first', 'warning'); return; }
 
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Finding number...';
 
-  setTimeout(() => {
-    const number = pickNumber(country);
-    state.walletBalance -= price;
+  try {
+    const data = await api('POST', '/numbers/buy', {
+      serviceType: type,
+      country: countrySelect.value
+    });
+    if (!data) return;
+
+    const order  = data.order;
+    const number = order.phoneNumber;
+    const price  = order.cost;
+
+    state.walletBalance = Math.max(0, state.walletBalance - price);
     updateWalletDisplay();
-    addOrder({ type, country, number, price });
 
     resultDiv.classList.remove('hidden');
     resultDiv.innerHTML = `
@@ -304,9 +457,9 @@ function buyNumber(type) {
         <div>
           <div style="font-size:.75rem;color:var(--txt-4);margin-bottom:4px;text-transform:uppercase;letter-spacing:.06em">Your Number</div>
           <div class="number-display">${number}</div>
-          <div class="number-timer">
-            <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
-            Waiting for ${type === 'whatsapp' ? 'WhatsApp OTP' : 'SMS'}... <span id="timer-${number.replace(/\D/g,'')}">20:00</span>
+          <div id="otpDisplay-${order.id}" style="margin-top:8px;font-size:.85rem;color:var(--txt-3)">
+            <span class="pulse-ring"></span> Waiting for ${type === 'whatsapp' ? 'WhatsApp OTP' : 'SMS'}...
+            <span id="timer-${order.id}">20:00</span>
           </div>
         </div>
         <div style="display:flex;flex-direction:column;gap:6px">
@@ -314,20 +467,72 @@ function buyNumber(type) {
             <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
             Copy
           </button>
-          <button class="copy-btn" onclick="simulateOTP('${type}','${number}')">Simulate OTP</button>
+          <button class="copy-btn" style="color:var(--error)" onclick="cancelOrder('${order.id}')">Cancel</button>
         </div>
-      </div>
-    `;
+      </div>`;
 
-    startTimer(`timer-${number.replace(/\D/g,'')}`, 1200);
+    startTimer('timer-' + order.id, Math.floor((order.timeRemainingMs || 1200000) / 1000));
+    _pollOrder(order.id, type);
 
-    btn.disabled = false;
-    btn.innerHTML = type === 'whatsapp'
-      ? '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Get Another Number'
-      : '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Get Another Number';
-
+    // refresh orders list
+    loadRecentOrders();
     showToast(`${type === 'whatsapp' ? 'WhatsApp' : 'SMS'} number assigned! Waiting for OTP...`, 'success');
-  }, 2000);
+  } catch (err) {
+    showToast(err.message || 'Failed to get number. Try again.', 'error');
+    if (err.message?.toLowerCase().includes('balance')) openTopupModal();
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg> Get Another Number';
+  }
+}
+
+function _pollOrder(orderId, type) {
+  if (state.activePollers[orderId]) return;
+  let attempts = 0;
+  state.activePollers[orderId] = setInterval(async () => {
+    attempts++;
+    try {
+      const data = await api('GET', '/numbers/orders/' + orderId + '/status');
+      if (!data) return;
+      const o = data.order;
+      if (o.otpCode) {
+        clearInterval(state.activePollers[orderId]);
+        delete state.activePollers[orderId];
+        const otpEl = document.getElementById('otpDisplay-' + orderId);
+        if (otpEl) {
+          otpEl.innerHTML = `
+            <div style="font-size:.75rem;color:var(--txt-4);margin-bottom:6px;text-transform:uppercase"><span class="pulse-ring"></span> OTP Received</div>
+            <div class="otp-display">${o.otpCode}</div>
+            <div style="text-align:center;margin-top:8px">
+              <button class="copy-btn" style="margin:0 auto" onclick="copyText('${o.otpCode}')">Copy OTP</button>
+            </div>`;
+        }
+        showToast('OTP received: ' + o.otpCode, 'success', 6000);
+        loadRecentOrders();
+        // refresh balance
+        const me = await api('GET', '/auth/me');
+        if (me) { state.walletBalance = me.user?.walletBalance || state.walletBalance; updateWalletDisplay(); }
+      } else if (['cancelled','expired','refunded'].includes(o.status)) {
+        clearInterval(state.activePollers[orderId]);
+        delete state.activePollers[orderId];
+        loadRecentOrders();
+      }
+    } catch (_e) {}
+    if (attempts >= 40) { clearInterval(state.activePollers[orderId]); delete state.activePollers[orderId]; }
+  }, 5000);
+}
+
+async function cancelOrder(orderId) {
+  try {
+    await api('POST', '/numbers/orders/' + orderId + '/cancel');
+    if (state.activePollers[orderId]) { clearInterval(state.activePollers[orderId]); delete state.activePollers[orderId]; }
+    showToast('Order cancelled and refunded to wallet', 'info');
+    loadRecentOrders();
+    const me = await api('GET', '/auth/me');
+    if (me) { state.walletBalance = me.user?.walletBalance || state.walletBalance; updateWalletDisplay(); }
+  } catch (err) {
+    showToast(err.message || 'Cancel failed', 'error');
+  }
 }
 
 // Full page buy (dedicated sections)
@@ -447,116 +652,84 @@ function processTopup() {
   const bonus = amount >= 100 ? amount * 0.20 : amount >= 50 ? amount * 0.15 : amount >= 25 ? amount * 0.10 : 0;
   const total = amount + bonus;
 
+  // Detect selected payment method
+  const selected = document.querySelector('.pay-method.selected');
+  const method = selected?.dataset?.method || 'nowpayments';
+  const payCurrency = selected?.dataset?.currency || 'USDT';
+
   closeTopupModal();
   showToast('Redirecting to payment gateway...', 'info');
 
-  setTimeout(() => {
-    state.walletBalance += total;
-    updateWalletDisplay();
-
-    // Add transaction
-    state.transactions.unshift({
-      id: 'TX' + Date.now(),
-      type: 'Top Up',
-      amount: '+$' + total.toFixed(2),
-      method: 'USDT',
-      balanceAfter: '$' + state.walletBalance.toFixed(2),
-      status: 'success',
-      date: new Date().toLocaleString()
-    });
-
-    showToast(`Wallet topped up! +$${total.toFixed(2)} credited`, 'success', 4000);
-    renderTransactions();
-  }, 2000);
+  try {
+    const data = await api('POST', '/wallet/topup', { amount, method, payCurrency });
+    if (!data) return;
+    // Redirect to payment URL returned by backend
+    const url = data.paymentUrl || data.url || data.checkoutUrl || data.invoiceUrl;
+    if (url) {
+      window.open(url, '_blank');
+      showToast('Complete payment in the new tab. Your balance updates automatically.', 'info', 6000);
+    } else {
+      showToast('Payment initiated. Your balance will update once confirmed.', 'success');
+    }
+  } catch (err) {
+    showToast(err.message || 'Payment initiation failed. Try again.', 'error');
+  }
 }
 
-// ── ORDERS DATA ────────────────────────────────────────────
-function addOrder(order) {
-  state.orders.unshift({
-    id: '#NV' + Math.floor(10000 + Math.random() * 90000),
-    service: order.type === 'whatsapp' ? 'WhatsApp' : 'SMS',
-    number: order.number,
-    country: order.country,
-    cost: '$' + order.price.toFixed(2),
-    otp: '—',
-    status: 'pending',
-    date: new Date().toLocaleString()
-  });
-  renderOrdersTable();
-
-  state.transactions.unshift({
-    id: 'TX' + Date.now(),
-    type: 'Purchase',
-    amount: '-$' + order.price.toFixed(2),
-    method: 'Wallet',
-    balanceAfter: '$' + state.walletBalance.toFixed(2),
-    status: 'success',
-    date: new Date().toLocaleString()
-  });
-}
-
-function generateSampleOrders() {
-  const sampleData = [
-    { id:'#NV84921', service:'WhatsApp', number:'+12025550142', country:'US', cost:'$0.12', otp:'483921', status:'completed', date:'2025-05-29 14:32' },
-    { id:'#NV84920', service:'SMS',      number:'+447700900142', country:'GB', cost:'$0.07', otp:'729104', status:'completed', date:'2025-05-29 13:15' },
-    { id:'#NV84919', service:'WhatsApp', number:'+919876543210', country:'IN', cost:'$0.08', otp:'—',      status:'pending',   date:'2025-05-29 12:44' },
-    { id:'#NV84918', service:'SMS',      number:'+4915221234567',country:'DE', cost:'$0.07', otp:'334782', status:'completed', date:'2025-05-28 22:10' },
-    { id:'#NV84917', service:'SMS',      number:'+5511987654321', country:'BR', cost:'$0.06', otp:'102938', status:'completed', date:'2025-05-28 20:05' },
-    { id:'#NV84916', service:'WhatsApp', number:'+2348012345678', country:'NG', cost:'$0.08', otp:'—',      status:'refunded',  date:'2025-05-28 18:30' },
-    { id:'#NV84915', service:'SMS',      number:'+79261234567',   country:'RU', cost:'$0.06', otp:'667823', status:'completed', date:'2025-05-27 16:00' },
-    { id:'#NV84914', service:'WhatsApp', number:'+33612345678',   country:'FR', cost:'$0.11', otp:'541209', status:'completed', date:'2025-05-27 14:20' },
-  ];
-  return [...state.orders, ...sampleData];
+// ── ORDERS ─────────────────────────────────────────────────
+function _orderRow(o) {
+  const svc     = (o.serviceType || o.service || '').toLowerCase();
+  const isWA    = svc === 'whatsapp';
+  const otp     = o.otpCode || (o.smsMessages?.[0]?.code) || '—';
+  const cost    = o.userCost != null ? '$' + parseFloat(o.userCost).toFixed(2) : (o.cost || '—');
+  const date    = o.createdAt ? new Date(o.createdAt).toLocaleString() : (o.date || '');
+  const orderId = o.orderId || o.id || '';
+  const country = o.country || '';
+  const phone   = o.phoneNumber || o.number || '';
+  const status  = o.status || 'pending';
+  return `<tr>
+    <td style="font-size:.82rem;color:var(--p-300)">#${orderId}</td>
+    <td><div class="td-service">
+      ${isWA
+        ? '<img src="https://cdn.simpleicons.org/whatsapp/25D366" alt="WA" width="16" height="16" style="vertical-align:middle"/>'
+        : '<svg width="16" height="16" fill="none" stroke="var(--p-400)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>'}
+      ${isWA ? 'WhatsApp' : 'SMS'}
+    </div></td>
+    <td class="td-number">${phone}</td>
+    <td><span class="badge badge-purple" style="font-size:.7rem">${country}</span></td>
+    <td class="td-amount">${cost}</td>
+    <td style="font-size:.85rem;color:${otp !== '—' ? 'var(--success)' : 'var(--txt-4)'}">${otp}</td>
+    <td>${statusBadge(status)}</td>
+    <td style="color:var(--txt-4);font-size:.8rem">${date}</td>
+  </tr>`;
 }
 
 function renderOrdersTable() {
   const tbody = document.getElementById('ordersBody');
   if (!tbody) return;
-  const orders = generateSampleOrders().slice(0, 6);
-  tbody.innerHTML = orders.map(o => `
-    <tr>
-      <td style="font-family:var(--font-head);font-size:.82rem;color:var(--p-300)">${o.id}</td>
-      <td>
-        <div class="td-service">
-          ${o.service === 'WhatsApp'
-            ? '<img src="https://cdn.simpleicons.org/whatsapp/25D366" alt="WhatsApp" width="16" height="16" loading="lazy" style="vertical-align:middle"/>'
-            : '<svg width="16" height="16" fill="none" stroke="var(--p-400)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>'}
-          ${o.service}
-        </div>
-      </td>
-      <td class="td-number">${o.number}</td>
-      <td><span class="badge badge-purple" style="font-size:.7rem">${o.country}</span></td>
-      <td class="td-amount">${o.cost}</td>
-      <td style="font-family:var(--font-head);font-size:.85rem;color:${o.otp !== '—' ? 'var(--success)' : 'var(--txt-4)'};letter-spacing:.06em">${o.otp}</td>
-      <td>${statusBadge(o.status)}</td>
-      <td style="color:var(--txt-4);font-size:.8rem">${o.date}</td>
-    </tr>
-  `).join('');
+  if (!state.orders.length) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--txt-4);padding:32px">No orders yet. Buy your first number! 🚀</td></tr>';
+    return;
+  }
+  tbody.innerHTML = state.orders.slice(0, 6).map(_orderRow).join('');
 }
 
-function renderAllOrders() {
+async function renderAllOrders() {
   const tbody = document.getElementById('allOrdersBody');
   if (!tbody) return;
-  const orders = generateSampleOrders();
-  tbody.innerHTML = orders.map(o => `
-    <tr>
-      <td style="font-family:var(--font-head);font-size:.82rem;color:var(--p-300)">${o.id}</td>
-      <td>
-        <div class="td-service">
-          ${o.service === 'WhatsApp'
-            ? '<img src="https://cdn.simpleicons.org/whatsapp/25D366" alt="WhatsApp" width="16" height="16" loading="lazy" style="vertical-align:middle"/>'
-            : '<svg width="16" height="16" fill="none" stroke="var(--p-400)" stroke-width="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"/></svg>'}
-          ${o.service}
-        </div>
-      </td>
-      <td class="td-number">${o.number}</td>
-      <td><span class="badge badge-purple" style="font-size:.7rem">${o.country}</span></td>
-      <td class="td-amount">${o.cost}</td>
-      <td style="font-family:var(--font-head);font-size:.85rem;color:${o.otp !== '—' ? 'var(--success)' : 'var(--txt-4)'};letter-spacing:.06em">${o.otp}</td>
-      <td>${statusBadge(o.status)}</td>
-      <td style="color:var(--txt-4);font-size:.8rem">${o.date}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--txt-4);padding:24px"><span class="spinner"></span> Loading...</td></tr>';
+  try {
+    const data = await api('GET', '/numbers/orders?limit=50');
+    if (!data) return;
+    const orders = data.orders || [];
+    if (!orders.length) {
+      tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--txt-4);padding:32px">No orders yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = orders.map(_orderRow).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="8" style="text-align:center;color:var(--error);padding:24px">Failed to load orders</td></tr>';
+  }
 }
 
 function statusBadge(status) {
@@ -577,47 +750,53 @@ function filterTable(query) {
 }
 
 // ── TRANSACTIONS ───────────────────────────────────────────
-function generateSampleTx() {
-  const samples = [
-    { id:'TX1748500001', type:'Top Up',  amount:'+$10.00', method:'USDT',       balanceAfter:'$24.50', status:'success', date:'2025-05-29 10:00' },
-    { id:'TX1748499872', type:'Purchase',amount:'-$0.12',  method:'Wallet',     balanceAfter:'$14.50', status:'success', date:'2025-05-29 14:32' },
-    { id:'TX1748499800', type:'Purchase',amount:'-$0.07',  method:'Wallet',     balanceAfter:'$14.38', status:'success', date:'2025-05-29 13:15' },
-    { id:'TX1748499700', type:'Refund',  amount:'+$0.08',  method:'Wallet',     balanceAfter:'$14.46', status:'success', date:'2025-05-28 18:30' },
-    { id:'TX1748400000', type:'Top Up',  amount:'+$25.00', method:'Credit Card',balanceAfter:'$25.00', status:'success', date:'2025-05-27 09:00' },
-  ];
-  return [...state.transactions, ...samples];
+function _txRow(tx, showId) {
+  const type   = tx.type || tx.transactionType || 'Transaction';
+  const amt    = tx.amount != null ? (parseFloat(tx.amount) >= 0 ? '+$' : '-$') + Math.abs(parseFloat(tx.amount)).toFixed(2) : '—';
+  const isPos  = parseFloat(tx.amount || 0) >= 0;
+  const method = tx.method || tx.paymentMethod || 'Wallet';
+  const bal    = tx.balanceAfter != null ? '$' + parseFloat(tx.balanceAfter).toFixed(2) : '—';
+  const date   = tx.createdAt ? new Date(tx.createdAt).toLocaleString() : (tx.date || '');
+  const status = tx.status || 'success';
+  const typeClass = type.toLowerCase().includes('top') ? 'badge-success' : type.toLowerCase().includes('refund') ? 'badge-info' : 'badge-purple';
+  const idCell = showId ? `<td style="font-size:.78rem;color:var(--p-300)">${tx.id || ''}</td>` : '';
+  return `<tr>
+    ${idCell}
+    <td><span class="badge ${typeClass}">${type}</span></td>
+    <td style="font-weight:700;color:${isPos ? 'var(--success)' : 'var(--error)'}">${amt}</td>
+    <td style="color:var(--txt-3);font-size:.85rem">${method}</td>
+    ${showId ? `<td style="color:var(--txt-3);font-size:.85rem">${bal}</td>` : ''}
+    <td>${statusBadge2(status)}</td>
+    <td style="color:var(--txt-4);font-size:.8rem">${date}</td>
+  </tr>`;
 }
 
 function renderTransactions() {
   const tbody = document.getElementById('txBody');
   if (!tbody) return;
-  const txs = generateSampleTx().slice(0, 6);
-  tbody.innerHTML = txs.map(tx => `
-    <tr>
-      <td><span class="badge ${tx.type === 'Top Up' ? 'badge-success' : tx.type === 'Refund' ? 'badge-info' : 'badge-purple'}">${tx.type}</span></td>
-      <td style="font-weight:700;color:${tx.amount.startsWith('+') ? 'var(--success)' : 'var(--error)'}">${tx.amount}</td>
-      <td style="color:var(--txt-3);font-size:.85rem">${tx.method}</td>
-      <td>${statusBadge2(tx.status)}</td>
-      <td style="color:var(--txt-4);font-size:.8rem">${tx.date}</td>
-    </tr>
-  `).join('');
+  if (!state.transactions.length) {
+    tbody.innerHTML = '<tr><td colspan="5" style="text-align:center;color:var(--txt-4);padding:28px">No transactions yet.</td></tr>';
+    return;
+  }
+  tbody.innerHTML = state.transactions.slice(0, 6).map(tx => _txRow(tx, false)).join('');
 }
 
-function renderAllTransactions() {
+async function renderAllTransactions() {
   const tbody = document.getElementById('allTxBody');
   if (!tbody) return;
-  const txs = generateSampleTx();
-  tbody.innerHTML = txs.map(tx => `
-    <tr>
-      <td style="font-family:var(--font-head);font-size:.78rem;color:var(--p-300)">${tx.id}</td>
-      <td><span class="badge ${tx.type === 'Top Up' ? 'badge-success' : tx.type === 'Refund' ? 'badge-info' : 'badge-purple'}">${tx.type}</span></td>
-      <td style="font-weight:700;color:${tx.amount.startsWith('+') ? 'var(--success)' : 'var(--error)'}">${tx.amount}</td>
-      <td style="color:var(--txt-3);font-size:.85rem">${tx.method}</td>
-      <td style="color:var(--txt-3);font-size:.85rem">${tx.balanceAfter}</td>
-      <td>${statusBadge2(tx.status)}</td>
-      <td style="color:var(--txt-4);font-size:.8rem">${tx.date}</td>
-    </tr>
-  `).join('');
+  tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--txt-4);padding:24px"><span class="spinner"></span> Loading...</td></tr>';
+  try {
+    const data = await api('GET', '/wallet/transactions?limit=100');
+    if (!data) return;
+    const txs = data.transactions || [];
+    if (!txs.length) {
+      tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--txt-4);padding:32px">No transactions yet.</td></tr>';
+      return;
+    }
+    tbody.innerHTML = txs.map(tx => _txRow(tx, true)).join('');
+  } catch (err) {
+    tbody.innerHTML = '<tr><td colspan="7" style="text-align:center;color:var(--error);padding:24px">Failed to load transactions</td></tr>';
+  }
 }
 
 function statusBadge2(status) {
@@ -749,12 +928,53 @@ function buildParticles() {
 }
 
 // ── DASHBOARD INIT ─────────────────────────────────────────
-function initDashboard() {
-  setTimeout(() => {
+async function initDashboard() {
+  await _loadAndRenderUser();
+  loadDashboardStats();
+  loadRecentOrders();
+  loadRecentTransactions();
+}
+
+async function loadDashboardStats() {
+  try {
+    const data = await api('GET', '/users/dashboard-stats');
+    if (!data) return;
+    const s = data.stats || data;
+    const els = {
+      statBalance:      '$' + parseFloat(s.walletBalance || 0).toFixed(2),
+      statOrders:       s.totalOrders || 0,
+      statCompleted:    s.completedOrders || 0,
+      statSpent:        '$' + parseFloat(s.totalSpent || 0).toFixed(2)
+    };
+    Object.entries(els).forEach(([id, val]) => {
+      const el = document.getElementById(id);
+      if (el) el.textContent = val;
+    });
+  } catch (err) {
+    console.error('loadDashboardStats:', err.message);
+  }
+}
+
+async function loadRecentOrders() {
+  try {
+    const data = await api('GET', '/numbers/orders?limit=6');
+    if (!data) return;
+    state.orders = data.orders || [];
     renderOrdersTable();
+  } catch (err) {
+    console.error('loadRecentOrders:', err.message);
+  }
+}
+
+async function loadRecentTransactions() {
+  try {
+    const data = await api('GET', '/wallet/transactions?limit=6');
+    if (!data) return;
+    state.transactions = data.transactions || [];
     renderTransactions();
-    updateWalletDisplay();
-  }, 50);
+  } catch (err) {
+    console.error('loadRecentTransactions:', err.message);
+  }
 }
 
 // ── MODAL CLOSE ON OVERLAY CLICK ──────────────────────────
@@ -1780,4 +2000,6 @@ document.addEventListener('DOMContentLoaded', () => {
   updateNotifBadge();
   updateAvailability();
   setInterval(updateAvailability, 60_000);
+  // Auto-login if token exists
+  initAuth();
 });
