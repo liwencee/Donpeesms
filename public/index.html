@@ -1874,7 +1874,7 @@
           <div class="wallet-grid">
             <div class="wallet-balance-card">
               <div class="wb-label">Available Balance</div>
-              <div class="wb-amount"><sup>$</sup>24.50</div>
+              <div class="wb-amount" id="walletPageBalance">₦0</div>
               <div class="wb-note">Balance never expires · Used for all purchases</div>
               <div class="topup-grid">
                 <div class="topup-amount-btn" onclick="selectTopup(this,'5')">$5</div>
@@ -2112,36 +2112,14 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
               <table class="data-table">
                 <thead><tr><th>URL</th><th>Events</th><th>Status</th><th>Last Delivery</th><th>Actions</th></tr></thead>
                 <tbody>
-                  <tr>
-                    <td><code style="font-size:.8rem;color:var(--p-200)">https://myapp.io/hooks/otp</code></td>
-                    <td><span class="badge badge-purple">otp.received</span> <span class="badge">order.expired</span></td>
-                    <td><span class="webhook-status-pill delivered">Active</span></td>
-                    <td style="color:var(--txt-4);font-size:.82rem">2 min ago · 200 OK</td>
-                    <td style="display:flex;gap:6px">
-                      <button class="btn btn-outline btn-sm" onclick="showToast('Test event sent','success')">Test</button>
-                      <button class="btn btn-outline btn-sm" style="color:var(--error)" onclick="showToast('Endpoint deleted','info')">Delete</button>
-                    </td>
-                  </tr>
-                  <tr>
-                    <td><code style="font-size:.8rem;color:var(--p-200)">https://myapp.io/hooks/payments</code></td>
-                    <td><span class="badge badge-purple">payment.confirmed</span></td>
-                    <td><span class="webhook-status-pill delivered">Active</span></td>
-                    <td style="color:var(--txt-4);font-size:.82rem">1 hr ago · 200 OK</td>
-                    <td style="display:flex;gap:6px">
-                      <button class="btn btn-outline btn-sm" onclick="showToast('Test event sent','success')">Test</button>
-                      <button class="btn btn-outline btn-sm" style="color:var(--error)" onclick="showToast('Endpoint deleted','info')">Delete</button>
-                    </td>
-                  </tr>
+                  <tr><td colspan="5" style="text-align:center;color:var(--txt-4);padding:28px">No endpoints registered yet</td></tr>
                 </tbody>
               </table>
             </div>
           </div>
           <div class="card">
             <div style="font-weight:700;margin-bottom:16px">Delivery Logs</div>
-            <div class="webhook-event-row"><span style="color:var(--success);font-family:var(--font-head);font-size:.8rem">200</span><span style="flex:1;font-size:.83rem"><strong>otp.received</strong> → myapp.io/hooks/otp</span><span style="color:var(--txt-4);font-size:.75rem">2 min ago</span><span class="webhook-status-pill delivered">Delivered</span></div>
-            <div class="webhook-event-row"><span style="color:var(--success);font-family:var(--font-head);font-size:.8rem">200</span><span style="flex:1;font-size:.83rem"><strong>payment.confirmed</strong> → myapp.io/hooks/payments</span><span style="color:var(--txt-4);font-size:.75rem">1hr ago</span><span class="webhook-status-pill delivered">Delivered</span></div>
-            <div class="webhook-event-row"><span style="color:var(--error);font-family:var(--font-head);font-size:.8rem">500</span><span style="flex:1;font-size:.83rem"><strong>order.expired</strong> → myapp.io/hooks/otp</span><span style="color:var(--txt-4);font-size:.75rem">3hr ago</span><span class="webhook-status-pill failed">Failed</span><button class="btn btn-outline btn-sm" onclick="showToast('Retrying...','info')">Retry</button></div>
-            <div class="webhook-event-row"><span style="color:var(--success);font-family:var(--font-head);font-size:.8rem">200</span><span style="flex:1;font-size:.83rem"><strong>otp.received</strong> → myapp.io/hooks/otp</span><span style="color:var(--txt-4);font-size:.75rem">Yesterday</span><span class="webhook-status-pill delivered">Delivered</span></div>
+            <div style="text-align:center;color:var(--txt-4);padding:24px;font-size:.85rem">No delivery logs yet</div>
           </div>
         </div>
 
@@ -2153,10 +2131,10 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
           </div>
 
           <div class="affiliate-overview">
-            <div class="stat-card"><div><div class="stat-card-label">Total Referred</div><div class="stat-card-value">28</div><div class="stat-card-change change-up">+3 this month</div></div><div class="stat-card-icon icon-purple"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div></div>
-            <div class="stat-card"><div><div class="stat-card-label">Total Earnings</div><div class="stat-card-value text-gradient">$48.20</div><div class="stat-card-change change-up">+$6.40 this month</div></div><div class="stat-card-icon icon-green"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div></div>
-            <div class="stat-card"><div><div class="stat-card-label">Commission Rate</div><div class="stat-card-value">10%</div><div class="stat-card-change" style="color:var(--warning)">→ 12% at Platinum</div></div><div class="stat-card-icon icon-amber"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg></div></div>
-            <div class="stat-card"><div><div class="stat-card-label">Pending Payout</div><div class="stat-card-value">$12.40</div><div class="stat-card-change" style="color:var(--txt-4)">Min. $5 to withdraw</div></div><div class="stat-card-icon icon-blue"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/></svg></div></div>
+            <div class="stat-card"><div><div class="stat-card-label">Total Referred</div><div class="stat-card-value">0</div><div class="stat-card-change" style="color:var(--txt-4)">All time</div></div><div class="stat-card-icon icon-purple"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div></div>
+            <div class="stat-card"><div><div class="stat-card-label">Total Earnings</div><div class="stat-card-value text-gradient">₦0</div><div class="stat-card-change" style="color:var(--txt-4)">All time</div></div><div class="stat-card-icon icon-green"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div></div>
+            <div class="stat-card"><div><div class="stat-card-label">Commission Rate</div><div class="stat-card-value">10%</div><div class="stat-card-change" style="color:var(--txt-4)">On referred top-ups</div></div><div class="stat-card-icon icon-amber"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/></svg></div></div>
+            <div class="stat-card"><div><div class="stat-card-label">Pending Payout</div><div class="stat-card-value">₦0</div><div class="stat-card-change" style="color:var(--txt-4)">Available to withdraw</div></div><div class="stat-card-icon icon-blue"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 12V22H4V12"/><path d="M22 7H2v5h20V7z"/></svg></div></div>
           </div>
 
           <!-- Tier Progress -->
@@ -2168,7 +2146,7 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
             <div style="background:var(--bg-3);border-radius:var(--radius-full);height:8px;margin-bottom:10px">
               <div style="width:56%;height:100%;border-radius:var(--radius-full);background:linear-gradient(90deg,var(--p-600),var(--p-300));box-shadow:0 0 10px var(--p-500)"></div>
             </div>
-            <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--txt-4)"><span>28 referrals</span><span>50 needed for Platinum (12% rate)</span></div>
+            <div style="display:flex;justify-content:space-between;font-size:.78rem;color:var(--txt-4)"><span>0 referrals</span><span>50 needed for Platinum (12% rate)</span></div>
           </div>
 
           <!-- Referral Link -->
@@ -2177,13 +2155,13 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
             <div style="color:var(--txt-3);font-size:.85rem;margin-bottom:16px">Share these links. You earn 10% of every topup your referrals make — forever.</div>
             <div style="display:flex;align-items:center;gap:10px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md);padding:12px 16px;margin-bottom:12px">
               <span style="font-size:.75rem;color:var(--txt-4);min-width:60px">Landing</span>
-              <code style="font-size:.85rem;color:var(--p-200);flex:1">https://donpeesms.com/?ref=johndoe99</code>
-              <button class="copy-btn" onclick="copyText('https://donpeesms.com/?ref=johndoe99')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
+              <code style="font-size:.85rem;color:var(--p-200);flex:1" id="refLinkLanding">https://donpeesms.com/</code>
+              <button class="copy-btn" onclick="copyText(document.getElementById('refLinkLanding').textContent)"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
             </div>
             <div style="display:flex;align-items:center;gap:10px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md);padding:12px 16px">
               <span style="font-size:.75rem;color:var(--txt-4);min-width:60px">Register</span>
-              <code style="font-size:.85rem;color:var(--p-200);flex:1">https://donpeesms.com/register?ref=johndoe99</code>
-              <button class="copy-btn" onclick="copyText('https://donpeesms.com/register?ref=johndoe99')"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
+              <code style="font-size:.85rem;color:var(--p-200);flex:1" id="refLinkRegister">https://donpeesms.com/register</code>
+              <button class="copy-btn" onclick="copyText(document.getElementById('refLinkRegister').textContent)"><svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>Copy</button>
             </div>
           </div>
 
@@ -2194,18 +2172,14 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
               <table class="data-table">
                 <thead><tr><th>Date</th><th>Referred User</th><th>Their Deposit</th><th>Your Commission</th><th>Status</th></tr></thead>
                 <tbody>
-                  <tr><td style="color:var(--txt-4)">2025-05-28</td><td>user_7k2m</td><td>$25.00</td><td style="color:var(--success)">+$2.50</td><td><span class="badge badge-success">Paid</span></td></tr>
-                  <tr><td style="color:var(--txt-4)">2025-05-24</td><td>user_9x1r</td><td>$100.00</td><td style="color:var(--success)">+$10.00</td><td><span class="badge badge-success">Paid</span></td></tr>
-                  <tr><td style="color:var(--txt-4)">2025-05-20</td><td>user_4q8s</td><td>$10.00</td><td style="color:var(--success)">+$1.00</td><td><span class="badge badge-success">Paid</span></td></tr>
-                  <tr><td style="color:var(--txt-4)">2025-05-18</td><td>user_2n5t</td><td>$50.00</td><td style="color:var(--warning)">+$5.00</td><td><span class="badge" style="background:rgba(245,158,11,.15);color:var(--warning)">Pending</span></td></tr>
-                  <tr><td style="color:var(--txt-4)">2025-05-15</td><td>user_8f3v</td><td>$25.00</td><td style="color:var(--warning)">+$2.50</td><td><span class="badge" style="background:rgba(245,158,11,.15);color:var(--warning)">Pending</span></td></tr>
+                  <tr><td colspan="5" style="text-align:center;color:var(--txt-4);padding:28px">No commissions yet</td></tr>
                 </tbody>
               </table>
             </div>
             <div style="display:flex;gap:12px;margin-top:20px">
-              <button class="btn btn-primary" onclick="showToast('Withdrawal of $12.40 requested!','success')">
+              <button class="btn btn-primary" onclick="showToast('No balance available to withdraw yet','info')">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-                Withdraw $12.40
+                Withdraw
               </button>
               <button class="btn btn-outline" onclick="showToast('Marketing materials downloaded','info')">Get Banners & Materials</button>
             </div>
@@ -2216,16 +2190,16 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
         <div id="dash-referral" class="hidden">
           <h2 class="h3 mb-6" style="font-family:var(--font-head)">Referral <span class="text-gradient">Program</span></h2>
           <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:20px;margin-bottom:28px">
-            <div class="stat-card"><div><div class="stat-card-label">Total Referrals</div><div class="stat-card-value">8</div></div><div class="stat-card-icon icon-purple"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div></div>
-            <div class="stat-card"><div><div class="stat-card-label">Earnings</div><div class="stat-card-value text-gradient">$4.80</div></div><div class="stat-card-icon icon-green"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div></div>
+            <div class="stat-card"><div><div class="stat-card-label">Total Referrals</div><div class="stat-card-value">0</div></div><div class="stat-card-icon icon-purple"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg></div></div>
+            <div class="stat-card"><div><div class="stat-card-label">Earnings</div><div class="stat-card-value text-gradient">₦0</div></div><div class="stat-card-icon icon-green"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div></div>
             <div class="stat-card"><div><div class="stat-card-label">Commission Rate</div><div class="stat-card-value">10%</div></div><div class="stat-card-icon icon-amber"><svg width="22" height="22" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg></div></div>
           </div>
           <div class="card">
             <div style="font-size:1rem;font-weight:700;margin-bottom:6px">Your Referral Link</div>
             <div style="color:var(--txt-3);font-size:.875rem;margin-bottom:14px">Earn 10% commission on every top-up made by users you refer.</div>
             <div style="display:flex;align-items:center;gap:10px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md);padding:14px 18px">
-              <code style="font-size:.875rem;color:var(--p-200);flex:1">https://donpeesms.com/ref/johndoe99</code>
-              <button class="copy-btn" onclick="copyText('https://donpeesms.com/ref/johndoe99')">
+              <code style="font-size:.875rem;color:var(--p-200);flex:1" id="refLinkSimple">https://donpeesms.com/</code>
+              <button class="copy-btn" onclick="copyText(document.getElementById('refLinkSimple').textContent)">
                 <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
                 Copy
               </button>
@@ -2671,6 +2645,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
   </div>
 </div>
 
-<script src="app.js?v=20260604tabs"></script>
+<script src="app.js?v=20260604nofake2"></script>
 </body>
 </html>

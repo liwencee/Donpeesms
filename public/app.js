@@ -462,6 +462,15 @@ async function _loadAndRenderUser() {
     // Wallet balance
     state.walletBalance = parseFloat(u.walletBalance || 0);
     updateWalletDisplay();
+
+    // Referral links (real code, no dummy username)
+    const code = u.referralCode || u.username || '';
+    const setLink = (id, url) => { const el = document.getElementById(id); if (el) el.textContent = url; };
+    if (code) {
+      setLink('refLinkLanding',  'https://donpeesms.com/?ref=' + code);
+      setLink('refLinkRegister', 'https://donpeesms.com/register?ref=' + code);
+      setLink('refLinkSimple',   'https://donpeesms.com/ref/' + code);
+    }
   } catch (err) {
     console.error('_loadAndRenderUser:', err.message);
   }
@@ -784,9 +793,15 @@ function updateWalletDisplay() {
   const naira = fmtNaira(state.walletBalance);
   const el = document.getElementById('sidebarBalance');
   if (el) el.textContent = naira;
-  // Also update overview stat
+  // Overview stat card
   const stats = document.querySelectorAll('.stat-card-value');
   if (stats[0]) stats[0].textContent = naira;
+  // Wallet page balance
+  const wp = document.getElementById('walletPageBalance');
+  if (wp) wp.textContent = naira;
+  // Dashboard balance stat (if present)
+  const sb = document.getElementById('statBalance');
+  if (sb) sb.textContent = naira;
 }
 
 function selectTopup(el, amount) {
