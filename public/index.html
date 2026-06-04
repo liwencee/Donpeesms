@@ -1945,56 +1945,118 @@
           <h2 class="h3 mb-6" style="font-family:var(--font-head)">Profile <span class="text-gradient">Settings</span></h2>
           <div class="settings-grid">
             <div class="settings-nav">
-              <div class="settings-nav-item active" onclick="this.parentNode.querySelectorAll('.settings-nav-item').forEach(e=>e.classList.remove('active'));this.classList.add('active')">
+              <div class="settings-nav-item active" onclick="profileTab('personal', this)">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
                 Personal Info
               </div>
-              <div class="settings-nav-item" onclick="this.parentNode.querySelectorAll('.settings-nav-item').forEach(e=>e.classList.remove('active'));this.classList.add('active')">
+              <div class="settings-nav-item" onclick="profileTab('security', this)">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0110 0v4"/></svg>
                 Password & Security
               </div>
-              <div class="settings-nav-item" onclick="this.parentNode.querySelectorAll('.settings-nav-item').forEach(e=>e.classList.remove('active'));this.classList.add('active')">
+              <div class="settings-nav-item" onclick="profileTab('notifications', this)">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 01-3.46 0"/></svg>
                 Notifications
               </div>
-              <div class="settings-nav-item" onclick="this.parentNode.querySelectorAll('.settings-nav-item').forEach(e=>e.classList.remove('active'));this.classList.add('active')">
+              <div class="settings-nav-item" onclick="profileTab('payments', this)">
                 <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
                 Payment Methods
               </div>
             </div>
             <div>
-              <div class="card mb-6">
-                <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px">
-                  <div id="profileAvatar" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--p-600),var(--p-400));display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;box-shadow:var(--glow-md)">--</div>
-                  <div>
-                    <div id="profileFullName" style="font-weight:700;font-size:1.1rem"></div>
-                    <div id="profileEmailDisplay" style="color:var(--txt-4);font-size:.85rem"></div>
-                    <div style="margin-top:6px"><span class="badge badge-success" id="profileVerifiedBadge"></span></div>
+              <!-- Personal Info -->
+              <div class="settings-panel" id="settings-personal">
+                <div class="card mb-6">
+                  <div style="display:flex;align-items:center;gap:20px;margin-bottom:28px">
+                    <div id="profileAvatar" style="width:72px;height:72px;border-radius:50%;background:linear-gradient(135deg,var(--p-600),var(--p-400));display:flex;align-items:center;justify-content:center;font-size:1.6rem;font-weight:700;box-shadow:var(--glow-md)">--</div>
+                    <div>
+                      <div id="profileFullName" style="font-weight:700;font-size:1.1rem"></div>
+                      <div id="profileEmailDisplay" style="color:var(--txt-4);font-size:.85rem"></div>
+                      <div style="margin-top:6px"><span class="badge badge-success" id="profileVerifiedBadge"></span></div>
+                    </div>
                   </div>
+                  <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+                    <div class="form-group">
+                      <label class="form-label">First Name</label>
+                      <input type="text" class="form-input" id="profileFirstName"/>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Last Name</label>
+                      <input type="text" class="form-input" id="profileLastName"/>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Email</label>
+                      <input type="email" class="form-input" id="profileEmail" readonly/>
+                    </div>
+                    <div class="form-group">
+                      <label class="form-label">Username</label>
+                      <input type="text" class="form-input" id="profileUsername"/>
+                    </div>
+                    <div class="form-group" style="grid-column:1/-1">
+                      <label class="form-label">Telegram Handle (optional)</label>
+                      <input type="text" class="form-input" id="profileTelegram" placeholder="@yourtelegram"/>
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" id="saveProfileBtn" onclick="saveProfile()">Save Changes</button>
                 </div>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+              </div>
+
+              <!-- Password & Security -->
+              <div class="settings-panel hidden" id="settings-security">
+                <div class="card mb-6">
+                  <div style="font-weight:700;font-size:1.05rem;margin-bottom:6px">Change Password</div>
+                  <div style="color:var(--txt-4);font-size:.85rem;margin-bottom:22px">Use a strong password you don't reuse on other sites.</div>
                   <div class="form-group">
-                    <label class="form-label">First Name</label>
-                    <input type="text" class="form-input" id="profileFirstName"/>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Last Name</label>
-                    <input type="text" class="form-input" id="profileLastName"/>
-                  </div>
-                  <div class="form-group">
-                    <label class="form-label">Email</label>
-                    <input type="email" class="form-input" id="profileEmail" readonly/>
+                    <label class="form-label">Current Password</label>
+                    <input type="password" class="form-input" id="curPassword" autocomplete="current-password"/>
                   </div>
                   <div class="form-group">
-                    <label class="form-label">Username</label>
-                    <input type="text" class="form-input" id="profileUsername"/>
+                    <label class="form-label">New Password</label>
+                    <input type="password" class="form-input" id="newPassword" autocomplete="new-password"/>
                   </div>
-                  <div class="form-group" style="grid-column:1/-1">
-                    <label class="form-label">Telegram Handle (optional)</label>
-                    <input type="text" class="form-input" placeholder="@yourtelegram"/>
+                  <div class="form-group">
+                    <label class="form-label">Confirm New Password</label>
+                    <input type="password" class="form-input" id="confirmPassword" autocomplete="new-password"/>
                   </div>
+                  <button class="btn btn-primary" id="changePassBtn" onclick="changePassword()">Update Password</button>
                 </div>
-                <button class="btn btn-primary" id="saveProfileBtn" onclick="saveProfile()">Save Changes</button>
+              </div>
+
+              <!-- Notifications -->
+              <div class="settings-panel hidden" id="settings-notifications">
+                <div class="card mb-6">
+                  <div style="font-weight:700;font-size:1.05rem;margin-bottom:6px">Notification Preferences</div>
+                  <div style="color:var(--txt-4);font-size:.85rem;margin-bottom:22px">Choose what we email you about.</div>
+                  <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+                    <span>OTP & order updates</span>
+                    <input type="checkbox" id="notifOtp" checked style="accent-color:var(--p-500);width:18px;height:18px"/>
+                  </label>
+                  <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+                    <span>Wallet & payment receipts</span>
+                    <input type="checkbox" id="notifWallet" checked style="accent-color:var(--p-500);width:18px;height:18px"/>
+                  </label>
+                  <label style="display:flex;align-items:center;justify-content:space-between;padding:14px 0;border-bottom:1px solid var(--border)">
+                    <span>Promotions & offers</span>
+                    <input type="checkbox" id="notifPromo" style="accent-color:var(--p-500);width:18px;height:18px"/>
+                  </label>
+                  <button class="btn btn-primary" style="margin-top:20px" onclick="showToast('Notification preferences saved','success')">Save Preferences</button>
+                </div>
+              </div>
+
+              <!-- Payment Methods -->
+              <div class="settings-panel hidden" id="settings-payments">
+                <div class="card mb-6">
+                  <div style="font-weight:700;font-size:1.05rem;margin-bottom:6px">Payment Methods</div>
+                  <div style="color:var(--txt-4);font-size:.85rem;margin-bottom:22px">No card is stored — you pay at top-up time. Accepted methods:</div>
+                  <div style="display:flex;flex-direction:column;gap:10px">
+                    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md)">
+                      <span style="font-size:1.1rem">₿</span><span>Crypto — USDT, BTC, ETH, BNB, Litecoin</span>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md)">
+                      <span style="font-size:1.1rem">🏦</span><span>Bank transfer & card (at checkout)</span>
+                    </div>
+                  </div>
+                  <button class="btn btn-primary" style="margin-top:20px" onclick="dashNav('wallet')">Go to Wallet & Top Up</button>
+                </div>
               </div>
             </div>
           </div>
@@ -2609,6 +2671,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
   </div>
 </div>
 
-<script src="app.js?v=20260604routing"></script>
+<script src="app.js?v=20260604tabs"></script>
 </body>
 </html>

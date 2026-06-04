@@ -490,6 +490,42 @@ async function saveProfile() {
   }
 }
 
+// ── PROFILE TABS ───────────────────────────────────────────
+// Switch between Personal Info / Security / Notifications / Payments.
+function profileTab(tab, el) {
+  document.querySelectorAll('#dash-profile .settings-panel').forEach(p => p.classList.add('hidden'));
+  const panel = document.getElementById('settings-' + tab);
+  if (panel) panel.classList.remove('hidden');
+  document.querySelectorAll('#dash-profile .settings-nav-item').forEach(e => e.classList.remove('active'));
+  if (el) el.classList.add('active');
+}
+
+async function changePassword() {
+  const btn = document.getElementById('changePassBtn');
+  const currentPassword = document.getElementById('curPassword')?.value;
+  const newPassword     = document.getElementById('newPassword')?.value;
+  const confirm         = document.getElementById('confirmPassword')?.value;
+  if (!currentPassword || !newPassword) return showToast('Fill in all password fields', 'warning');
+  if (newPassword.length < 6) return showToast('New password must be at least 6 characters', 'warning');
+  if (newPassword !== confirm) return showToast('New passwords do not match', 'warning');
+
+  btn.disabled = true;
+  btn.textContent = 'Updating...';
+  try {
+    const data = await api('POST', '/auth/change-password', { currentPassword, newPassword });
+    if (!data) return;
+    showToast('Password updated successfully', 'success');
+    ['curPassword', 'newPassword', 'confirmPassword'].forEach(id => {
+      const f = document.getElementById(id); if (f) f.value = '';
+    });
+  } catch (err) {
+    showToast(err.message || 'Failed to update password', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Update Password';
+  }
+}
+
 // ── AUTO-AUTH ON LOAD ────────────────────────────────────────
 async function initAuth() {
   // Resolve the session first, then render the page matching the URL.
