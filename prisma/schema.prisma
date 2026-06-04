@@ -3,7 +3,13 @@
 //      npx prisma generate
 
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  // Use the out-of-process "binary" engine. The default in-process
+  // "library" engine panics ("timer has gone away") on restricted shared
+  // hosting (Hostinger). binaryTargets bundles the engine for the local
+  // dev machine ("native") and the Hostinger server (debian-openssl-1.1.x).
+  engineType    = "binary"
+  binaryTargets = ["native", "debian-openssl-1.1.x"]
 }
 
 datasource db {
