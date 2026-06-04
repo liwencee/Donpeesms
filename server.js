@@ -115,14 +115,34 @@ app.get('/health', (req, res) => {
 // surface as a readable error instead of hanging the request.
 app.get('/api/dbcheck', async (_req, res) => {
   const { prisma } = require('./config/db');
+  const fs = require('fs');
+  const path = require('path');
   const raw = process.env.DATABASE_URL || '';
   // Mask password between ':' and '@' so we can safely show the URL shape.
   const redacted = raw.replace(/:\/\/([^:]+):([^@]*)@/, '://$1:****@');
   const portMatch = raw.match(/@[^/:]+:(\d+)/);
+  // Read the .env FILE directly from disk to compare against process.env.
+  let fileEnvLen = 'no-file', fileEnvPort = 'no-file', envPath = 'none';
+  for (const p of [path.join(__dirname, '.env'), path.join(process.cwd(), '.env')]) {
+    try {
+      const txt = fs.readFileSync(p, 'utf8');
+      const m = txt.match(/^\s*DATABASE_URL\s*=\s*"?([^"\n\r]+)"?/m);
+      if (m) {
+        const v = m[1].trim();
+        fileEnvLen = v.length;
+        const pm = v.match(/@[^/:]+:(\d+)/);
+        fileEnvPort = pm ? pm[1] : 'none';
+        envPath = p;
+        break;
+      }
+    } catch (_e) {}
+  }
   const info = {
+    build: 'v4-diag',
     hasEnv: !!raw,
     envLen: raw.length,
     port: portMatch ? portMatch[1] : 'none',
+    fileEnvLen, fileEnvPort, envPath,
     redacted: redacted.slice(0, 140)
   };
   const started = Date.now();
