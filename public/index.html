@@ -1447,7 +1447,7 @@
       <!-- Wallet Widget -->
       <div class="sidebar-wallet">
         <div class="sw-label">Wallet Balance</div>
-        <div class="sw-balance"><span>$</span><span id="sidebarBalance">0.00</span></div>
+        <div class="sw-balance"><span id="sidebarBalance">₦0</span></div>
         <button class="btn btn-primary btn-sm w-full" onclick="openTopupModal()">
           <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
           Add Funds
@@ -2532,7 +2532,7 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
         <div class="topup-amount-btn" onclick="selectTopup(this,'custom')">Custom</div>
       </div>
       <div id="customAmountWrap" class="hidden" style="margin-top:10px">
-        <input type="number" class="form-input" placeholder="Enter amount (min $1)" min="1" id="customAmount"/>
+        <input type="number" class="form-input" placeholder="Enter amount in ₦ (min ₦1,600)" min="1600" step="100" id="customAmount" oninput="onCustomAmountInput(this.value)"/>
       </div>
     </div>
     <div style="margin-bottom:20px">

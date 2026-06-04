@@ -15,6 +15,47 @@ const state = {
   activePollers: {}
 };
 
+// ── CURRENCY (Naira) ───────────────────────────────────────
+// All backend amounts are stored in USD; the UI shows Naira.
+// Change NGN_RATE here to update the exchange rate everywhere.
+const NGN_RATE = 1600;
+
+// Format a USD amount as Naira, e.g. fmtNaira(24.5) -> "₦39,200".
+function fmtNaira(usd, dp = 0) {
+  const n = (parseFloat(usd) || 0) * NGN_RATE;
+  return '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+}
+// Signed variant for transactions: +₦.. / -₦..
+function fmtNairaSigned(usd, dp = 0) {
+  const v = parseFloat(usd) || 0;
+  return (v >= 0 ? '+' : '-') + fmtNaira(Math.abs(v), dp);
+}
+// Convert a Naira amount entered by the user back into USD for the API.
+function nairaToUsd(naira) { return (parseFloat(naira) || 0) / NGN_RATE; }
+
+// One-time sweep: convert any hard-coded "$N" text in the static HTML
+// into Naira. Runs once on load; skips inputs, scripts and styles.
+function nairaifyStaticText(root) {
+  if (!root) return;
+  const rx = /\$\s?(\d[\d,]*(?:\.\d+)?)/g;
+  const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT, {
+    acceptNode(node) {
+      if (!node.nodeValue || node.nodeValue.indexOf('$') === -1) return NodeFilter.FILTER_REJECT;
+      const tag = node.parentNode && node.parentNode.nodeName;
+      if (tag === 'SCRIPT' || tag === 'STYLE' || tag === 'TEXTAREA') return NodeFilter.FILTER_REJECT;
+      return NodeFilter.FILTER_ACCEPT;
+    }
+  });
+  const nodes = [];
+  let n; while ((n = walker.nextNode())) nodes.push(n);
+  nodes.forEach(node => {
+    node.nodeValue = node.nodeValue.replace(rx, (_m, num) => {
+      const usd = parseFloat(num.replace(/,/g, ''));
+      return fmtNaira(usd);
+    });
+  });
+}
+
 // ── API CLIENT ──────────────────────────────────────────────
 const API_BASE = '/api';
 let _token = localStorage.getItem('donpee_token') || null;
@@ -663,12 +704,12 @@ function startTimer(elId, seconds) {
 
 // ── WALLET ─────────────────────────────────────────────────
 function updateWalletDisplay() {
-  const formatted = state.walletBalance.toFixed(2);
+  const naira = fmtNaira(state.walletBalance);
   const el = document.getElementById('sidebarBalance');
-  if (el) el.textContent = formatted;
+  if (el) el.textContent = naira;
   // Also update overview stat
   const stats = document.querySelectorAll('.stat-card-value');
-  if (stats[0]) stats[0].textContent = '$' + formatted;
+  if (stats[0]) stats[0].textContent = naira;
 }
 
 function selectTopup(el, amount) {
@@ -679,19 +720,30 @@ function selectTopup(el, amount) {
   const customWrap = document.getElementById('customAmountWrap');
   if (customWrap) customWrap.classList.toggle('hidden', amount !== 'custom');
 
-  // Update modal summary
-  updateTopupSummary(amount === 'custom' ? 10 : parseFloat(amount));
+  // Update modal summary (custom input is entered in Naira)
+  if (amount === 'custom') {
+    const naira = document.getElementById('customAmount')?.value || 0;
+    updateTopupSummary(nairaToUsd(naira));
+  } else {
+    updateTopupSummary(parseFloat(amount));
+  }
 }
 
+// amount is in USD (presets) — summary is shown in Naira.
 function updateTopupSummary(amount) {
   const bonus = amount >= 100 ? amount * 0.20 : amount >= 50 ? amount * 0.15 : amount >= 25 ? amount * 0.10 : 0;
   const total = amount + bonus;
   const amtEl = document.getElementById('modalAmountDisplay');
   const bonusEl = document.getElementById('modalBonus');
   const totalEl = document.getElementById('modalTotal');
-  if (amtEl) amtEl.textContent = `$${amount.toFixed(2)}`;
-  if (bonusEl) bonusEl.textContent = bonus > 0 ? `+$${bonus.toFixed(2)}` : '+$0.00';
-  if (totalEl) totalEl.textContent = `$${total.toFixed(2)}`;
+  if (amtEl) amtEl.textContent = fmtNaira(amount);
+  if (bonusEl) bonusEl.textContent = bonus > 0 ? '+' + fmtNaira(bonus) : '+₦0';
+  if (totalEl) totalEl.textContent = fmtNaira(total);
+}
+
+// Live-update the summary when the user types a custom Naira amount.
+function onCustomAmountInput(nairaVal) {
+  updateTopupSummary(nairaToUsd(nairaVal));
 }
 
 function openTopupModal() {
@@ -709,12 +761,14 @@ function selectPayMethod(el) {
 }
 
 async function processTopup() {
+  // Custom amount is entered in Naira → convert to USD for the backend.
+  // Presets are already USD values.
   const amount = state.selectedTopup === 'custom'
-    ? parseFloat(document.getElementById('customAmount')?.value || 10)
+    ? nairaToUsd(document.getElementById('customAmount')?.value || 0)
     : parseFloat(state.selectedTopup);
 
   if (!amount || amount < 1) {
-    showToast('Please enter a valid amount (min $1)', 'warning');
+    showToast(`Please enter a valid amount (min ${fmtNaira(1)})`, 'warning');
     return;
   }
 
@@ -750,7 +804,7 @@ function _orderRow(o) {
   const svc     = (o.serviceType || o.service || '').toLowerCase();
   const isWA    = svc === 'whatsapp';
   const otp     = o.otpCode || (o.smsMessages?.[0]?.code) || '—';
-  const cost    = o.userCost != null ? '$' + parseFloat(o.userCost).toFixed(2) : (o.cost || '—');
+  const cost    = o.userCost != null ? fmtNaira(o.userCost) : (o.cost || '—');
   const date    = o.createdAt ? new Date(o.createdAt).toLocaleString() : (o.date || '');
   const orderId = o.orderId || o.id || '';
   const country = o.country || '';
@@ -821,10 +875,10 @@ function filterTable(query) {
 // ── TRANSACTIONS ───────────────────────────────────────────
 function _txRow(tx, showId) {
   const type   = tx.type || tx.transactionType || 'Transaction';
-  const amt    = tx.amount != null ? (parseFloat(tx.amount) >= 0 ? '+$' : '-$') + Math.abs(parseFloat(tx.amount)).toFixed(2) : '—';
+  const amt    = tx.amount != null ? fmtNairaSigned(tx.amount) : '—';
   const isPos  = parseFloat(tx.amount || 0) >= 0;
   const method = tx.method || tx.paymentMethod || 'Wallet';
-  const bal    = tx.balanceAfter != null ? '$' + parseFloat(tx.balanceAfter).toFixed(2) : '—';
+  const bal    = tx.balanceAfter != null ? fmtNaira(tx.balanceAfter) : '—';
   const date   = tx.createdAt ? new Date(tx.createdAt).toLocaleString() : (tx.date || '');
   const status = tx.status || 'success';
   const typeClass = type.toLowerCase().includes('top') ? 'badge-success' : type.toLowerCase().includes('refund') ? 'badge-info' : 'badge-purple';
@@ -1010,10 +1064,10 @@ async function loadDashboardStats() {
     if (!data) return;
     const s = data.stats || data;
     const els = {
-      statBalance:      '$' + parseFloat(s.walletBalance || 0).toFixed(2),
+      statBalance:      fmtNaira(s.walletBalance || 0),
       statOrders:       s.totalOrders || 0,
       statCompleted:    s.completedOrders || 0,
-      statSpent:        '$' + parseFloat(s.totalSpent || 0).toFixed(2)
+      statSpent:        fmtNaira(s.totalSpent || 0)
     };
     Object.entries(els).forEach(([id, val]) => {
       const el = document.getElementById(id);
@@ -1348,10 +1402,10 @@ let _chatGreeted   = false;
 const CHAT_KB = [
   {
     keys: ['price','pricing','cost','how much','cheap','expensive','fee','rate','plan'],
-    reply: `Our numbers start from as low as <strong>$0.10 per use</strong>! 🎉<br><br>
-      • <strong>Basic SMS</strong> – from $0.10<br>
-      • <strong>WhatsApp numbers</strong> – from $0.25<br>
-      • <strong>Premium countries (US/UK)</strong> – from $0.50<br><br>
+    reply: `Our numbers start from as low as <strong>₦160 per use</strong>! 🎉<br><br>
+      • <strong>Basic SMS</strong> – from ₦160<br>
+      • <strong>WhatsApp numbers</strong> – from ₦400<br>
+      • <strong>Premium countries (US/UK)</strong> – from ₦800<br><br>
       No subscriptions — pay only for what you use. Top up your wallet and go! 💳`,
     wa: 'Hi DonPeeSMS, I want to know more about pricing'
   },
@@ -1365,7 +1419,7 @@ const CHAT_KB = [
     keys: ['how','work','start','begin','step','process','use','get number','buy number'],
     reply: `Getting your number takes <strong>under 60 seconds</strong>! ⚡<br><br>
       <strong>1.</strong> Create a free account<br>
-      <strong>2.</strong> Top up your wallet (from $1)<br>
+      <strong>2.</strong> Top up your wallet (from ₦1,600)<br>
       <strong>3.</strong> Pick a country + service<br>
       <strong>4.</strong> Receive your OTP instantly<br><br>
       No ID, no KYC, no waiting — just instant delivery! 🚀`,
@@ -1671,7 +1725,7 @@ function initDashboardCharts() {
       data:{
         labels,
         datasets:[{
-          label:'Revenue ($)',
+          label:'Revenue (₦)',
           data,
           borderColor:'rgba(139,92,246,1)',
           backgroundColor:'rgba(139,92,246,.12)',
@@ -1688,7 +1742,7 @@ function initDashboardCharts() {
         plugins:{ legend:{display:false}, tooltip:{mode:'index',intersect:false} },
         scales:{
           x:{ grid:{color:c.grid}, ticks:{color:c.tick,maxTicksLimit:6} },
-          y:{ grid:{color:c.grid}, ticks:{color:c.tick,callback:v=>'$'+v} }
+          y:{ grid:{color:c.grid}, ticks:{color:c.tick,callback:v=>'₦'+Number(v).toLocaleString()} }
         }
       }
     });
@@ -1835,7 +1889,7 @@ function initAdminCharts() {
         plugins:{ legend:{labels:{color:c.tick,boxWidth:10}}, tooltip:{mode:'index',intersect:false} },
         scales:{
           x:{ grid:{color:c.grid}, ticks:{color:c.tick,maxTicksLimit:8} },
-          y:{ grid:{color:c.grid}, ticks:{color:c.tick,callback:v=>'$'+v} }
+          y:{ grid:{color:c.grid}, ticks:{color:c.tick,callback:v=>'₦'+Number(v).toLocaleString()} }
         }
       }
     });
@@ -1888,7 +1942,7 @@ function initAdminCharts() {
         plugins:{ legend:{labels:{color:c.tick,boxWidth:10}}, tooltip:{mode:'index',intersect:false} },
         scales:{
           x:{ grid:{display:false}, ticks:{color:c.tick}, stacked:true },
-          y:{ grid:{color:c.grid}, ticks:{color:c.tick,callback:v=>'$'+v.toLocaleString()}, stacked:true }
+          y:{ grid:{color:c.grid}, ticks:{color:c.tick,callback:v=>'₦'+Number(v).toLocaleString()}, stacked:true }
         }
       }
     });
@@ -1945,7 +1999,7 @@ function buildAdminUsers(filter='') {
       <td><input type="checkbox" style="accent-color:var(--p-500)"/></td>
       <td><div style="font-weight:600">${u.name}</div><div style="font-size:.75rem;color:var(--txt-4)">${u.id}</div></td>
       <td style="color:var(--txt-3)">${u.email}</td>
-      <td style="color:${u.balance>0?'var(--success)':'var(--txt-4)'}">$${u.balance.toFixed(2)}</td>
+      <td style="color:${u.balance>0?'var(--success)':'var(--txt-4)'}">${fmtNaira(u.balance)}</td>
       <td>${u.orders}</td>
       <td style="color:var(--txt-4);font-size:.82rem">${u.joined}</td>
       <td>${stBadge}</td>
@@ -2002,7 +2056,7 @@ function buildAdminOrders() {
     <td>${o.svc}</td>
     <td style="font-family:var(--font-head);font-size:.82rem;color:var(--p-200)">${o.num}</td>
     <td>${o.country}</td>
-    <td>$${o.cost.toFixed(2)}</td>
+    <td>${fmtNaira(o.cost)}</td>
     <td style="color:var(--txt-4)">${o.prov}</td>
     <td><span class="badge ${statusMap[o.status]||''}" style="color:${colorMap[o.status]||'var(--txt-4)'}">${o.status.charAt(0).toUpperCase()+o.status.slice(1)}</span></td>
     <td style="color:var(--txt-4);font-size:.78rem">Just now</td>
@@ -2062,6 +2116,9 @@ document.addEventListener('DOMContentLoaded', () => {
   buildAppChips();
   buildFAQ();
   buildParticles();
+  // Convert all hard-coded "$N" text in the static HTML to Naira.
+  // Runs after the builders above so their injected content is covered.
+  nairaifyStaticText(document.body);
   updateTopupSummary(10);
   initVerifyStageInteraction();
   initNavObserver();
