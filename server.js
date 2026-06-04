@@ -109,17 +109,24 @@ app.get('/health', (req, res) => {
 app.get('/api/dbcheck', async (_req, res) => {
   const { prisma } = require('./config/db');
   const raw = process.env.DATABASE_URL || '';
-  let host = 'unknown';
-  try { const u = new URL(raw); host = `${u.hostname}:${u.port}${u.search}`; } catch (_e) {}
+  // Mask password between ':' and '@' so we can safely show the URL shape.
+  const redacted = raw.replace(/:\/\/([^:]+):([^@]*)@/, '://$1:****@');
+  const portMatch = raw.match(/@[^/:]+:(\d+)/);
+  const info = {
+    hasEnv: !!raw,
+    envLen: raw.length,
+    port: portMatch ? portMatch[1] : 'none',
+    redacted: redacted.slice(0, 140)
+  };
   const started = Date.now();
   try {
     await Promise.race([
       prisma.$queryRaw`SELECT 1`,
       new Promise((_, rej) => setTimeout(() => rej(new Error('DB query timed out after 8s')), 8000))
     ]);
-    res.json({ ok: true, dbHost: host, latencyMs: Date.now() - started });
+    res.json({ ok: true, ...info, latencyMs: Date.now() - started });
   } catch (err) {
-    res.status(503).json({ ok: false, dbHost: host, latencyMs: Date.now() - started, error: err.message });
+    res.status(503).json({ ok: false, ...info, latencyMs: Date.now() - started, error: err.message });
   }
 });
 
