@@ -2,7 +2,14 @@
  * DonPeeSMS Backend — Main Entry Point
  * Express + PostgreSQL (Prisma) + JWT + Stripe + NowPayments + PayPal + SMS providers
  */
-require('dotenv').config();
+// override:true makes the .env FILE authoritative over any stale
+// environment variables set at the host/panel level (e.g. a wrong
+// DATABASE_URL stuck in Hostinger's env panel). PORT is deliberately
+// kept from the host (deleted from the file) so the LiteSpeed proxy
+// still finds the app.
+const _hostPort = process.env.PORT;
+require('dotenv').config({ override: true });
+if (_hostPort) process.env.PORT = _hostPort;
 
 const express      = require('express');
 const cors         = require('cors');
