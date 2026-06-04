@@ -100,6 +100,52 @@ function _setToken(token) {
   else localStorage.removeItem('donpee_token');
 }
 
+// ── URL ROUTING (History API) ──────────────────────────────
+// Keeps the address bar in sync with the current page so every screen
+// has its own shareable URL and the browser back/forward buttons work.
+let _suppressUrl = false;
+const LANDING_PATHS = {
+  home:'/', features:'/features', howitworks:'/how-it-works',
+  services:'/services', pricing:'/pricing', faq:'/faq', contact:'/contact'
+};
+const PATH_TO_LANDING = {};
+Object.entries(LANDING_PATHS).forEach(([sec, p]) => { PATH_TO_LANDING[p] = sec; });
+const PAGE_PATHS = { login:'/login', register:'/register', dashboard:'/dashboard', admin:'/admin', 'admin-login':'/admin' };
+
+function _setUrl(path) {
+  if (_suppressUrl) return;
+  const clean = path || '/';
+  if (window.location.pathname !== clean) history.pushState({}, '', clean);
+}
+
+// Render the page that matches the current URL (used on load + back/forward).
+function route() {
+  const raw = window.location.pathname.replace(/\/+$/, '') || '/';
+  const parts = raw.split('/').filter(Boolean);
+  _suppressUrl = true;
+  try {
+    if (parts.length === 0) { showPage('landing'); showLandingPage('home'); }
+    else if (parts[0] === 'login')    showPage('login');
+    else if (parts[0] === 'register') showPage('register');
+    else if (parts[0] === 'admin')    showPage('admin'); // guard redirects non-admins
+    else if (parts[0] === 'dashboard') {
+      if (!state.currentUser) { showPage('login'); }
+      else {
+        showPage('dashboard');
+        const sec = parts[1] || 'overview';
+        if (dashSections.includes(sec) && sec !== 'overview') dashNav(sec);
+      }
+    }
+    else if (PATH_TO_LANDING['/' + parts[0]]) {
+      showPage('landing'); showLandingPage(PATH_TO_LANDING['/' + parts[0]]);
+    }
+    else { showPage('landing'); showLandingPage('home'); }
+  } finally {
+    _suppressUrl = false;
+  }
+}
+window.addEventListener('popstate', route);
+
 // ── PAGE ROUTER ────────────────────────────────────────────
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -123,6 +169,8 @@ function showPage(name) {
       buildAdminOrders();
     }, 100);
   }
+  // Sync the URL (landing sub-pages are handled by showLandingPage).
+  if (name !== 'landing' && PAGE_PATHS[name] !== undefined) _setUrl(PAGE_PATHS[name]);
 }
 
 // ── ADMIN AUTH ─────────────────────────────────────────────
@@ -206,6 +254,9 @@ function showLandingPage(section) {
   if (section === 'faq' && !document.querySelector('#faqList .faq-item')) {
     buildFAQ();
   }
+
+  // Sync the URL to this landing sub-page.
+  _setUrl(LANDING_PATHS[section] || '/');
 }
 
 // ── SET ACTIVE NAV LINK (kept for compatibility) ───────────
@@ -292,6 +343,9 @@ function dashNav(section) {
   if (section === 'orders') renderAllOrders();
   if (section === 'wallet') renderTransactions();
   if (section === 'transactions') renderAllTransactions();
+
+  // Sync the URL: /dashboard for overview, /dashboard/<section> otherwise.
+  _setUrl(section === 'overview' ? '/dashboard' : '/dashboard/' + section);
 
   closeSidebar();
 }
@@ -438,33 +492,20 @@ async function saveProfile() {
 
 // ── AUTO-AUTH ON LOAD ────────────────────────────────────────
 async function initAuth() {
-  // Dedicated /admin route — show the admin gate, never the normal app.
-  if (isAdminRoute()) {
-    if (_token) {
-      try {
-        const data = await api('GET', '/auth/me');
-        state.currentUser = data?.user || data || null;
-      } catch (_e) { _setToken(null); state.currentUser = null; }
+  // Resolve the session first, then render the page matching the URL.
+  if (_token) {
+    try {
+      const data = await api('GET', '/auth/me');
+      if (data) {
+        state.currentUser = data.user || data;
+        await _loadAndRenderUser();
+      }
+    } catch (_e) {
+      _setToken(null);
+      state.currentUser = null;
     }
-    if (state.currentUser && state.currentUser.role === 'admin') showPage('admin');
-    else showPage('admin-login');
-    return;
   }
-
-  if (!_token) return;
-  try {
-    const data = await api('GET', '/auth/me');
-    if (!data) return;
-    state.currentUser = data.user || data;
-    await _loadAndRenderUser();
-    // If user lands directly on the page and is already logged in, go to dashboard
-    const activePage = document.querySelector('.page.active');
-    if (!activePage || activePage.id === 'page-landing') {
-      showPage('dashboard');
-    }
-  } catch (_e) {
-    _setToken(null);
-  }
+  route();
 }
 
 // ── TOGGLE PASSWORD ────────────────────────────────────────
