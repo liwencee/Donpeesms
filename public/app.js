@@ -1719,7 +1719,7 @@ function initDashboardCharts() {
       const d=new Date(); d.setDate(d.getDate()-29+i);
       return d.toLocaleDateString('en',{month:'short',day:'numeric'});
     });
-    const data = labels.map(()=>Math.floor(Math.random()*80+20));
+    const data = labels.map(()=>0);
     const ch = new Chart(revEl, {
       type:'line',
       data:{
@@ -1758,7 +1758,7 @@ function initDashboardCharts() {
       data:{
         labels:['Received','Expired','Refunded'],
         datasets:[{
-          data:[93.6, 4.2, 2.2],
+          data:[0, 0, 0],
           backgroundColor:['rgba(16,185,129,.85)','rgba(245,158,11,.85)','rgba(239,68,68,.85)'],
           borderWidth:0, hoverOffset:4
         }]
@@ -1784,8 +1784,8 @@ function initDashboardCharts() {
       data:{
         labels:['Jan','Feb','Mar','Apr','May','Jun'],
         datasets:[
-          { label:'WhatsApp', data:[28,35,42,39,47,55], backgroundColor:'rgba(37,211,102,.75)', borderRadius:4 },
-          { label:'SMS',      data:[14,18,22,20,28,31], backgroundColor:'rgba(139,92,246,.75)', borderRadius:4 }
+          { label:'WhatsApp', data:[0,0,0,0,0,0], backgroundColor:'rgba(37,211,102,.75)', borderRadius:4 },
+          { label:'SMS',      data:[0,0,0,0,0,0], backgroundColor:'rgba(139,92,246,.75)', borderRadius:4 }
         ]
       },
       options:{
@@ -1810,7 +1810,7 @@ function initDashboardCharts() {
         labels:['US','IN','NG','GB','BR','PK','DE'],
         datasets:[{
           label:'Orders',
-          data:[182,147,96,84,72,68,54],
+          data:[0,0,0,0,0,0,0],
           backgroundColor:'rgba(59,130,246,.75)',
           borderRadius:4
         }]
@@ -1838,7 +1838,7 @@ function initDashboardCharts() {
         labels:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],
         datasets:[{
           label:'Orders',
-          data:[24,38,29,45,52,48,37],
+          data:[0,0,0,0,0,0,0],
           borderColor:'rgba(245,158,11,1)',
           backgroundColor:'rgba(245,158,11,.12)',
           borderWidth:2, fill:true, tension:.4, pointRadius:3,

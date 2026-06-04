@@ -1479,48 +1479,8 @@
                 <span style="font-size:.75rem;color:var(--p-300);cursor:pointer;font-weight:400" onclick="markAllRead()">Mark all read</span>
               </div>
               <div id="notifList">
-                <div class="notif-item unread" onclick="markRead(this)">
-                  <div class="notif-icon otp"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2 19.79 19.79 0 01-8.63-3.07A19.5 19.5 0 014.64 12"/></svg></div>
-                  <div style="flex:1">
-                    <div class="notif-text"><strong>OTP Received</strong> — +1 (415) 555-0142</div>
-                    <div class="notif-text">Code: <strong style="color:var(--success)">582903</strong> · WhatsApp</div>
-                    <div class="notif-time">2 minutes ago</div>
-                  </div>
-                  <div class="notif-unread-dot"></div>
-                </div>
-                <div class="notif-item unread" onclick="markRead(this)">
-                  <div class="notif-icon pay"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 000 7h5a3.5 3.5 0 010 7H6"/></svg></div>
-                  <div style="flex:1">
-                    <div class="notif-text"><strong>Wallet Topped Up</strong> · +$25.00</div>
-                    <div class="notif-text">Balance: $49.50 · Via USDT</div>
-                    <div class="notif-time">1 hour ago</div>
-                  </div>
-                  <div class="notif-unread-dot"></div>
-                </div>
-                <div class="notif-item unread" onclick="markRead(this)">
-                  <div class="notif-icon warn"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94"/></svg></div>
-                  <div style="flex:1">
-                    <div class="notif-text"><strong>Order Expired</strong> — +44 7911 123456</div>
-                    <div class="notif-text">Auto-refund of $0.10 issued</div>
-                    <div class="notif-time">3 hours ago</div>
-                  </div>
-                  <div class="notif-unread-dot"></div>
-                </div>
-                <div class="notif-item" onclick="markRead(this)">
-                  <div class="notif-icon info"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg></div>
-                  <div style="flex:1">
-                    <div class="notif-text"><strong>Referral Bonus</strong> +$1.25 earned</div>
-                    <div class="notif-text">User johndoe_ref made a deposit</div>
-                    <div class="notif-time">Yesterday</div>
-                  </div>
-                </div>
-                <div class="notif-item" onclick="markRead(this)">
-                  <div class="notif-icon otp"><svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 16.92v3a2 2 0 01-2.18 2"/></svg></div>
-                  <div style="flex:1">
-                    <div class="notif-text"><strong>OTP Received</strong> — +49 152 2345678</div>
-                    <div class="notif-text">Code: <strong style="color:var(--success)">739421</strong> · Telegram</div>
-                    <div class="notif-time">2 days ago</div>
-                  </div>
+                <div class="notif-empty" style="padding:32px 20px;text-align:center;color:var(--txt-4);font-size:.85rem">
+                  No notifications yet
                 </div>
               </div>
               <div class="notif-panel-foot" onclick="dashNav('transactions');toggleNotifPanel()">View all activity →</div>
@@ -2654,6 +2614,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
   </div>
 </div>
 
-<script src="app.js?v=20260604naira"></script>
+<script src="app.js?v=20260604nofake"></script>
 </body>
 </html>
