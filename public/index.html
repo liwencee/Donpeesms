@@ -1435,10 +1435,6 @@
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
             Affiliate Program
           </div>
-          <div class="sidebar-link" onclick="showPage('admin')" style="color:var(--warning)">
-            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
-            Admin Panel
-          </div>
           <div class="sidebar-link" onclick="handleLogout()">
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
             Sign Out
@@ -2227,6 +2223,39 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
 
 
 <!-- ═══════════════════════════════════════ ADMIN PANEL ═══ -->
+<div id="page-admin-login" class="page">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="width:100%;max-width:420px;background:var(--bg-2);border:1px solid var(--border);border-radius:18px;padding:38px 30px;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div style="text-align:center;margin-bottom:26px">
+        <div style="width:64px;height:64px;margin:0 auto 16px;border-radius:16px;background:linear-gradient(135deg,var(--p-500),var(--p-700));display:flex;align-items:center;justify-content:center">
+          <svg width="30" height="30" fill="none" stroke="white" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9 12l2 2 4-4"/></svg>
+        </div>
+        <h2 style="font-size:1.5rem;font-weight:800;margin-bottom:6px">Admin Access</h2>
+        <p style="color:var(--txt-3);font-size:.9rem">Restricted area — authorized personnel only</p>
+      </div>
+      <form class="auth-form" onsubmit="handleAdminLogin(event)">
+        <div class="form-group">
+          <label class="form-label">Admin Email</label>
+          <input type="email" class="form-input" placeholder="admin@donpeesms.com" id="adminEmail" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Password</label>
+          <div style="position:relative">
+            <input type="password" class="form-input" placeholder="Enter admin password" id="adminPassword" required style="padding-right:46px"/>
+            <button type="button" onclick="togglePass('adminPassword')" style="position:absolute;right:14px;top:50%;transform:translateY(-50%);background:none;color:var(--txt-4);cursor:pointer;padding:4px">
+              <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            </button>
+          </div>
+        </div>
+        <button type="submit" class="btn btn-primary w-full btn-lg" id="adminLoginBtn">Sign In to Admin</button>
+      </form>
+      <div style="text-align:center;margin-top:18px">
+        <a href="/" style="color:var(--txt-4);font-size:.85rem">← Back to site</a>
+      </div>
+    </div>
+  </div>
+</div>
+
 <div id="page-admin" class="page">
   <div class="admin-wrap">
     <!-- Admin Sidebar -->
@@ -2265,9 +2294,9 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
           Settings
         </div>
-        <div class="admin-nav-link" style="margin-top:auto;color:var(--txt-4)" onclick="showPage('dashboard')">
-          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M19 12H5M12 5l-7 7 7 7"/></svg>
-          Back to Dashboard
+        <div class="admin-nav-link" style="margin-top:auto;color:var(--error)" onclick="adminLogout()">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 01-2-2V5a2 2 0 012-2h4"/><polyline points="16 17 21 12 16 7"/><line x1="21" y1="12" x2="9" y2="12"/></svg>
+          Log Out
         </div>
       </nav>
     </aside>

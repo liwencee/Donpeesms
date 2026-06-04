@@ -69,6 +69,12 @@ function showPage(name) {
   }
   if (name === 'dashboard') initDashboard();
   if (name === 'admin') {
+    // Hard guard: only an authenticated admin-role user may view the panel.
+    if (!state.currentUser || state.currentUser.role !== 'admin') {
+      target?.classList.remove('active');
+      showPage('admin-login');
+      return;
+    }
     setTimeout(() => {
       initAdminCharts();
       buildAdminUsers();
@@ -76,6 +82,50 @@ function showPage(name) {
       buildAdminOrders();
     }, 100);
   }
+}
+
+// ── ADMIN AUTH ─────────────────────────────────────────────
+function isAdminRoute() {
+  return /^\/admin\/?$/i.test(window.location.pathname);
+}
+
+async function handleAdminLogin(e) {
+  e.preventDefault();
+  const btn = document.getElementById('adminLoginBtn');
+  const email    = document.getElementById('adminEmail')?.value?.trim();
+  const password = document.getElementById('adminPassword')?.value;
+  if (!email || !password) return showToast('Enter email and password', 'warning');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Verifying...';
+  try {
+    const data = await api('POST', '/auth/login', { email, password });
+    if (!data) return;
+    const user = data.user || {};
+    if (user.role !== 'admin') {
+      _setToken(null);
+      state.currentUser = null;
+      showToast('This account does not have admin access.', 'error');
+      return;
+    }
+    _setToken(data.token || data.accessToken);
+    state.currentUser = user;
+    showPage('admin');
+    showToast('Welcome back, Admin 🛡️', 'success');
+  } catch (err) {
+    showToast(err.message || 'Admin login failed', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Sign In to Admin';
+  }
+}
+
+async function adminLogout() {
+  try { await api('POST', '/auth/logout'); } catch (_e) {}
+  _setToken(null);
+  state.currentUser = null;
+  showPage('admin-login');
+  showToast('Signed out of admin', 'info');
 }
 
 // ── NAVBAR SCROLL ──────────────────────────────────────────
@@ -347,6 +397,19 @@ async function saveProfile() {
 
 // ── AUTO-AUTH ON LOAD ────────────────────────────────────────
 async function initAuth() {
+  // Dedicated /admin route — show the admin gate, never the normal app.
+  if (isAdminRoute()) {
+    if (_token) {
+      try {
+        const data = await api('GET', '/auth/me');
+        state.currentUser = data?.user || data || null;
+      } catch (_e) { _setToken(null); state.currentUser = null; }
+    }
+    if (state.currentUser && state.currentUser.role === 'admin') showPage('admin');
+    else showPage('admin-login');
+    return;
+  }
+
   if (!_token) return;
   try {
     const data = await api('GET', '/auth/me');
