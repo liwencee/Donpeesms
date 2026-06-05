@@ -57,7 +57,7 @@ const send = async ({ to, subject, html, text }) => {
   }
 
   const info = await t.sendMail({
-    from: `"${env.smtp.fromName}" <${env.smtp.fromEmail}>`,
+    from: `"${env.smtp.fromName}" <${env.smtp.fromEmail || env.smtp.user}>`,
     to,
     subject,
     html,

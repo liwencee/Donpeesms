@@ -2213,6 +2213,23 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
 </div><!-- end page-dashboard -->
 
 
+<!-- ═══════════════════════════════════════ EMAIL VERIFICATION ═══ -->
+<div id="page-verify-email" class="page">
+  <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
+    <div style="width:100%;max-width:440px;background:var(--bg-2);border:1px solid var(--border);border-radius:18px;padding:40px 32px;text-align:center;box-shadow:0 20px 60px rgba(0,0,0,.4)">
+      <div id="verifyIcon" style="width:72px;height:72px;margin:0 auto 22px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:rgba(139,92,246,.15)">
+        <span class="spinner" style="width:28px;height:28px"></span>
+      </div>
+      <h2 id="verifyTitle" style="font-size:1.4rem;font-weight:800;margin-bottom:10px">Verifying your email…</h2>
+      <p id="verifyMsg" style="color:var(--txt-3);font-size:.92rem;line-height:1.6">Please wait a moment.</p>
+      <div id="verifyActions" style="margin-top:26px;display:none">
+        <button class="btn btn-primary w-full btn-lg" id="verifyActionBtn" onclick="showPage('dashboard')">Go to Dashboard</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+
 <!-- ═══════════════════════════════════════ ADMIN PANEL ═══ -->
 <div id="page-admin-login" class="page">
   <div style="min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px">
@@ -2645,6 +2662,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
   </div>
 </div>
 
-<script src="/app.js?v=20260604logout"></script>
+<script src="/app.js?v=20260604verify"></script>
 </body>
 </html>

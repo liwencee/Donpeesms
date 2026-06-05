@@ -127,6 +127,7 @@ function route() {
     if (parts.length === 0) { showPage('landing'); showLandingPage('home'); }
     else if (parts[0] === 'login')    showPage('login');
     else if (parts[0] === 'register') showPage('register');
+    else if (parts[0] === 'verify-email') { showPage('verify-email'); verifyEmailFromUrl(); }
     else if (parts[0] === 'admin')    showPage('admin'); // guard redirects non-admins
     else if (parts[0] === 'dashboard') {
       if (!state.currentUser) { showPage('login'); }
@@ -395,7 +396,7 @@ async function handleRegister(e) {
     state.currentUser = data.user;
     await _loadAndRenderUser();
     showPage('dashboard');
-    showToast('Account created! Welcome to DonPeeSMS 🎉', 'success');
+    showToast('Account created! 🎉 Check your email to verify your account.', 'success', 6000);
   } catch (err) {
     showToast(err.message || 'Registration failed. Try again.', 'error');
   } finally {
@@ -422,6 +423,62 @@ async function handleLogout() {
   showPage('landing');
   showLandingPage('home');
   showToast('Signed out successfully', 'info');
+}
+
+// ── EMAIL VERIFICATION ─────────────────────────────────────
+async function verifyEmailFromUrl() {
+  const token   = new URLSearchParams(window.location.search).get('token');
+  const iconEl  = document.getElementById('verifyIcon');
+  const titleEl = document.getElementById('verifyTitle');
+  const msgEl   = document.getElementById('verifyMsg');
+  const actsEl  = document.getElementById('verifyActions');
+  const btnEl   = document.getElementById('verifyActionBtn');
+
+  const ICONS = {
+    success: '<svg width="34" height="34" fill="none" stroke="#34D399" stroke-width="2.5" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 11-5.93-9.14"/><path d="M22 4L12 14.01l-3-3"/></svg>',
+    error:   '<svg width="34" height="34" fill="none" stroke="#F87171" stroke-width="2.5" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M15 9l-6 6M9 9l6 6"/></svg>'
+  };
+  const setState = (type, title, msg, bg) => {
+    if (iconEl)  { iconEl.innerHTML = ICONS[type] || ''; iconEl.style.background = bg; }
+    if (titleEl) titleEl.textContent = title;
+    if (msgEl)   msgEl.textContent = msg;
+  };
+
+  if (!token) {
+    setState('error', 'Invalid link', 'No verification token was found in the link.', 'rgba(248,113,113,.15)');
+    if (actsEl) { actsEl.style.display = 'block'; btnEl.textContent = 'Go to Login'; btnEl.onclick = () => showPage('login'); }
+    return;
+  }
+
+  try {
+    const data = await api('POST', '/auth/verify-email', { token });
+    if (!data) return;
+    setState('success', 'Email verified! 🎉', 'Your account is now verified. You can use all features.', 'rgba(52,211,153,.15)');
+    if (state.currentUser) { state.currentUser.emailVerified = true; _loadAndRenderUser(); }
+    if (actsEl) {
+      actsEl.style.display = 'block';
+      btnEl.textContent = state.currentUser ? 'Go to Dashboard' : 'Go to Login';
+      btnEl.onclick = () => showPage(state.currentUser ? 'dashboard' : 'login');
+    }
+  } catch (err) {
+    setState('error', 'Verification failed', err.message || 'This link is invalid or has expired.', 'rgba(248,113,113,.15)');
+    if (actsEl) {
+      actsEl.style.display = 'block';
+      btnEl.textContent = 'Resend Email';
+      btnEl.onclick = () => resendVerification();
+    }
+  }
+}
+
+// Resend the verification email (requires being logged in).
+async function resendVerification() {
+  if (!state.currentUser) { showToast('Please sign in first to resend', 'warning'); return showPage('login'); }
+  try {
+    await api('POST', '/auth/resend-verification');
+    showToast('Verification email sent — check your inbox', 'success', 5000);
+  } catch (err) {
+    showToast(err.message || 'Could not resend verification email', 'error');
+  }
 }
 
 // ── USER PROFILE ────────────────────────────────────────────
@@ -452,7 +509,14 @@ async function _loadAndRenderUser() {
     if (pAv) pAv.textContent = initials;
     if (pFN) pFN.textContent = fullName;
     if (pED) pED.textContent = u.email;
-    if (pVB) pVB.textContent = u.isEmailVerified ? 'Verified Account' : 'Email Not Verified';
+    if (pVB) {
+      const verified = u.emailVerified === true;
+      pVB.textContent = verified ? 'Verified Account' : 'Email Not Verified';
+      pVB.className = verified ? 'badge badge-success' : 'badge';
+      pVB.style.cssText = verified ? '' : 'background:rgba(245,158,11,.15);color:var(--warning);cursor:pointer';
+      pVB.title = verified ? '' : 'Click to resend verification email';
+      pVB.onclick = verified ? null : () => resendVerification();
+    }
 
     const pfn = document.getElementById('profileFirstName');
     const pln = document.getElementById('profileLastName');
