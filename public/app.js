@@ -409,12 +409,16 @@ function socialLogin(provider) {
 }
 
 async function handleLogout() {
-  try { await api('POST', '/auth/logout'); } catch (_e) {}
+  // Clear client session FIRST so the user is logged out even if the
+  // network call hangs or fails.
   _setToken(null);
   state.currentUser = null;
   state.orders = [];
   state.transactions = [];
   state.walletBalance = 0;
+  try { localStorage.removeItem('donpee_token'); } catch (_e) {}
+  // Tell the backend to clear its auth cookies (fire and forget).
+  try { await api('POST', '/auth/logout'); } catch (_e) {}
   showPage('landing');
   showLandingPage('home');
   showToast('Signed out successfully', 'info');

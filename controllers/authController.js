@@ -188,8 +188,15 @@ exports.refresh = asyncHandler(async (req, res) => {
 // POST /api/auth/logout
 // ═════════════════════════════════════════════
 exports.logout = asyncHandler(async (_req, res) => {
-  res.clearCookie('accessToken');
-  res.clearCookie('refreshToken', { path: '/api/auth' });
+  // clearCookie only deletes the cookie when the options match those used
+  // when it was set (secure/sameSite/path), so mirror them here.
+  const base = {
+    httpOnly: true,
+    secure:   env.env === 'production',
+    sameSite: env.env === 'production' ? 'none' : 'lax'
+  };
+  res.clearCookie('accessToken',  { ...base, path: '/' });
+  res.clearCookie('refreshToken', { ...base, path: '/api/auth' });
   res.json({ success: true, message: 'Logged out' });
 });
 
