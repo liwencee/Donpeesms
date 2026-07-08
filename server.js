@@ -168,6 +168,26 @@ app.get('/api', (_req, res) => {
 });
 
 // ══════════════════════════════════════════
+// MAINTENANCE MODE
+// When MAINTENANCE_MODE=true, show a maintenance page to visitors and
+// 503 the API, while keeping /admin, admin auth, /health, /api/dbcheck
+// and static assets reachable so the owner can still work.
+// Runs before the API routes and the SPA fallback so nothing slips past.
+// ══════════════════════════════════════════
+const _publicDir = require('path').join(__dirname, 'public');
+app.use((req, res, next) => {
+  if (!env.maintenance) return next();
+  const p = req.path;
+  if (p.startsWith('/admin') || p.startsWith('/api/auth') || p === '/api/dbcheck' || p === '/health') return next();
+  if (require('path').extname(p)) return next(); // static assets (css/js/img/fonts)
+  if (p.startsWith('/api')) {
+    return res.status(503).json({ success: false, message: 'DonPeeSMS is under maintenance. Please try again shortly.' });
+  }
+  res.setHeader('Retry-After', '3600');
+  return res.status(503).sendFile(require('path').join(_publicDir, 'maintenance.html'));
+});
+
+// ══════════════════════════════════════════
 // API ROUTES
 // ══════════════════════════════════════════
 app.use('/api/auth',    authRoutes);
@@ -181,22 +201,6 @@ app.use('/api/v1',      apiV1Numbers);
 // ══════════════════════════════════════════
 const path      = require('path');
 const publicDir = path.join(__dirname, 'public');
-
-// ── MAINTENANCE MODE ──────────────────────────────────────
-// When MAINTENANCE_MODE=true, show a maintenance page to visitors.
-// The /admin area and admin auth stay reachable so the owner can work,
-// and static assets are allowed so allowed pages can load their CSS/JS.
-app.use((req, res, next) => {
-  if (!env.maintenance) return next();
-  const p = req.path;
-  if (p.startsWith('/admin') || p.startsWith('/api/auth') || p === '/api/dbcheck' || p === '/health') return next();
-  if (path.extname(p)) return next(); // static assets (css/js/img/fonts)
-  if (p.startsWith('/api')) {
-    return res.status(503).json({ success: false, message: 'DonPeeSMS is under maintenance. Please try again shortly.' });
-  }
-  res.setHeader('Retry-After', '3600');
-  return res.status(503).sendFile(path.join(publicDir, 'maintenance.html'));
-});
 
 app.use(express.static(publicDir, {
   maxAge:  env.env === 'production' ? '7d' : 0,
