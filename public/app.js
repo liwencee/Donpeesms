@@ -106,7 +106,8 @@ function _setToken(token) {
 let _suppressUrl = false;
 const LANDING_PATHS = {
   home:'/', features:'/features', howitworks:'/how-it-works',
-  services:'/services', pricing:'/pricing', faq:'/faq', contact:'/contact'
+  services:'/services', products:'/products', pricing:'/pricing',
+  faq:'/faq', contact:'/contact'
 };
 const PATH_TO_LANDING = {};
 Object.entries(LANDING_PATHS).forEach(([sec, p]) => { PATH_TO_LANDING[p] = sec; });
@@ -228,7 +229,7 @@ window.addEventListener('scroll', () => {
 // Shows one landing sub-page (home/features/howitworks/services/pricing/faq)
 // and hides all others — no scroll, true separate pages.
 function showLandingPage(section) {
-  const pages = ['home','features','howitworks','services','pricing','faq','contact'];
+  const pages = ['home','features','howitworks','services','products','pricing','faq','contact'];
 
   pages.forEach(id => {
     const el = document.getElementById('lp-' + id);
@@ -1134,6 +1135,73 @@ const apps = [
   { name:'Discord', color:'#5865F2' },  { name:'Snapchat', color:'#FFFC00' },
   { name:'LinkedIn', color:'#0A66C2' }, { name:'Spotify', color:'#1DB954' },
 ];
+
+// ── PRODUCTS CATALOG ───────────────────────────────────────
+// usd = provider-side price; displayed in Naira via fmtNaira().
+const PRODUCTS = [
+  // One-time OTP numbers
+  { cat:'otp', name:'WhatsApp Number',    desc:'Receive WhatsApp OTP instantly. 150+ countries.',      usd:0.08, stock:'In stock', color:'#25D366' },
+  { cat:'otp', name:'Telegram Number',    desc:'Verify Telegram accounts in seconds.',                 usd:0.05, stock:'In stock', color:'#2CA5E0' },
+  { cat:'otp', name:'Google / Gmail',     desc:'OTP for Google sign-up and account recovery.',         usd:0.06, stock:'In stock', color:'#4285F4' },
+  { cat:'otp', name:'Instagram Number',   desc:'Phone verification code for Instagram.',               usd:0.06, stock:'In stock', color:'#E1306C' },
+  { cat:'otp', name:'TikTok Number',      desc:'Receive TikTok verification SMS.',                     usd:0.06, stock:'In stock', color:'#FF0050' },
+  { cat:'otp', name:'Twitter / X Number', desc:'SMS verification for X account setup.',                usd:0.07, stock:'In stock', color:'#1D9BF0' },
+  { cat:'otp', name:'Facebook Number',    desc:'OTP code for Facebook phone verification.',            usd:0.07, stock:'In stock', color:'#1877F2' },
+  { cat:'otp', name:'Any Service SMS',    desc:'Works with any platform that sends an SMS code.',      usd:0.05, stock:'In stock', color:'#8B5CF6' },
+  // Rentals
+  { cat:'rental', name:'Number Rental — 1 Day',   desc:'Keep one number for 24 hours, unlimited SMS.', usd:1.20, stock:'In stock', color:'#F59E0B' },
+  { cat:'rental', name:'Number Rental — 7 Days',  desc:'Weekly rental for repeat verifications.',      usd:6.00, stock:'In stock', color:'#F59E0B' },
+  { cat:'rental', name:'Number Rental — 30 Days', desc:'Long-term dedicated number for a month.',      usd:18.00, stock:'Limited',  color:'#F59E0B' },
+  // API / bulk
+  { cat:'api', name:'Developer API — Starter',  desc:'1,000 verifications/month with REST API access.', usd:45.00, stock:'In stock', color:'#3B82F6' },
+  { cat:'api', name:'Developer API — Growth',   desc:'5,000 verifications/month plus webhooks.',        usd:180.00, stock:'In stock', color:'#3B82F6' },
+  { cat:'api', name:'Developer API — Business', desc:'Unlimited volume, priority routing, SLA.',        usd:420.00, stock:'Contact us', color:'#3B82F6' }
+];
+
+const PRODUCT_CATS = [
+  { id:'all',    label:'All Products' },
+  { id:'otp',    label:'One-Time OTP' },
+  { id:'rental', label:'Number Rentals' },
+  { id:'api',    label:'Developer API' }
+];
+
+let _activeProdCat = 'all';
+
+function buildProductFilters() {
+  const el = document.getElementById('prodFilters');
+  if (!el) return;
+  el.innerHTML = PRODUCT_CATS.map(c =>
+    `<button class="prod-chip${c.id === _activeProdCat ? ' active' : ''}" onclick="filterProducts('${c.id}')">${c.label}</button>`
+  ).join('');
+}
+
+function filterProducts(cat) {
+  _activeProdCat = cat;
+  buildProductFilters();
+  buildProducts();
+}
+
+function buildProducts() {
+  const grid = document.getElementById('productsGrid');
+  if (!grid) return;
+  const list = _activeProdCat === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === _activeProdCat);
+  grid.innerHTML = list.map(p => {
+    const out = p.stock === 'Contact us';
+    return `<div class="prod-card">
+      <div class="prod-card-top">
+        <span class="prod-dot" style="background:${p.color}"></span>
+        <span class="prod-stock${p.stock === 'Limited' ? ' low' : ''}">${p.stock}</span>
+      </div>
+      <div class="prod-name">${p.name}</div>
+      <div class="prod-desc">${p.desc}</div>
+      <div class="prod-price">${fmtNaira(p.usd)}</div>
+      <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
+        onclick="${out ? "showLandingPage('contact')" : "showPage('register')"}">
+        ${out ? 'Contact Sales' : 'Buy Now'}
+      </button>
+    </div>`;
+  }).join('');
+}
 
 function buildAppChips() {
   const container = document.getElementById('appChips');
@@ -2274,6 +2342,8 @@ document.addEventListener('DOMContentLoaded', () => {
   initTheme();
   buildCountriesScroll();
   buildAppChips();
+  buildProductFilters();
+  buildProducts();
   buildFAQ();
   buildParticles();
   // Convert all hard-coded "$N" text in the static HTML to Naira.

@@ -3113,3 +3113,56 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
   .admin-wrap { display: block; }
   .lang-btn span { display: none; }
 }
+
+/* ── PRODUCTS PAGE ─────────────────────────────────────── */
+.prod-filters {
+  display: flex; flex-wrap: wrap; gap: 10px;
+  justify-content: center; margin-bottom: 32px;
+}
+.prod-chip {
+  padding: 9px 18px; border-radius: 9999px; cursor: pointer;
+  background: var(--bg-3); border: 1px solid var(--border-2);
+  color: var(--txt-3); font-size: .85rem; font-weight: 600;
+  transition: all .18s ease;
+}
+.prod-chip:hover { border-color: var(--p-500); color: var(--txt-1); }
+.prod-chip.active {
+  background: linear-gradient(135deg, var(--p-700), var(--p-500));
+  border-color: transparent; color: #fff;
+}
+.prod-grid {
+  display: grid; gap: 18px;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+.prod-card {
+  background: var(--bg-2); border: 1px solid var(--border);
+  border-radius: var(--radius-lg); padding: 22px 20px;
+  display: flex; flex-direction: column;
+  transition: transform .18s ease, border-color .18s ease;
+}
+.prod-card:hover { transform: translateY(-3px); border-color: var(--p-600); }
+.prod-card-top {
+  display: flex; align-items: center; justify-content: space-between;
+  margin-bottom: 14px;
+}
+.prod-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+.prod-stock {
+  font-size: .7rem; font-weight: 700; text-transform: uppercase;
+  letter-spacing: .04em; color: var(--success);
+  background: rgba(16, 185, 129, .12); padding: 4px 10px; border-radius: 9999px;
+}
+.prod-stock.low { color: var(--warning); background: rgba(245, 158, 11, .12); }
+.prod-name { font-weight: 700; font-size: 1rem; margin-bottom: 6px; }
+.prod-desc {
+  color: var(--txt-4); font-size: .82rem; line-height: 1.55;
+  margin-bottom: 16px; flex: 1;
+}
+.prod-price {
+  font-family: var(--font-head); font-size: 1.45rem; font-weight: 800;
+  color: var(--p-300); margin-bottom: 16px;
+}
+@media (max-width: 600px) {
+  .prod-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 12px; }
+  .prod-card { padding: 18px 15px; }
+  .prod-price { font-size: 1.2rem; }
+}
