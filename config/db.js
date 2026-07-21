@@ -15,7 +15,13 @@ prisma.$on('error', (e) => logger.error('Prisma:', e.message));
 
 const connectDB = async () => {
   try {
-    await prisma.$connect();
+    // Bound the connect attempt — a hanging (not just failing) connection
+    // would otherwise stall server startup forever with no logs and no
+    // response on any route, since app.listen() is never reached.
+    await Promise.race([
+      prisma.$connect(),
+      new Promise((_, reject) => setTimeout(() => reject(new Error('DB connect timed out after 8s')), 8000))
+    ]);
     logger.info('✓ PostgreSQL connected (Prisma)');
     return prisma;
   } catch (err) {
