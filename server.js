@@ -224,6 +224,10 @@ const start = async () => {
     logger.info(`╚═══════════════════════════════════════════════╝`);
   });
 
+  server.on('error', (err) => {
+    logger.error(`HTTP server failed to bind on port ${env.port}: ${err.code || err.message}`);
+  });
+
   startBackgroundJobs();
 
   const shutdown = (signal) => {
@@ -268,8 +272,12 @@ const startBackgroundJobs = () => {
   }, 60_000);
 };
 
-if (require.main === module) {
-  start();
-}
+// Always start the server. Hostinger/LiteSpeed may load this file via
+// require() rather than running it directly, in which case
+// `require.main === module` is false and the old guard skipped start()
+// entirely — the process stayed up but never called app.listen(), so
+// nothing (not even static files) responded. Starting unconditionally
+// guarantees the app binds its port.
+start();
 
 module.exports = app;
