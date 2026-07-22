@@ -59,7 +59,11 @@ app.use(cors({
       'https://donpeesms.netlify.app',
       'https://comforting-hotteok-f88aff.netlify.app'
     ];
-    if (allowed.includes(origin) || env.env === 'development') return cb(null, true);
+    // Allow the Railway-provided domains (e.g. *.up.railway.app) so the
+    // app works when accessed via its Railway URL before the custom
+    // domain is attached.
+    const isRailway = /\.(up\.)?railway\.app$/i.test(new URL(origin).hostname);
+    if (allowed.includes(origin) || isRailway || env.env === 'development') return cb(null, true);
     cb(new Error('Not allowed by CORS'));
   },
   credentials: true,

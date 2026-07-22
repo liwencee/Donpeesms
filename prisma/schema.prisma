@@ -4,12 +4,13 @@
 
 generator client {
   provider      = "prisma-client-js"
-  // Use the out-of-process "binary" engine. The default in-process
-  // "library" engine panics ("timer has gone away") on restricted shared
-  // hosting (Hostinger). binaryTargets bundles the engine for the local
-  // dev machine ("native") and the Hostinger server (debian-openssl-1.1.x).
+  // Out-of-process "binary" engine — robust across hosts.
+  // binaryTargets: "native" matches whatever platform runs `prisma
+  // generate` at build time (Railway, local, etc.); the explicit debian
+  // targets cover both older (openssl 1.1) and newer (openssl 3.0)
+  // container images so the right engine is always bundled.
   engineType    = "binary"
-  binaryTargets = ["native", "debian-openssl-1.1.x"]
+  binaryTargets = ["native", "debian-openssl-1.1.x", "debian-openssl-3.0.x"]
 }
 
 datasource db {
