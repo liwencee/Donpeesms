@@ -1,17 +1,33 @@
 /**
  * Environment variable loader & validator
  */
+const crypto = require('crypto');
 require('dotenv').config();
 
-const required = [
-  'NODE_ENV', 'PORT', 'DATABASE_URL',
-  'JWT_SECRET', 'JWT_REFRESH_SECRET'
-];
+// IMPORTANT: never process.exit() on a missing var. This process serves
+// BOTH the frontend and the API, so exiting takes the whole site down —
+// which is exactly what happened on Hostinger when one JWT var was
+// missing. Instead we warn loudly and fall back so the app always boots:
+//   - JWT secrets: generate a random per-boot secret if absent (auth
+//     keeps working; tokens simply invalidate on the next restart).
+//   - DATABASE_URL: cannot be faked — DB features fail per-request, but
+//     the frontend and non-DB routes still serve.
+const warnings = [];
 
-const missing = required.filter(k => !process.env[k]);
-if (missing.length) {
-  console.error(`\n❌ Missing required env vars: ${missing.join(', ')}\n`);
-  process.exit(1);
+if (!process.env.JWT_SECRET) {
+  process.env.JWT_SECRET = crypto.randomBytes(48).toString('hex');
+  warnings.push('JWT_SECRET missing — using a random per-boot secret (set it in env to persist sessions).');
+}
+if (!process.env.JWT_REFRESH_SECRET) {
+  process.env.JWT_REFRESH_SECRET = crypto.randomBytes(48).toString('hex');
+  warnings.push('JWT_REFRESH_SECRET missing — using a random per-boot secret.');
+}
+if (!process.env.DATABASE_URL) {
+  warnings.push('DATABASE_URL missing — database features will fail until it is set.');
+}
+
+if (warnings.length) {
+  console.warn('\n⚠️  Startup env warnings:\n   - ' + warnings.join('\n   - ') + '\n   (site still starts; frontend stays up)\n');
 }
 
 module.exports = {
