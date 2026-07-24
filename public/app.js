@@ -75,7 +75,11 @@ async function api(method, path, body, timeoutMs = 15000) {
     });
     clearTimeout(timer);
     const data = await res.json().catch(() => ({}));
-    if (res.status === 401) { _handleUnauth(); return null; }
+    // A 401 on the auth endpoints (login/register/etc.) is a failed
+    // credential attempt — show its real message. A 401 elsewhere while
+    // a token exists means the session actually expired.
+    const isAuthEndpoint = path.startsWith('/auth/');
+    if (res.status === 401 && !isAuthEndpoint && _token) { _handleUnauth(); return null; }
     if (!res.ok) throw new Error(data.message || data.error || 'Request failed (' + res.status + ')');
     return data;
   } catch (err) {
