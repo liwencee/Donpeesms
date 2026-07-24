@@ -2,13 +2,14 @@
  * DonPeeSMS Backend — Main Entry Point
  * Express + PostgreSQL (Prisma) + JWT + Stripe + NowPayments + PayPal + SMS providers
  */
-// override:true makes the .env FILE authoritative over any stale
-// environment variables set at the host/panel level (e.g. a wrong
-// DATABASE_URL stuck in Hostinger's env panel). PORT is deliberately
-// kept from the host (deleted from the file) so the LiteSpeed proxy
-// still finds the app.
+// Load config from a .env file placed NEXT TO this file (__dirname), and
+// let it override any stale/broken values from the host's env panel.
+// This lets you configure the app by uploading a .env file via File
+// Manager, bypassing Hostinger's Environment Variables panel entirely
+// (which has a bug that drops saved values). PORT is kept from the host
+// so the LiteSpeed/Passenger proxy still finds the app.
 const _hostPort = process.env.PORT;
-require('dotenv').config({ override: true });
+require('dotenv').config({ path: require('path').join(__dirname, '.env'), override: true });
 if (_hostPort) process.env.PORT = _hostPort;
 
 const express      = require('express');
