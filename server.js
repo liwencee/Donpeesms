@@ -143,11 +143,14 @@ app.get('/api/dbcheck', async (_req, res) => {
     } catch (_e) {}
   }
   const info = {
-    build: 'v4-diag',
+    build: 'v5-paths',
     hasEnv: !!raw,
     envLen: raw.length,
     port: portMatch ? portMatch[1] : 'none',
     fileEnvLen, fileEnvPort, envPath,
+    // Exact folders the app reads .env from — put the .env file HERE:
+    putEnvFileHere: path.join(__dirname, '.env'),
+    alsoChecks: path.join(process.cwd(), '.env'),
     redacted: redacted.slice(0, 140)
   };
   const started = Date.now();
