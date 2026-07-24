@@ -1404,6 +1404,10 @@
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
             Overview
           </div>
+          <div class="sidebar-link" onclick="dashNav('products')">
+            <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg>
+            Products
+          </div>
           <div class="sidebar-link" onclick="dashNav('buy-whatsapp')">
             <img src="https://cdn.simpleicons.org/whatsapp/25D366" alt="" width="18" height="18" loading="lazy"/>
             WhatsApp Numbers
@@ -1415,7 +1419,6 @@
           <div class="sidebar-link" onclick="dashNav('orders')">
             <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 12h6M9 16h4"/></svg>
             My Orders
-            <span class="sidebar-badge">12</span>
           </div>
         </nav>
       </div>
@@ -1736,6 +1739,13 @@
             </div>
           </div>
         </div><!-- end overview -->
+
+        <!-- ── PRODUCTS ── -->
+        <div id="dash-products" class="hidden">
+          <h2 class="h3 mb-6" style="font-family:var(--font-head)">Our <span class="text-gradient">Products</span></h2>
+          <div class="prod-filters" id="dashProdFilters"></div>
+          <div class="prod-grid" id="dashProductsGrid"></div>
+        </div>
 
         <!-- â”€â”€ BUY WHATSAPP (dedicated) â”€â”€ -->
         <div id="dash-buy-whatsapp" class="hidden">
@@ -2689,7 +2699,8 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
   </div>
 </div>
 
-<script src="/app.js?v=20260724login"></script>
+<script src="/app.js?v=20260724products2"></script>
 </body>
 </html>
+
 

@@ -311,9 +311,10 @@ function closeSidebar() {
 }
 
 // ── DASHBOARD NAVIGATION ───────────────────────────────────
-const dashSections = ['overview','buy-whatsapp','buy-sms','orders','wallet','transactions','profile','api','referral','webhooks','affiliate'];
+const dashSections = ['overview','products','buy-whatsapp','buy-sms','orders','wallet','transactions','profile','api','referral','webhooks','affiliate'];
 const dashTitles = {
   'overview':       'Dashboard Overview',
+  'products':       'Products',
   'buy-whatsapp':   'Buy WhatsApp Number',
   'buy-sms':        'Buy SMS Number',
   'orders':         'My Orders',
@@ -349,6 +350,7 @@ function dashNav(section) {
   if (section === 'orders') renderAllOrders();
   if (section === 'wallet') renderTransactions();
   if (section === 'transactions') renderAllTransactions();
+  if (section === 'products') { buildDashProdFilters(); buildDashProducts(); }
 
   // Sync the URL: /dashboard for overview, /dashboard/<section> otherwise.
   _setUrl(section === 'overview' ? '/dashboard' : '/dashboard/' + section);
@@ -1202,6 +1204,45 @@ function buildProducts() {
       <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
         onclick="${out ? "showLandingPage('contact')" : "showPage('register')"}">
         ${out ? 'Contact Sales' : 'Buy Now'}
+      </button>
+    </div>`;
+  }).join('');
+}
+
+// ── Dashboard Products (logged-in view) ────────────────────
+let _activeDashProdCat = 'all';
+function buildDashProdFilters() {
+  const el = document.getElementById('dashProdFilters');
+  if (!el) return;
+  el.innerHTML = PRODUCT_CATS.map(c =>
+    `<button class="prod-chip${c.id === _activeDashProdCat ? ' active' : ''}" onclick="filterDashProducts('${c.id}')">${c.label}</button>`
+  ).join('');
+}
+function filterDashProducts(cat) {
+  _activeDashProdCat = cat;
+  buildDashProdFilters();
+  buildDashProducts();
+}
+function buildDashProducts() {
+  const grid = document.getElementById('dashProductsGrid');
+  if (!grid) return;
+  const list = _activeDashProdCat === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === _activeDashProdCat);
+  grid.innerHTML = list.map(p => {
+    const contact = p.stock === 'Contact us';
+    // Route "Buy Now" to the right in-dashboard flow.
+    const action = contact ? "dashNav('affiliate')"
+      : p.cat === 'otp' ? (/whatsapp/i.test(p.name) ? "dashNav('buy-whatsapp')" : "dashNav('buy-sms')")
+      : "dashNav('wallet')";
+    return `<div class="prod-card">
+      <div class="prod-card-top">
+        <span class="prod-dot" style="background:${p.color}"></span>
+        <span class="prod-stock${p.stock === 'Limited' ? ' low' : ''}">${p.stock}</span>
+      </div>
+      <div class="prod-name">${p.name}</div>
+      <div class="prod-desc">${p.desc}</div>
+      <div class="prod-price">${fmtNaira(p.usd)}</div>
+      <button class="btn ${contact ? 'btn-outline' : 'btn-primary'} w-full btn-sm" onclick="${action}">
+        ${contact ? 'Contact' : 'Buy Now'}
       </button>
     </div>`;
   }).join('');

@@ -78,22 +78,9 @@ exports.register = asyncHandler(async (req, res) => {
       referralCode:            generateReferralCode(username.toLowerCase()),
       emailVerificationToken:  verifyHashed,
       emailVerificationExpires: verifyExpires,
-      walletBalance:           0.10  // welcome credit
+      walletBalance:           0  // new accounts start at ₦0
     },
     select: USER_PUBLIC
-  });
-
-  // Welcome bonus transaction
-  await prisma.transaction.create({
-    data: {
-      userId:      user.id,
-      type:        'admin_adjustment',
-      amount:      0.10,
-      balanceAfter: 0.10,
-      method:      'bonus',
-      status:      'success',
-      description: 'Welcome bonus'
-    }
   });
 
   // Verification email (async, non-blocking)
