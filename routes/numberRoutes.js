@@ -20,6 +20,7 @@ const priceRules = [
 ];
 
 // ── PUBLIC ──
+router.get('/provider-check', c.providerCheck);
 router.get('/countries',  c.listCountries);
 router.get('/services',   c.listServices);
 router.get('/price',      priceRules, validate, c.getPrice);

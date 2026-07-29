@@ -44,6 +44,34 @@ const FALLBACK_COUNTRIES = [
   { code: 'TH', name: 'Thailand',       flag: '🇹🇭' }
 ];
 
+// ═════════════════════════════════════════════
+// GET /api/numbers/provider-check  (diagnostic)
+// Verifies the SMS provider API key by calling /balance and /countries.
+// ═════════════════════════════════════════════
+exports.providerCheck = asyncHandler(async (_req, res) => {
+  const provider = getProvider();
+  const out = { provider: provider.name, keyConfigured: false, balance: null, countriesCount: null, errors: {} };
+
+  // Is a key configured? (only relevant fields, never expose the key itself)
+  try {
+    const env = require('../config/env');
+    out.keyConfigured = !!(env.sms.sureVerifications && env.sms.sureVerifications.apiKey);
+    out.baseUrl = env.sms.sureVerifications && env.sms.sureVerifications.baseUrl;
+  } catch (_e) {}
+
+  if (typeof provider.getBalance === 'function') {
+    try { out.balance = await provider.getBalance(); }
+    catch (err) { out.errors.balance = err.response?.data || err.message; }
+  }
+  if (typeof provider.getCountries === 'function') {
+    try { const c = await provider.getCountries(); out.countriesCount = Array.isArray(c) ? c.length : 0; }
+    catch (err) { out.errors.countries = err.response?.data || err.message; }
+  }
+
+  out.ok = out.balance !== null && Object.keys(out.errors).length === 0;
+  res.json(out);
+});
+
 exports.listCountries = asyncHandler(async (_req, res) => {
   const provider = getProvider();
   if (typeof provider.getCountries === 'function') {
