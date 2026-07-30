@@ -20,10 +20,14 @@ const env            = require('../config/env');
 const logger         = require('../utils/logger');
 
 // ── COOKIES ──
+// sameSite:'lax' — frontend and API are served from the same origin
+// (donpeesms.com), so cross-site cookie delivery is not needed. 'lax'
+// blocks the cookie on cross-site POST/PATCH/DELETE requests, closing
+// off CSRF via the cookie-auth fallback in middleware/auth.js.
 const accessCookie = {
   httpOnly: true,
   secure:   env.env === 'production',
-  sameSite: env.env === 'production' ? 'none' : 'lax',
+  sameSite: 'lax',
   maxAge:   7 * 24 * 60 * 60 * 1000
 };
 const refreshCookie = { ...accessCookie, maxAge: 30 * 24 * 60 * 60 * 1000, path: '/api/auth' };
@@ -180,7 +184,7 @@ exports.logout = asyncHandler(async (_req, res) => {
   const base = {
     httpOnly: true,
     secure:   env.env === 'production',
-    sameSite: env.env === 'production' ? 'none' : 'lax'
+    sameSite: 'lax'
   };
   res.clearCookie('accessToken',  { ...base, path: '/' });
   res.clearCookie('refreshToken', { ...base, path: '/api/auth' });

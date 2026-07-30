@@ -27,6 +27,7 @@ const logger        = require('./utils/logger');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { globalLimiter }          = require('./middleware/rateLimiter');
 
+const { protect, requireRole } = require('./middleware/auth');
 const authRoutes         = require('./routes/authRoutes');
 const walletRoutes       = require('./routes/walletRoutes');
 const numberRoutesModule = require('./routes/numberRoutes');
@@ -119,7 +120,9 @@ app.get('/health', (req, res) => {
 
 // DB diagnostic — pings the database with a short timeout so failures
 // surface as a readable error instead of hanging the request.
-app.get('/api/dbcheck', async (_req, res) => {
+// Admin-only: this previously leaked DB host/port details and, during a
+// prior incident, raw engine stack traces to anyone on the internet.
+app.get('/api/dbcheck', protect, requireRole('admin'), async (_req, res) => {
   const { prisma } = require('./config/db');
   const fs = require('fs');
   const path = require('path');

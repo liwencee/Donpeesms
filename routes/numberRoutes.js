@@ -4,7 +4,7 @@
 const router = require('express').Router();
 const { body, query } = require('express-validator');
 const validate = require('../middleware/validate');
-const { protect, requireEmailVerified, apiKeyAuth } = require('../middleware/auth');
+const { protect, requireEmailVerified, requireRole, apiKeyAuth } = require('../middleware/auth');
 const { purchaseLimiter } = require('../middleware/rateLimiter');
 const c = require('../controllers/numberController');
 
@@ -20,10 +20,12 @@ const priceRules = [
 ];
 
 // ── PUBLIC ──
-router.get('/provider-check', c.providerCheck);
 router.get('/countries',  c.listCountries);
 router.get('/services',   c.listServices);
 router.get('/price',      priceRules, validate, c.getPrice);
+
+// ── ADMIN-ONLY — leaks provider balance/config, was previously public ──
+router.get('/provider-check', protect, requireRole('admin'), c.providerCheck);
 
 // ── AUTH (session) ──
 router.use(protect);

@@ -350,7 +350,7 @@ function dashNav(section) {
   if (section === 'orders') renderAllOrders();
   if (section === 'wallet') renderTransactions();
   if (section === 'transactions') renderAllTransactions();
-  if (section === 'products') { buildDashProdFilters(); buildDashProducts(); }
+  if (section === 'products') loadDashProducts();
 
   // Sync the URL: /dashboard for overview, /dashboard/<section> otherwise.
   _setUrl(section === 'overview' ? '/dashboard' : '/dashboard/' + section);
@@ -1199,7 +1199,7 @@ function buildProductFilters() {
     ? [{ id: 'all', label: 'All Products' }, ..._liveCategories.map(c => ({ id: c.slug, label: c.name }))]
     : PRODUCT_CATS;
   el.innerHTML = cats.map(c =>
-    `<button class="prod-chip${c.id === _activeProdCat ? ' active' : ''}" onclick="filterProducts('${c.id}')">${c.label}</button>`
+    `<button class="prod-chip${c.id === _activeProdCat ? ' active' : ''}" onclick="filterProducts('${escapeHTML(c.id)}')">${escapeHTML(c.label)}</button>`
   ).join('');
 }
 
@@ -1259,25 +1259,75 @@ function buildProducts() {
 
 // ── Dashboard Products (logged-in view) ────────────────────
 let _activeDashProdCat = 'all';
+let _liveDashProducts   = null; // populated from /api/products when available
+let _liveDashCategories = null;
+
+async function loadDashProducts() {
+  try {
+    const [prodRes, catRes] = await Promise.all([
+      api('GET', '/products'),
+      api('GET', '/products/categories')
+    ]);
+    if (prodRes?.products?.length) _liveDashProducts = prodRes.products;
+    if (catRes?.categories?.length) _liveDashCategories = catRes.categories;
+  } catch (_e) {
+    // Falls back to the static catalog below.
+  }
+  buildDashProdFilters();
+  buildDashProducts();
+}
+
 function buildDashProdFilters() {
   const el = document.getElementById('dashProdFilters');
   if (!el) return;
-  el.innerHTML = PRODUCT_CATS.map(c =>
-    `<button class="prod-chip${c.id === _activeDashProdCat ? ' active' : ''}" onclick="filterDashProducts('${c.id}')">${c.label}</button>`
+  const cats = _liveDashCategories
+    ? [{ id: 'all', label: 'All Products' }, ..._liveDashCategories.map(c => ({ id: c.slug, label: c.name }))]
+    : PRODUCT_CATS;
+  el.innerHTML = cats.map(c =>
+    `<button class="prod-chip${c.id === _activeDashProdCat ? ' active' : ''}" onclick="filterDashProducts('${escapeHTML(c.id)}')">${escapeHTML(c.label)}</button>`
   ).join('');
 }
+
 function filterDashProducts(cat) {
   _activeDashProdCat = cat;
   buildDashProdFilters();
   buildDashProducts();
 }
+
 function buildDashProducts() {
   const grid = document.getElementById('dashProductsGrid');
   if (!grid) return;
+
+  if (_liveDashProducts) {
+    const list = _activeDashProdCat === 'all'
+      ? _liveDashProducts
+      : _liveDashProducts.filter(p => p.category?.slug === _activeDashProdCat);
+    grid.innerHTML = list.map(p => {
+      const contact = p.stock === 0;
+      const action = contact ? "dashNav('affiliate')"
+        : /whatsapp/i.test(p.name) ? "dashNav('buy-whatsapp')"
+        : /sms|telegram|otp/i.test(p.name) ? "dashNav('buy-sms')"
+        : "dashNav('wallet')";
+      return `<div class="prod-card">
+        <div class="prod-card-top">
+          <span class="prod-dot" style="background:${p.color || '#8b5cf6'}"></span>
+          <span class="prod-stock${contact ? ' low' : ''}">${escapeHTML(p.stockText || 'In stock')}</span>
+        </div>
+        <div class="prod-name">${escapeHTML(p.name)}</div>
+        <div class="prod-desc">${escapeHTML(p.description || '')}</div>
+        <div class="prod-price">${fmtNaira(p.price)}</div>
+        <button class="btn ${contact ? 'btn-outline' : 'btn-primary'} w-full btn-sm" onclick="${action}">
+          ${contact ? 'Contact' : 'Buy Now'}
+        </button>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  // Fallback: static catalog (used only if the API has no products yet).
   const list = _activeDashProdCat === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === _activeDashProdCat);
   grid.innerHTML = list.map(p => {
     const contact = p.stock === 'Contact us';
-    // Route "Buy Now" to the right in-dashboard flow.
     const action = contact ? "dashNav('affiliate')"
       : p.cat === 'otp' ? (/whatsapp/i.test(p.name) ? "dashNav('buy-whatsapp')" : "dashNav('buy-sms')")
       : "dashNav('wallet')";
