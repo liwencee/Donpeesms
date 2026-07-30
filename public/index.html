@@ -2315,6 +2315,14 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></svg>
           Overview
         </div>
+        <div class="admin-nav-link" onclick="adminNav('products')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 2L3 6v14a2 2 0 002 2h14a2 2 0 002-2V6l-3-4z"/><path d="M3 6h18M16 10a4 4 0 01-8 0"/></svg>
+          Products
+        </div>
+        <div class="admin-nav-link" onclick="adminNav('categories')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
+          Categories
+        </div>
         <div class="admin-nav-link" onclick="adminNav('users')">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
           Users
@@ -2383,6 +2391,40 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
               <div class="chart-subtitle">This week</div>
               <div class="chart-canvas-wrap" style="height:220px"><canvas id="adminChartUsers"></canvas></div>
             </div>
+          </div>
+        </div>
+
+        <!-- PRODUCTS -->
+        <div class="admin-section" id="admin-products">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+            <h2 style="font-family:var(--font-head);font-size:1.1rem">All Products</h2>
+            <button class="btn btn-primary btn-sm" onclick="openProductModal()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Add Product
+            </button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead><tr><th></th><th>Name</th><th>Category</th><th>Price</th><th>Stock</th><th>Provider</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="adminProductsBody"><tr><td colspan="8" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- CATEGORIES -->
+        <div class="admin-section" id="admin-categories">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
+            <h2 style="font-family:var(--font-head);font-size:1.1rem">Categories</h2>
+            <button class="btn btn-primary btn-sm" onclick="openCategoryModal()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Add Category
+            </button>
+          </div>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead><tr><th>Icon</th><th>Name</th><th>Slug</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="adminCategoriesBody"><tr><td colspan="6" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr></tbody>
+            </table>
           </div>
         </div>
 
@@ -2557,6 +2599,100 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
 </div><!-- end page-admin -->
 
 
+<!-- ═══════════════════════════════════════ PRODUCT MODAL ═══ -->
+<div class="modal-overlay" id="productModal">
+  <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto">
+    <div class="modal-header">
+      <div class="modal-title" id="productModalTitle">Add Product</div>
+      <div class="modal-close" onclick="closeProductModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div>
+      <input type="hidden" id="prodId"/>
+      <div class="form-group">
+        <label class="form-label">Product Name *</label>
+        <input type="text" class="form-input" id="prodName" placeholder="e.g. WhatsApp Number"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Description</label>
+        <textarea class="form-input" id="prodDesc" rows="2" placeholder="Short description shown on the card"></textarea>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Price (USD) *</label>
+          <input type="number" step="0.01" min="0" class="form-input" id="prodPrice" placeholder="0.08" oninput="updateProdPriceNaira()"/>
+          <div style="font-size:.72rem;color:var(--txt-4);margin-top:4px" id="prodPriceNaira">≈ ₦0</div>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Category</label>
+          <select class="form-select" id="prodCategory"><option value="">— None —</option></select>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label class="form-label">Stock</label>
+          <input type="number" class="form-input" id="prodStock" placeholder="-1 = unlimited"/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Stock Label (optional)</label>
+          <input type="text" class="form-input" id="prodStockLabel" placeholder="Limited / Contact us"/>
+        </div>
+      </div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
+        <div class="form-group">
+          <label class="form-label">API Provider</label>
+          <select class="form-select" id="prodProvider"><option value="manual">Manual fulfilment</option></select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Accent Color</label>
+          <input type="color" class="form-input" id="prodColor" value="#8b5cf6" style="height:44px;padding:4px"/>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Image URL</label>
+        <input type="url" class="form-input" id="prodImage" placeholder="https://... (link to product image)"/>
+      </div>
+      <div style="display:flex;gap:20px;align-items:center;margin:6px 0 20px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem"><input type="checkbox" id="prodEnabled" checked style="accent-color:var(--p-500)"/> Enabled</label>
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem"><input type="checkbox" id="prodFeatured" style="accent-color:var(--p-500)"/> Featured</label>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeProductModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="prodSaveBtn" onclick="saveProduct()">Save Product</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════ CATEGORY MODAL ═══ -->
+<div class="modal-overlay" id="categoryModal">
+  <div class="modal-box" style="max-width:420px">
+    <div class="modal-header">
+      <div class="modal-title" id="categoryModalTitle">Add Category</div>
+      <div class="modal-close" onclick="closeCategoryModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div>
+      <input type="hidden" id="catId"/>
+      <div class="form-group">
+        <label class="form-label">Category Name *</label>
+        <input type="text" class="form-input" id="catName" placeholder="e.g. One-Time OTP"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Icon (emoji, optional)</label>
+        <input type="text" class="form-input" id="catIcon" placeholder="📱" maxlength="4"/>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeCategoryModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="catSaveBtn" onclick="saveCategory()">Save Category</button>
+    </div>
+  </div>
+</div>
+
+
 <!-- ═══════════════════════════════════════ TOPUP MODAL ═══ -->
 <div class="modal-overlay" id="topupModal">
   <div class="modal-box">
@@ -2699,6 +2835,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
   </div>
 </div>
 
-<script src="/app.js?v=20260724fixenc"></script>
+<script src="/app.js?v=20260724pm"></script>
 </body>
 </html>

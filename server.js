@@ -34,6 +34,7 @@ const numberRoutes       = numberRoutesModule;
 const apiV1Numbers       = numberRoutesModule.apiRouter;
 const userRoutes         = require('./routes/userRoutes');
 const paymentRoutes      = require('./routes/paymentRoutes');
+const productRoutes      = require('./routes/productRoutes');
 
 const app = express();
 
@@ -183,6 +184,8 @@ app.use('/api/wallet',  walletRoutes);
 app.use('/api/numbers', numberRoutes);
 app.use('/api/users',   userRoutes);
 app.use('/api/v1',      apiV1Numbers);
+app.use('/api/products', productRoutes.publicRouter);  // public catalog
+app.use('/api/admin',    productRoutes.adminRouter);    // admin CRUD
 
 // ══════════════════════════════════════════
 // STATIC FRONTEND (DonPeeSMS SPA)

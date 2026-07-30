@@ -1172,11 +1172,33 @@ const PRODUCT_CATS = [
 ];
 
 let _activeProdCat = 'all';
+let _liveCategories = null; // populated from /api/products/categories when available
+let _liveProducts   = null; // populated from /api/products when available
+
+// Fetch admin-managed products/categories once; fall back to the static
+// catalog above if the API has nothing yet (e.g. fresh install).
+async function loadLiveProducts() {
+  try {
+    const [prodRes, catRes] = await Promise.all([
+      api('GET', '/products'),
+      api('GET', '/products/categories')
+    ]);
+    if (prodRes?.products?.length) _liveProducts = prodRes.products;
+    if (catRes?.categories?.length) _liveCategories = catRes.categories;
+  } catch (_e) {
+    // API not reachable / no products yet — static catalog is used instead.
+  }
+  buildProductFilters();
+  buildProducts();
+}
 
 function buildProductFilters() {
   const el = document.getElementById('prodFilters');
   if (!el) return;
-  el.innerHTML = PRODUCT_CATS.map(c =>
+  const cats = _liveCategories
+    ? [{ id: 'all', label: 'All Products' }, ..._liveCategories.map(c => ({ id: c.slug, label: c.name }))]
+    : PRODUCT_CATS;
+  el.innerHTML = cats.map(c =>
     `<button class="prod-chip${c.id === _activeProdCat ? ' active' : ''}" onclick="filterProducts('${c.id}')">${c.label}</button>`
   ).join('');
 }
@@ -1190,6 +1212,32 @@ function filterProducts(cat) {
 function buildProducts() {
   const grid = document.getElementById('productsGrid');
   if (!grid) return;
+
+  // Live (admin-managed) products take priority once loaded.
+  if (_liveProducts) {
+    const list = _activeProdCat === 'all'
+      ? _liveProducts
+      : _liveProducts.filter(p => p.category?.slug === _activeProdCat);
+    grid.innerHTML = list.map(p => {
+      const out = p.stock === 0;
+      return `<div class="prod-card">
+        <div class="prod-card-top">
+          <span class="prod-dot" style="background:${p.color || '#8b5cf6'}"></span>
+          <span class="prod-stock${out ? ' low' : ''}">${escapeHTML(p.stockText || 'In stock')}</span>
+        </div>
+        <div class="prod-name">${escapeHTML(p.name)}</div>
+        <div class="prod-desc">${escapeHTML(p.description || '')}</div>
+        <div class="prod-price">${fmtNaira(p.price)}</div>
+        <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
+          onclick="${out ? "showLandingPage('contact')" : "showPage('register')"}">
+          ${out ? 'Contact Sales' : 'Buy Now'}
+        </button>
+      </div>`;
+    }).join('');
+    return;
+  }
+
+  // Fallback: static catalog.
   const list = _activeProdCat === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === _activeProdCat);
   grid.innerHTML = list.map(p => {
     const out = p.stock === 'Contact us';
@@ -2226,9 +2274,9 @@ function initAdminCharts() {
 // ══════════════════════════════════════════
 // ADMIN PANEL
 // ══════════════════════════════════════════
-const adminSections = ['overview','users','pricing','providers','orders','revenue','settings'];
+const adminSections = ['overview','products','categories','users','pricing','providers','orders','revenue','settings'];
 const adminTitles = {
-  'overview':'Admin Overview','users':'User Management','pricing':'Pricing Management',
+  'overview':'Admin Overview','products':'All Products','categories':'Categories','users':'User Management','pricing':'Pricing Management',
   'providers':'Provider Management','orders':'All Orders','revenue':'Revenue Analytics','settings':'Platform Settings'
 };
 
@@ -2243,11 +2291,297 @@ function adminNav(section) {
   const title = document.getElementById('adminTitle');
   if (title) title.textContent = adminTitles[section] || 'Admin';
 
-  if (section === 'overview') { setTimeout(initAdminCharts, 50); }
-  if (section === 'users')    buildAdminUsers();
-  if (section === 'pricing')  buildAdminPricing();
-  if (section === 'orders')   buildAdminOrders();
-  if (section === 'revenue')  setTimeout(()=>{ destroyChart('adminChartMonthly'); initAdminCharts(); }, 50);
+  if (section === 'overview')   { setTimeout(initAdminCharts, 50); }
+  if (section === 'products')   loadAdminProducts();
+  if (section === 'categories') loadAdminCategories();
+  if (section === 'users')      buildAdminUsers();
+  if (section === 'pricing')    buildAdminPricing();
+  if (section === 'orders')     buildAdminOrders();
+  if (section === 'revenue')    setTimeout(()=>{ destroyChart('adminChartMonthly'); initAdminCharts(); }, 50);
+}
+
+// ═════════════════════════════════════════════
+// ADMIN — PRODUCT MANAGEMENT (CRUD)
+// ═════════════════════════════════════════════
+let _adminCategories = [];
+let _adminProviders  = [];
+
+async function loadAdminProducts() {
+  const tbody = document.getElementById('adminProductsBody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr>`;
+  try {
+    const [prodRes, catRes, provRes] = await Promise.all([
+      api('GET', '/admin/products'),
+      api('GET', '/admin/categories'),
+      api('GET', '/admin/providers')
+    ]);
+    _adminCategories = catRes?.categories || [];
+    _adminProviders  = provRes?.providers || [];
+    renderAdminProducts(prodRes?.products || []);
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--error);padding:26px">${escapeHTML(err.message || 'Failed to load products')}</td></tr>`;
+  }
+}
+
+function renderAdminProducts(products) {
+  const tbody = document.getElementById('adminProductsBody');
+  if (!tbody) return;
+  if (!products.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--txt-4);padding:26px">No products yet. Click "Add Product" to create one.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = products.map(p => {
+    const stockText = p.stock === -1 ? 'Unlimited' : p.stockLabel || (p.stock === 0 ? 'Out of stock' : p.stock + ' units');
+    return `<tr>
+      <td><span style="display:inline-block;width:14px;height:14px;border-radius:50%;background:${p.color || 'var(--p-500)'}"></span></td>
+      <td>
+        <div style="font-weight:600">${escapeHTML(p.name)}${p.featured ? ' <span class="badge badge-purple" style="font-size:.65rem">Featured</span>' : ''}</div>
+        <div style="font-size:.75rem;color:var(--txt-4)">${escapeHTML(p.description || '')}</div>
+      </td>
+      <td style="color:var(--txt-3)">${p.category ? escapeHTML(p.category.name) : '—'}</td>
+      <td>${fmtNaira(p.price)}</td>
+      <td style="color:var(--txt-3);font-size:.85rem">${stockText}</td>
+      <td style="color:var(--txt-4);font-size:.82rem">${p.apiProvider === 'manual' ? 'Manual' : escapeHTML(p.apiProvider)}</td>
+      <td>
+        <div class="provider-toggle${p.enabled ? ' on' : ''}" style="position:static" onclick="toggleProductEnabled('${p.id}')"></div>
+      </td>
+      <td style="display:flex;gap:6px">
+        <button class="btn btn-outline btn-sm" onclick="openProductModal('${p.id}')">Edit</button>
+        <button class="btn btn-outline btn-sm" style="color:var(--error)" onclick="deleteProduct('${p.id}')">Delete</button>
+      </td>
+    </tr>`;
+  }).join('');
+}
+
+function _fillProductSelects() {
+  const catSel = document.getElementById('prodCategory');
+  if (catSel) {
+    catSel.innerHTML = '<option value="">— None —</option>' +
+      _adminCategories.map(c => `<option value="${c.id}">${escapeHTML(c.name)}</option>`).join('');
+  }
+  const provSel = document.getElementById('prodProvider');
+  if (provSel) {
+    provSel.innerHTML = _adminProviders.map(p =>
+      `<option value="${p.id}">${escapeHTML(p.name)}${p.configured ? '' : ' (not configured)'}</option>`
+    ).join('') || '<option value="manual">Manual fulfilment</option>';
+  }
+}
+
+async function openProductModal(id) {
+  _fillProductSelects();
+  const modal = document.getElementById('productModal');
+  const title = document.getElementById('productModalTitle');
+  document.getElementById('prodId').value = '';
+  document.getElementById('prodName').value = '';
+  document.getElementById('prodDesc').value = '';
+  document.getElementById('prodPrice').value = '';
+  document.getElementById('prodCategory').value = '';
+  document.getElementById('prodStock').value = '-1';
+  document.getElementById('prodStockLabel').value = '';
+  document.getElementById('prodProvider').value = 'manual';
+  document.getElementById('prodColor').value = '#8b5cf6';
+  document.getElementById('prodImage').value = '';
+  document.getElementById('prodEnabled').checked = true;
+  document.getElementById('prodFeatured').checked = false;
+  updateProdPriceNaira();
+
+  if (id) {
+    title.textContent = 'Edit Product';
+    try {
+      const res = await api('GET', '/admin/products');
+      const p = (res?.products || []).find(x => x.id === id);
+      if (p) {
+        document.getElementById('prodId').value = p.id;
+        document.getElementById('prodName').value = p.name;
+        document.getElementById('prodDesc').value = p.description || '';
+        document.getElementById('prodPrice').value = p.price;
+        document.getElementById('prodCategory').value = p.categoryId || '';
+        document.getElementById('prodStock').value = p.stock;
+        document.getElementById('prodStockLabel').value = p.stockLabel || '';
+        document.getElementById('prodProvider').value = p.apiProvider || 'manual';
+        document.getElementById('prodColor').value = p.color || '#8b5cf6';
+        document.getElementById('prodImage').value = p.imageUrl || '';
+        document.getElementById('prodEnabled').checked = !!p.enabled;
+        document.getElementById('prodFeatured').checked = !!p.featured;
+        updateProdPriceNaira();
+      }
+    } catch (err) {
+      showToast(err.message || 'Failed to load product', 'error');
+    }
+  } else {
+    title.textContent = 'Add Product';
+  }
+  modal.classList.add('open');
+}
+
+function closeProductModal() {
+  document.getElementById('productModal').classList.remove('open');
+}
+
+function updateProdPriceNaira() {
+  const usd = parseFloat(document.getElementById('prodPrice')?.value || 0);
+  const el = document.getElementById('prodPriceNaira');
+  if (el) el.textContent = '≈ ' + fmtNaira(usd);
+}
+
+async function saveProduct() {
+  const id = document.getElementById('prodId').value;
+  const name = document.getElementById('prodName').value.trim();
+  const price = parseFloat(document.getElementById('prodPrice').value);
+  if (!name) return showToast('Product name is required', 'warning');
+  if (isNaN(price) || price < 0) return showToast('Enter a valid price', 'warning');
+
+  const payload = {
+    name,
+    description: document.getElementById('prodDesc').value.trim(),
+    price,
+    categoryId: document.getElementById('prodCategory').value || null,
+    stock: parseInt(document.getElementById('prodStock').value || '-1', 10),
+    stockLabel: document.getElementById('prodStockLabel').value.trim(),
+    apiProvider: document.getElementById('prodProvider').value,
+    color: document.getElementById('prodColor').value,
+    imageUrl: document.getElementById('prodImage').value.trim(),
+    enabled: document.getElementById('prodEnabled').checked,
+    featured: document.getElementById('prodFeatured').checked
+  };
+
+  const btn = document.getElementById('prodSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    if (id) await api('PATCH', '/admin/products/' + id, payload);
+    else    await api('POST', '/admin/products', payload);
+    showToast(id ? 'Product updated' : 'Product created', 'success');
+    closeProductModal();
+    loadAdminProducts();
+  } catch (err) {
+    showToast(err.message || 'Failed to save product', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Product';
+  }
+}
+
+async function toggleProductEnabled(id) {
+  try {
+    await api('PATCH', '/admin/products/' + id + '/toggle');
+    loadAdminProducts();
+  } catch (err) {
+    showToast(err.message || 'Failed to toggle product', 'error');
+  }
+}
+
+async function deleteProduct(id) {
+  if (!confirm('Delete this product? This cannot be undone.')) return;
+  try {
+    await api('DELETE', '/admin/products/' + id);
+    showToast('Product deleted', 'success');
+    loadAdminProducts();
+  } catch (err) {
+    showToast(err.message || 'Failed to delete product', 'error');
+  }
+}
+
+// ── CATEGORIES ──────────────────────────────────────────────
+async function loadAdminCategories() {
+  const tbody = document.getElementById('adminCategoriesBody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr>`;
+  try {
+    const res = await api('GET', '/admin/categories');
+    _adminCategories = res?.categories || [];
+    renderAdminCategories(_adminCategories);
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--error);padding:26px">${escapeHTML(err.message || 'Failed to load categories')}</td></tr>`;
+  }
+}
+
+function renderAdminCategories(cats) {
+  const tbody = document.getElementById('adminCategoriesBody');
+  if (!tbody) return;
+  if (!cats.length) {
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;color:var(--txt-4);padding:26px">No categories yet.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = cats.map(c => `<tr>
+    <td style="font-size:1.1rem">${c.icon || '📦'}</td>
+    <td style="font-weight:600">${escapeHTML(c.name)}</td>
+    <td style="color:var(--txt-4);font-size:.82rem">${escapeHTML(c.slug)}</td>
+    <td>${c.productCount ?? 0}</td>
+    <td><div class="provider-toggle${c.active ? ' on' : ''}" style="position:static" onclick="toggleCategoryActive('${c.id}', ${c.active})"></div></td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-outline btn-sm" onclick="openCategoryModal('${c.id}')">Edit</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--error)" onclick="deleteCategory('${c.id}')">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+
+function openCategoryModal(id) {
+  const modal = document.getElementById('categoryModal');
+  const title = document.getElementById('categoryModalTitle');
+  document.getElementById('catId').value = '';
+  document.getElementById('catName').value = '';
+  document.getElementById('catIcon').value = '';
+  if (id) {
+    const c = _adminCategories.find(x => x.id === id);
+    title.textContent = 'Edit Category';
+    if (c) {
+      document.getElementById('catId').value = c.id;
+      document.getElementById('catName').value = c.name;
+      document.getElementById('catIcon').value = c.icon || '';
+    }
+  } else {
+    title.textContent = 'Add Category';
+  }
+  modal.classList.add('open');
+}
+
+function closeCategoryModal() {
+  document.getElementById('categoryModal').classList.remove('open');
+}
+
+async function saveCategory() {
+  const id = document.getElementById('catId').value;
+  const name = document.getElementById('catName').value.trim();
+  if (!name) return showToast('Category name is required', 'warning');
+  const payload = { name, icon: document.getElementById('catIcon').value.trim() };
+
+  const btn = document.getElementById('catSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    if (id) await api('PATCH', '/admin/categories/' + id, payload);
+    else    await api('POST', '/admin/categories', payload);
+    showToast(id ? 'Category updated' : 'Category created', 'success');
+    closeCategoryModal();
+    loadAdminCategories();
+  } catch (err) {
+    showToast(err.message || 'Failed to save category', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Category';
+  }
+}
+
+async function toggleCategoryActive(id, current) {
+  try {
+    await api('PATCH', '/admin/categories/' + id, { active: !current });
+    loadAdminCategories();
+  } catch (err) {
+    showToast(err.message || 'Failed to toggle category', 'error');
+  }
+}
+
+async function deleteCategory(id) {
+  if (!confirm('Delete this category? Products in it will become uncategorized.')) return;
+  try {
+    await api('DELETE', '/admin/categories/' + id);
+    showToast('Category deleted', 'success');
+    loadAdminCategories();
+  } catch (err) {
+    showToast(err.message || 'Failed to delete category', 'error');
+  }
 }
 
 const mockUsers = [
@@ -2389,6 +2723,7 @@ document.addEventListener('DOMContentLoaded', () => {
   buildAppChips();
   buildProductFilters();
   buildProducts();
+  loadLiveProducts(); // swaps in admin-managed products once fetched
   buildFAQ();
   buildParticles();
   // Convert all hard-coded "$N" text in the static HTML to Naira.

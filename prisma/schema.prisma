@@ -225,3 +225,59 @@ model ApiKey {
   @@index([keyPrefix])
   @@index([keyHash])
 }
+
+// ──────────────────────────────────────────────
+// CATEGORY  (product grouping, admin-managed)
+// ──────────────────────────────────────────────
+model Category {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name      String  @unique @db.VarChar(80)
+  slug      String  @unique @db.VarChar(80)
+  icon      String? // small emoji or icon key
+  sortOrder Int     @default(0)
+  active    Boolean @default(true)
+
+  products Product[]
+
+  @@index([slug])
+  @@index([active])
+}
+
+// ──────────────────────────────────────────────
+// PRODUCT  (admin-managed catalog item)
+// ──────────────────────────────────────────────
+model Product {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name        String  @db.VarChar(160)
+  description String?
+  price       Float   // stored in USD; UI displays Naira via the app's rate
+  imageUrl    String? // link to the product image
+  color       String? // accent color for the card, e.g. #25D366
+
+  // Inventory: stock -1 = unlimited, 0 = out of stock, >0 = quantity.
+  stock      Int     @default(-1)
+  stockLabel String? // optional manual label ("Limited", "Contact us")
+
+  // Fulfilment: which API provider (if any) powers this product.
+  // sureverifications | manual | none
+  apiProvider String @default("manual")
+
+  enabled   Boolean @default(true)
+  featured  Boolean @default(false)
+  sortOrder Int     @default(0)
+
+  metadata Json @default("{}")
+
+  categoryId String?
+  category   Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+
+  @@index([enabled])
+  @@index([categoryId])
+  @@index([sortOrder])
+}
