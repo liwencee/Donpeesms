@@ -133,7 +133,9 @@ function _setUrl(path) {
 // Render the page that matches the current URL (used on load + back/forward).
 function route() {
   const raw = window.location.pathname.replace(/\/+$/, '') || '/';
-  const parts = raw.split('/').filter(Boolean);
+  // Path matching is case-insensitive (e.g. /ADMIN must route the same
+  // as /admin) — lowercase every segment before comparing.
+  const parts = raw.split('/').filter(Boolean).map(s => s.toLowerCase());
   _suppressUrl = true;
   try {
     if (parts.length === 0) { showPage('landing'); showLandingPage('home'); }
