@@ -2543,41 +2543,60 @@ async function deleteCategory(id) {
   }
 }
 
-const mockUsers = [
-  { id:'USR001', name:'James Mitchell', email:'james@example.com', balance:24.50, orders:47, joined:'2024-12-01', status:'active' },
-  { id:'USR002', name:'Amir Khalil',    email:'amir@example.com',  balance:102.00, orders:218, joined:'2024-09-15', status:'active' },
-  { id:'USR003', name:'Sofia Carvalho', email:'sofia@example.com', balance:8.20,  orders:31,  joined:'2025-01-20', status:'active' },
-  { id:'USR004', name:'Nguyen Van An',  email:'nguyen@example.com',balance:0.00,  orders:5,   joined:'2025-04-10', status:'unverified' },
-  { id:'USR005', name:'Ahmed Hassan',   email:'ahmed@example.com', balance:45.80, orders:92,  joined:'2024-11-05', status:'active' },
-  { id:'USR006', name:'Maria Garcia',   email:'maria@example.com', balance:0.00,  orders:2,   joined:'2025-05-01', status:'banned' },
-  { id:'USR007', name:'Chen Wei',       email:'chen@example.com',  balance:67.30, orders:154, joined:'2024-08-22', status:'active' },
-];
+let _adminUsersCache = [];
 
-function buildAdminUsers(filter='') {
+async function buildAdminUsers(filter='') {
   const tbody = document.getElementById('adminUsersBody');
   if (!tbody) return;
-  const users = filter ? mockUsers.filter(u=>u.name.toLowerCase().includes(filter.toLowerCase())||u.email.includes(filter.toLowerCase())) : mockUsers;
+  tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr>`;
+  try {
+    const res = await api('GET', '/admin/users' + (filter ? '?search=' + encodeURIComponent(filter) : ''));
+    _adminUsersCache = res?.users || [];
+    renderAdminUsers(_adminUsersCache);
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--error);padding:26px">${escapeHTML(err.message || 'Failed to load users')}</td></tr>`;
+  }
+}
+
+function renderAdminUsers(users) {
+  const tbody = document.getElementById('adminUsersBody');
+  if (!tbody) return;
+  if (!users.length) {
+    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--txt-4);padding:26px">No users yet.</td></tr>`;
+    return;
+  }
   tbody.innerHTML = users.map(u => {
-    const stBadge = u.status==='active' ? '<span class="badge badge-success">Active</span>'
-      : u.status==='banned' ? '<span class="badge" style="background:rgba(239,68,68,.15);color:var(--error)">Banned</span>'
+    const banned = u.status === 'banned';
+    const stBadge = banned ? '<span class="badge" style="background:rgba(239,68,68,.15);color:var(--error)">Banned</span>'
+      : u.status === 'active' ? '<span class="badge badge-success">Active</span>'
       : '<span class="badge">Unverified</span>';
+    const joined = u.joined ? new Date(u.joined).toISOString().slice(0, 10) : '—';
     return `<tr>
       <td><input type="checkbox" style="accent-color:var(--p-500)"/></td>
-      <td><div style="font-weight:600">${u.name}</div><div style="font-size:.75rem;color:var(--txt-4)">${u.id}</div></td>
-      <td style="color:var(--txt-3)">${u.email}</td>
+      <td><div style="font-weight:600">${escapeHTML(u.name)}</div><div style="font-size:.75rem;color:var(--txt-4)">${escapeHTML(u.email)}</div></td>
+      <td style="color:var(--txt-3)">${escapeHTML(u.email)}</td>
       <td style="color:${u.balance>0?'var(--success)':'var(--txt-4)'}">${fmtNaira(u.balance)}</td>
       <td>${u.orders}</td>
-      <td style="color:var(--txt-4);font-size:.82rem">${u.joined}</td>
+      <td style="color:var(--txt-4);font-size:.82rem">${joined}</td>
       <td>${stBadge}</td>
       <td style="display:flex;gap:6px">
-        <button class="btn btn-outline btn-sm" onclick="showToast('Viewing ${u.name}','info')">View</button>
-        <button class="btn btn-outline btn-sm" style="color:${u.status==='banned'?'var(--success)':'var(--error)'}" onclick="showToast('${u.status==='banned'?'User unbanned':'User banned'}','${u.status==='banned'?'success':'warning'}')">${u.status==='banned'?'Unban':'Ban'}</button>
+        <button class="btn btn-outline btn-sm" onclick="showToast('User: ${escapeHTML(u.email)}','info')">View</button>
+        ${u.role === 'admin' ? '' : `<button class="btn btn-outline btn-sm" style="color:${banned?'var(--success)':'var(--error)'}" onclick="toggleAdminUserBan('${u.id}')">${banned?'Unban':'Ban'}</button>`}
       </td>
     </tr>`;
   }).join('');
 }
 
 function filterAdminUsers(val) { buildAdminUsers(val); }
+
+async function toggleAdminUserBan(id) {
+  try {
+    await api('PATCH', '/admin/users/' + id + '/ban');
+    buildAdminUsers();
+  } catch (err) {
+    showToast(err.message || 'Failed to update user', 'error');
+  }
+}
 
 const pricingRows = [
   { country:'🇺🇸 United States', wa:0.12, sms:0.08, provider:'5SIM',        markup:35 },
@@ -2604,28 +2623,37 @@ function buildAdminPricing() {
     </tr>`).join('');
 }
 
-function buildAdminOrders() {
+async function buildAdminOrders() {
   const tbody = document.getElementById('adminOrdersBody');
   if (!tbody) return;
-  const sample = [
-    { id:'ORD-4892', user:'james@example.com', svc:'WhatsApp', num:'+12025550142', country:'US', cost:0.12, prov:'5SIM',   status:'completed' },
-    { id:'ORD-4891', user:'amir@example.com',  svc:'SMS',      num:'+447700900142', country:'GB', cost:0.07, prov:'5SIM',   status:'active' },
-    { id:'ORD-4890', user:'sofia@example.com', svc:'SMS',      num:'+4915221234567',country:'DE', cost:0.07, prov:'SA',     status:'expired' },
-    { id:'ORD-4889', user:'chen@example.com',  svc:'WhatsApp', num:'+919876543210', country:'IN', cost:0.08, prov:'5SIM',   status:'completed' },
-    { id:'ORD-4888', user:'ahmed@example.com', svc:'SMS',      num:'+5511987654321',country:'BR', cost:0.06, prov:'5SIM',   status:'refunded' },
-  ];
-  const statusMap = { completed:'badge-success', active:'badge-purple', expired:'', refunded:'' };
-  const colorMap  = { completed:'var(--success)', active:'var(--p-300)', expired:'var(--txt-4)', refunded:'var(--warning)' };
-  tbody.innerHTML = sample.map(o => `<tr>
-    <td style="font-family:var(--font-head);font-size:.78rem">${o.id}</td>
-    <td style="color:var(--txt-3);font-size:.82rem">${o.user}</td>
-    <td>${o.svc}</td>
-    <td style="font-family:var(--font-head);font-size:.82rem;color:var(--p-200)">${o.num}</td>
-    <td>${o.country}</td>
+  tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr>`;
+  try {
+    const res = await api('GET', '/admin/orders');
+    renderAdminOrders(res?.orders || []);
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--error);padding:26px">${escapeHTML(err.message || 'Failed to load orders')}</td></tr>`;
+  }
+}
+
+function renderAdminOrders(orders) {
+  const tbody = document.getElementById('adminOrdersBody');
+  if (!tbody) return;
+  if (!orders.length) {
+    tbody.innerHTML = `<tr><td colspan="9" style="text-align:center;color:var(--txt-4);padding:26px">No orders yet.</td></tr>`;
+    return;
+  }
+  const statusMap = { completed:'badge-success', received:'badge-success', active:'badge-purple', expired:'', refunded:'', cancelled:'', pending:'' };
+  const colorMap  = { completed:'var(--success)', received:'var(--success)', active:'var(--p-300)', expired:'var(--txt-4)', refunded:'var(--warning)', cancelled:'var(--error)', pending:'var(--txt-4)' };
+  tbody.innerHTML = orders.map(o => `<tr>
+    <td style="font-family:var(--font-head);font-size:.78rem">${escapeHTML(o.id)}</td>
+    <td style="color:var(--txt-3);font-size:.82rem">${escapeHTML(o.user)}</td>
+    <td>${escapeHTML(o.service || '')}</td>
+    <td style="font-family:var(--font-head);font-size:.82rem;color:var(--p-200)">${escapeHTML(o.number || '')}</td>
+    <td>${escapeHTML(o.country || '')}</td>
     <td>${fmtNaira(o.cost)}</td>
-    <td style="color:var(--txt-4)">${o.prov}</td>
-    <td><span class="badge ${statusMap[o.status]||''}" style="color:${colorMap[o.status]||'var(--txt-4)'}">${o.status.charAt(0).toUpperCase()+o.status.slice(1)}</span></td>
-    <td style="color:var(--txt-4);font-size:.78rem">Just now</td>
+    <td style="color:var(--txt-4)">${escapeHTML(o.provider || '')}</td>
+    <td><span class="badge ${statusMap[o.status]||''}" style="color:${colorMap[o.status]||'var(--txt-4)'}">${escapeHTML((o.status||'').charAt(0).toUpperCase()+(o.status||'').slice(1))}</span></td>
+    <td style="color:var(--txt-4);font-size:.78rem">${o.date ? new Date(o.date).toLocaleString() : '—'}</td>
   </tr>`).join('');
 }
 
