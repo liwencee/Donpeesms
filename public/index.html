@@ -2312,6 +2312,10 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM14 14h6v6h-6z"/></svg>
           Categories
         </div>
+        <div class="admin-nav-link" onclick="adminNav('apiproviders')">
+          <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M10 13a5 5 0 007.54.54l3-3a5 5 0 00-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 00-7.54-.54l-3 3a5 5 0 007.07 7.07l1.71-1.71"/></svg>
+          API Providers
+        </div>
         <div class="admin-nav-link" onclick="adminNav('users')">
           <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>
           Users
@@ -2413,6 +2417,26 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
             <table class="data-table">
               <thead><tr><th>Icon</th><th>Name</th><th>Slug</th><th>Products</th><th>Status</th><th>Actions</th></tr></thead>
               <tbody id="adminCategoriesBody"><tr><td colspan="6" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- API PROVIDERS -->
+        <div class="admin-section" id="admin-apiproviders">
+          <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;flex-wrap:wrap;gap:12px">
+            <h2 style="font-family:var(--font-head);font-size:1.1rem">API Providers</h2>
+            <button class="btn btn-primary btn-sm" onclick="openApiProviderModal()">
+              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+              Add Provider
+            </button>
+          </div>
+          <p style="color:var(--txt-4);font-size:.84rem;margin-bottom:20px">
+            Third-party integrations available for product fulfilment. API keys are encrypted before storage and never shown again after saving.
+          </p>
+          <div style="overflow-x:auto">
+            <table class="data-table">
+              <thead><tr><th>Name</th><th>Slug</th><th>Base URL</th><th>Auth Header</th><th>API Key</th><th>Status</th><th>Actions</th></tr></thead>
+              <tbody id="adminApiProvidersBody"><tr><td colspan="7" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr></tbody>
             </table>
           </div>
         </div>
@@ -2681,6 +2705,51 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
   </div>
 </div>
 
+<!-- ═══════════════════════════════════════ API PROVIDER MODAL ═══ -->
+<div class="modal-overlay" id="apiProviderModal">
+  <div class="modal-box" style="max-width:520px;max-height:88vh;overflow-y:auto">
+    <div class="modal-header">
+      <div class="modal-title" id="apiProviderModalTitle">Add API Provider</div>
+      <div class="modal-close" onclick="closeApiProviderModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div>
+      <input type="hidden" id="apName"/>
+      <input type="hidden" id="apId"/>
+      <div class="form-group">
+        <label class="form-label">Provider Name *</label>
+        <input type="text" class="form-input" id="apNameInput" placeholder="e.g. SMS-Activate"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Base URL *</label>
+        <input type="url" class="form-input" id="apBaseUrl" placeholder="https://api.example.com/v1"/>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Auth Header Name</label>
+        <input type="text" class="form-input" id="apAuthHeader" placeholder="x-api-key" value="x-api-key"/>
+        <div style="font-size:.72rem;color:var(--txt-4);margin-top:4px">The header the key is sent in (e.g. x-api-key, Authorization).</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">API Key</label>
+        <input type="password" class="form-input" id="apApiKey" placeholder="Paste the provider's API key" autocomplete="new-password"/>
+        <div style="font-size:.72rem;color:var(--txt-4);margin-top:4px" id="apKeyHint">Encrypted before storage. Leave blank when editing to keep the existing key.</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notes (optional)</label>
+        <textarea class="form-input" id="apNotes" rows="2" placeholder="Anything worth remembering about this integration"></textarea>
+      </div>
+      <div style="display:flex;gap:20px;align-items:center;margin:6px 0 20px">
+        <label style="display:flex;align-items:center;gap:8px;cursor:pointer;font-size:.85rem"><input type="checkbox" id="apEnabled" checked style="accent-color:var(--p-500)"/> Enabled</label>
+      </div>
+    </div>
+    <div style="display:flex;gap:12px">
+      <button class="btn btn-outline" style="flex:1" onclick="closeApiProviderModal()">Cancel</button>
+      <button class="btn btn-primary" style="flex:1" id="apSaveBtn" onclick="saveApiProvider()">Save Provider</button>
+    </div>
+  </div>
+</div>
+
 
 <!-- ═══════════════════════════════════════ TOPUP MODAL ═══ -->
 <div class="modal-overlay" id="topupModal">
@@ -2824,6 +2893,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
   </div>
 </div>
 
-<script src="/app.js?v=20260725realusers"></script>
+<script src="/app.js?v=20260725apiprov"></script>
 </body>
 </html>

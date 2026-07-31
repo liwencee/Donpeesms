@@ -2233,9 +2233,9 @@ function initAdminCharts() {
 // ══════════════════════════════════════════
 // ADMIN PANEL
 // ══════════════════════════════════════════
-const adminSections = ['overview','products','categories','users','pricing','providers','orders','revenue','settings'];
+const adminSections = ['overview','products','categories','apiproviders','users','pricing','providers','orders','revenue','settings'];
 const adminTitles = {
-  'overview':'Admin Overview','products':'All Products','categories':'Categories','users':'User Management','pricing':'Pricing Management',
+  'overview':'Admin Overview','products':'All Products','categories':'Categories','apiproviders':'API Providers','users':'User Management','pricing':'Pricing Management',
   'providers':'Provider Management','orders':'All Orders','revenue':'Revenue Analytics','settings':'Platform Settings'
 };
 
@@ -2253,6 +2253,7 @@ function adminNav(section) {
   if (section === 'overview')   { setTimeout(initAdminCharts, 50); }
   if (section === 'products')   loadAdminProducts();
   if (section === 'categories') loadAdminCategories();
+  if (section === 'apiproviders') loadApiProviders();
   if (section === 'users')      buildAdminUsers();
   if (section === 'pricing')    buildAdminPricing();
   if (section === 'orders')     buildAdminOrders();
@@ -2540,6 +2541,134 @@ async function deleteCategory(id) {
     loadAdminCategories();
   } catch (err) {
     showToast(err.message || 'Failed to delete category', 'error');
+  }
+}
+
+// ═════════════════════════════════════════════
+// ADMIN — API PROVIDERS (CRUD)
+// ═════════════════════════════════════════════
+let _apiProvidersCache = [];
+
+async function loadApiProviders() {
+  const tbody = document.getElementById('adminApiProvidersBody');
+  if (!tbody) return;
+  tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr>`;
+  try {
+    const res = await api('GET', '/admin/api-providers');
+    _apiProvidersCache = res?.providers || [];
+    renderApiProviders(_apiProvidersCache);
+  } catch (err) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--error);padding:26px">${escapeHTML(err.message || 'Failed to load providers')}</td></tr>`;
+  }
+}
+
+function renderApiProviders(providers) {
+  const tbody = document.getElementById('adminApiProvidersBody');
+  if (!tbody) return;
+  if (!providers.length) {
+    tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;color:var(--txt-4);padding:26px">No custom providers yet. Click "Add Provider" to connect one.</td></tr>`;
+    return;
+  }
+  tbody.innerHTML = providers.map(p => `<tr>
+    <td style="font-weight:600">${escapeHTML(p.name)}</td>
+    <td style="color:var(--txt-4);font-size:.82rem">${escapeHTML(p.slug)}</td>
+    <td style="color:var(--txt-3);font-size:.82rem;max-width:220px;overflow:hidden;text-overflow:ellipsis">${escapeHTML(p.baseUrl)}</td>
+    <td style="color:var(--txt-4);font-size:.82rem">${escapeHTML(p.authHeader)}</td>
+    <td style="font-size:.82rem">${p.hasKey ? '<span style="color:var(--success)">' + escapeHTML(p.keyPreview || '••••••••') + '</span>' : '<span style="color:var(--warning)">Not set</span>'}</td>
+    <td><div class="provider-toggle${p.enabled ? ' on' : ''}" style="position:static" onclick="toggleApiProvider('${p.id}')"></div></td>
+    <td style="display:flex;gap:6px">
+      <button class="btn btn-outline btn-sm" onclick="openApiProviderModal('${p.id}')">Edit</button>
+      <button class="btn btn-outline btn-sm" style="color:var(--error)" onclick="deleteApiProvider('${p.id}')">Delete</button>
+    </td>
+  </tr>`).join('');
+}
+
+function openApiProviderModal(id) {
+  const modal = document.getElementById('apiProviderModal');
+  const title = document.getElementById('apiProviderModalTitle');
+  const hint  = document.getElementById('apKeyHint');
+  document.getElementById('apId').value = '';
+  document.getElementById('apNameInput').value = '';
+  document.getElementById('apBaseUrl').value = '';
+  document.getElementById('apAuthHeader').value = 'x-api-key';
+  document.getElementById('apApiKey').value = '';
+  document.getElementById('apNotes').value = '';
+  document.getElementById('apEnabled').checked = true;
+
+  if (id) {
+    const p = _apiProvidersCache.find(x => x.id === id);
+    title.textContent = 'Edit API Provider';
+    if (hint) hint.textContent = 'Leave blank to keep the existing key. Entering a new value replaces it.';
+    if (p) {
+      document.getElementById('apId').value = p.id;
+      document.getElementById('apNameInput').value = p.name;
+      document.getElementById('apBaseUrl').value = p.baseUrl;
+      document.getElementById('apAuthHeader').value = p.authHeader || 'x-api-key';
+      document.getElementById('apNotes').value = p.notes || '';
+      document.getElementById('apEnabled').checked = !!p.enabled;
+    }
+  } else {
+    title.textContent = 'Add API Provider';
+    if (hint) hint.textContent = 'Encrypted before storage and never shown in full again.';
+  }
+  modal.classList.add('open');
+}
+
+function closeApiProviderModal() {
+  document.getElementById('apiProviderModal').classList.remove('open');
+}
+
+async function saveApiProvider() {
+  const id      = document.getElementById('apId').value;
+  const name    = document.getElementById('apNameInput').value.trim();
+  const baseUrl = document.getElementById('apBaseUrl').value.trim();
+  if (!name)    return showToast('Provider name is required', 'warning');
+  if (!baseUrl) return showToast('Base URL is required', 'warning');
+
+  const payload = {
+    name,
+    baseUrl,
+    authHeader: document.getElementById('apAuthHeader').value.trim() || 'x-api-key',
+    notes: document.getElementById('apNotes').value.trim(),
+    enabled: document.getElementById('apEnabled').checked
+  };
+  const key = document.getElementById('apApiKey').value;
+  if (key) payload.apiKey = key; // omitted when blank so the stored key is kept
+
+  const btn = document.getElementById('apSaveBtn');
+  btn.disabled = true;
+  btn.textContent = 'Saving...';
+  try {
+    if (id) await api('PATCH', '/admin/api-providers/' + id, payload);
+    else    await api('POST', '/admin/api-providers', payload);
+    showToast(id ? 'Provider updated' : 'Provider added', 'success');
+    closeApiProviderModal();
+    loadApiProviders();
+  } catch (err) {
+    showToast(err.message || 'Failed to save provider', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Save Provider';
+  }
+}
+
+async function toggleApiProvider(id) {
+  try {
+    await api('PATCH', '/admin/api-providers/' + id + '/toggle');
+    loadApiProviders();
+  } catch (err) {
+    showToast(err.message || 'Failed to toggle provider', 'error');
+  }
+}
+
+async function deleteApiProvider(id) {
+  if (!confirm('Delete this provider? Products assigned to it will need reassigning.')) return;
+  try {
+    await api('DELETE', '/admin/api-providers/' + id);
+    showToast('Provider deleted', 'success');
+    loadApiProviders();
+  } catch (err) {
+    showToast(err.message || 'Failed to delete provider', 'error');
   }
 }
 

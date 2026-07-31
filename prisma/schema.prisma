@@ -281,3 +281,26 @@ model Product {
   @@index([categoryId])
   @@index([sortOrder])
 }
+
+// ──────────────────────────────────────────────
+// API PROVIDER  (admin-managed 3rd-party integration)
+// Product.apiProvider (a plain string) matches this row's slug.
+// The API key is stored encrypted (see utils/crypto.js) and is never
+// returned in full over the API — only a masked preview.
+// ──────────────────────────────────────────────
+model ApiProvider {
+  id        String   @id @default(uuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  name       String  @unique @db.VarChar(80)
+  slug       String  @unique @db.VarChar(80) // used as Product.apiProvider value
+  baseUrl    String
+  authHeader String  @default("x-api-key")   // header name used to send the key
+  apiKeyEnc  String?                          // encrypted; null = no key set
+  notes      String?
+  enabled    Boolean @default(true)
+
+  @@index([slug])
+  @@index([enabled])
+}

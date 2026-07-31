@@ -200,13 +200,19 @@ exports.adminDeleteCategory = asyncHandler(async (req, res) => {
 });
 
 // GET /api/admin/providers — available API providers for assignment
+// (built-in code-level providers + admin-added custom ones, merged).
 exports.adminListProviders = asyncHandler(async (_req, res) => {
   const env = require('../config/env');
+  const builtIn = [
+    { id: 'manual',            name: 'Manual fulfilment', configured: true },
+    { id: 'sureverifications', name: 'SureVerifications', configured: !!(env.sms.sureVerifications && env.sms.sureVerifications.apiKey) }
+  ];
+  const custom = await prisma.apiProvider.findMany({ where: { enabled: true }, orderBy: { name: 'asc' } });
   res.json({
     success: true,
     providers: [
-      { id: 'manual',           name: 'Manual fulfilment',  configured: true },
-      { id: 'sureverifications', name: 'SureVerifications',  configured: !!(env.sms.sureVerifications && env.sms.sureVerifications.apiKey) }
+      ...builtIn,
+      ...custom.map(p => ({ id: p.slug, name: p.name, configured: !!p.apiKeyEnc }))
     ]
   });
 });
