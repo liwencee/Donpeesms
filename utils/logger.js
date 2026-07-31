@@ -26,7 +26,7 @@ const formatProd = winston.format.combine(
   winston.format.json()
 );
 
-const logger = winston.createLogger({
+const rawLogger = winston.createLogger({
   level,
   format: isProd ? formatProd : formatDev,
   transports: [
@@ -36,5 +36,27 @@ const logger = winston.createLogger({
   ],
   exitOnError: false
 });
+
+// Winston's log methods take a single message (or message + metadata
+// object) — NOT multiple positional args like console.log. Every call
+// site in this codebase uses the console.log-style pattern
+// `logger.error('label:', err.message)`, and Winston was silently
+// dropping everything after the first argument, hiding real error
+// details in production logs all along. This wrapper joins args like
+// console.log does, without needing to touch every call site.
+function formatArgs(args) {
+  return args.map(a => {
+    if (a instanceof Error) return a.stack || a.message;
+    if (a !== null && typeof a === 'object') { try { return JSON.stringify(a); } catch { return String(a); } }
+    return String(a);
+  }).join(' ');
+}
+
+const logger = {
+  error: (...args) => rawLogger.error(formatArgs(args)),
+  warn:  (...args) => rawLogger.warn(formatArgs(args)),
+  info:  (...args) => rawLogger.info(formatArgs(args)),
+  debug: (...args) => rawLogger.debug(formatArgs(args))
+};
 
 module.exports = logger;

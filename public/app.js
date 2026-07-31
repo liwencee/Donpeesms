@@ -30,6 +30,13 @@ function fmtNairaSigned(usd, dp = 0) {
   const v = parseFloat(usd) || 0;
   return (v >= 0 ? '+' : '-') + fmtNaira(Math.abs(v), dp);
 }
+// Format a value that's ALREADY in Naira (no exchange-rate conversion).
+// Used for admin-managed Product prices, which are entered directly in
+// Naira — unlike fmtNaira(), which converts from USD.
+function fmtNGN(ngn, dp = 0) {
+  const n = parseFloat(ngn) || 0;
+  return '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: dp, maximumFractionDigits: dp });
+}
 // Convert a Naira amount entered by the user back into USD for the API.
 function nairaToUsd(naira) { return (parseFloat(naira) || 0) / NGN_RATE; }
 
@@ -1225,7 +1232,7 @@ function buildProducts() {
         </div>
         <div class="prod-name">${escapeHTML(p.name)}</div>
         <div class="prod-desc">${escapeHTML(p.description || '')}</div>
-        <div class="prod-price">${fmtNaira(p.price)}</div>
+        <div class="prod-price">${fmtNGN(p.price)}</div>
         <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
           onclick="${out ? "showLandingPage('contact')" : "showPage('register')"}">
           ${out ? 'Contact Sales' : 'Buy Now'}
@@ -2300,7 +2307,7 @@ function renderAdminProducts(products) {
         <div style="font-size:.75rem;color:var(--txt-4)">${escapeHTML(p.description || '')}</div>
       </td>
       <td style="color:var(--txt-3)">${p.category ? escapeHTML(p.category.name) : '—'}</td>
-      <td>${fmtNaira(p.price)}</td>
+      <td>${fmtNGN(p.price)}</td>
       <td style="color:var(--txt-3);font-size:.85rem">${stockText}</td>
       <td style="color:var(--txt-4);font-size:.82rem">${p.apiProvider === 'manual' ? 'Manual' : escapeHTML(p.apiProvider)}</td>
       <td>
@@ -2380,9 +2387,9 @@ function closeProductModal() {
 }
 
 function updateProdPriceNaira() {
-  const usd = parseFloat(document.getElementById('prodPrice')?.value || 0);
+  const ngn = parseFloat(document.getElementById('prodPrice')?.value || 0);
   const el = document.getElementById('prodPriceNaira');
-  if (el) el.textContent = '≈ ' + fmtNaira(usd);
+  if (el) el.textContent = fmtNGN(ngn);
 }
 
 async function saveProduct() {

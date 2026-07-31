@@ -2589,7 +2589,7 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
               <div class="form-group"><label class="form-label">Support Email</label><input type="email" class="form-input" value="support@donpeesms.com"/></div>
               <div class="form-group"><label class="form-label">Default WhatsApp Markup %</label><input type="number" class="form-input" value="35"/></div>
               <div class="form-group"><label class="form-label">Default SMS Markup %</label><input type="number" class="form-input" value="40"/></div>
-              <div class="form-group"><label class="form-label">Minimum Deposit ($)</label><input type="number" class="form-input" value="1"/></div>
+              <div class="form-group"><label class="form-label">Minimum Deposit (₦)</label><input type="number" class="form-input" value="1600"/></div>
               <div class="form-group"><label class="form-label">Referral Commission %</label><input type="number" class="form-input" value="10"/></div>
             </div>
             <button class="btn btn-primary" style="margin-top:16px" onclick="showToast('Settings saved!','success')">Save Settings</button>
@@ -2633,9 +2633,9 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
       </div>
       <div style="display:grid;grid-template-columns:1fr 1fr;gap:14px">
         <div class="form-group">
-          <label class="form-label">Price (USD) *</label>
-          <input type="number" step="0.01" min="0" class="form-input" id="prodPrice" placeholder="0.08" oninput="updateProdPriceNaira()"/>
-          <div style="font-size:.72rem;color:var(--txt-4);margin-top:4px" id="prodPriceNaira">≈ ₦0</div>
+          <label class="form-label">Price (₦) *</label>
+          <input type="number" step="1" min="0" class="form-input" id="prodPrice" placeholder="150" oninput="updateProdPriceNaira()"/>
+          <div style="font-size:.72rem;color:var(--txt-4);margin-top:4px" id="prodPriceNaira">₦0</div>
         </div>
         <div class="form-group">
           <label class="form-label">Category</label>
@@ -2893,6 +2893,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
   </div>
 </div>
 
-<script src="/app.js?v=20260725apiprov"></script>
+<script src="/app.js?v=20260731nairaonly"></script>
 </body>
 </html>
