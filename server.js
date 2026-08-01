@@ -265,6 +265,14 @@ const startBackgroundJobs = () => {
 
   setInterval(async () => {
     try {
+      // Explicit keep-alive: Supabase's pooler closes idle backend
+      // connections after a few minutes. Touching the DB every 60s
+      // stops the connection from ever going idle long enough to be
+      // reaped, on top of the retry-on-stale-connection middleware in
+      // config/db.js. Kept as its own statement (not folded into the
+      // query below) so it isn't silently lost if that query changes.
+      await prisma.$queryRaw`SELECT 1`;
+
       const expired = await prisma.order.findMany({
         where: { status: 'active', expiresAt: { lt: new Date() } },
         take:  50
