@@ -33,14 +33,30 @@ const isTransientConnectionError = (err) => {
   return TRANSIENT_CONNECTION_PATTERNS.some(p => msg.includes(p));
 };
 
+// Some dead connections don't throw at all — the socket looks alive
+// (half-open) but the query just never returns, so the middleware's
+// catch block above never fires. Race every query against a hard
+// timeout so a hang is FORCED into a failure (which then hits the same
+// retry path as an explicit connection error), instead of leaving the
+// request to hang until the client's own 15s abort or Hostinger's
+// proxy timeout — both of which produce a generic, unhelpful error
+// with no chance to recover.
+const QUERY_TIMEOUT_MS = 8000;
+const withTimeout = (promise, label) => Promise.race([
+  promise,
+  new Promise((_, reject) => setTimeout(() => reject(new Error(`Query timed out after ${QUERY_TIMEOUT_MS}ms: ${label}`)), QUERY_TIMEOUT_MS))
+]);
+
 prisma.$use(async (params, next) => {
+  const label = `${params.model}.${params.action}`;
   try {
-    return await next(params);
+    return await withTimeout(next(params), label);
   } catch (err) {
-    if (!isTransientConnectionError(err)) throw err;
-    logger.warn(`Prisma: stale connection on ${params.model}.${params.action}, retrying once —`, err.message);
+    const isTimeout = err.message && err.message.startsWith('Query timed out after');
+    if (!isTransientConnectionError(err) && !isTimeout) throw err;
+    logger.warn(`Prisma: ${isTimeout ? 'query timed out' : 'stale connection'} on ${label}, retrying once —`, err.message);
     await new Promise(r => setTimeout(r, 150)); // brief backoff before retry
-    return next(params); // let a second failure propagate normally
+    return withTimeout(next(params), label); // second attempt is also bounded; let it propagate if it fails too
   }
 });
 
