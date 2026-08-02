@@ -182,6 +182,26 @@ app.get('/api', (_req, res) => {
 });
 
 // ══════════════════════════════════════════
+// MAINTENANCE MODE
+// Runs before the API routes AND the static/SPA serving below, so it
+// gates the whole site in one place. Bypasses: /admin (owner needs to
+// keep working), /api/auth (so admin can still log in), /health and
+// /api/dbcheck (monitoring), and any static asset (so bypassed pages
+// still load their CSS/JS).
+// ══════════════════════════════════════════
+app.use((req, res, next) => {
+  if (!env.maintenance) return next();
+  const p = req.path;
+  if (p.startsWith('/admin') || p.startsWith('/api/auth') || p === '/health' || p === '/api/dbcheck') return next();
+  if (path.extname(p)) return next(); // css/js/img/fonts
+  if (p.startsWith('/api')) {
+    return res.status(503).json({ success: false, message: 'DonPeeSMS is under maintenance. Please try again shortly.' });
+  }
+  res.setHeader('Retry-After', '3600');
+  return res.status(503).sendFile(path.join(publicDir, 'maintenance.html'));
+});
+
+// ══════════════════════════════════════════
 // API ROUTES
 // ══════════════════════════════════════════
 app.use('/api/auth',    authRoutes);

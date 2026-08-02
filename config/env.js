@@ -34,6 +34,10 @@ module.exports = {
   env: process.env.NODE_ENV || 'development',
   port: parseInt(process.env.PORT, 10) || 5000,
   appName: process.env.APP_NAME || 'DonPeeSMS',
+  // MAINTENANCE_MODE=true serves a maintenance page to visitors and
+  // 503s the API, while /admin, admin auth, /health and static assets
+  // stay reachable. Toggle back with MAINTENANCE_MODE=false (or unset).
+  maintenance: process.env.MAINTENANCE_MODE === 'true',
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   backendUrl:  process.env.BACKEND_URL  || 'http://localhost:5000',
 
