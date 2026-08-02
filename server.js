@@ -255,8 +255,24 @@ const start = async () => {
 
   process.on('SIGTERM', () => shutdown('SIGTERM'));
   process.on('SIGINT',  () => shutdown('SIGINT'));
-  process.on('unhandledRejection', (err) => logger.error('UNHANDLED REJECTION:', err));
-  process.on('uncaughtException',  (err) => { logger.error('UNCAUGHT EXCEPTION:', err); shutdown('UNCAUGHT'); });
+
+  // Log and KEEP RUNNING. Previously an uncaughtException triggered a
+  // full shutdown, so a single unexpected error in one request took the
+  // entire site down for everyone — and since production runs bare
+  // `node server.js` with no process manager, it stayed down until the
+  // host happened to restart it. That is the most likely cause of the
+  // intermittent blank-500s with nothing in the runtime logs.
+  //
+  // Express already isolates per-request errors (asyncHandler ->
+  // errorHandler), so anything reaching here is from outside the request
+  // cycle (a stray timer/callback). Staying alive is strictly safer than
+  // dropping every in-flight request and going offline.
+  process.on('unhandledRejection', (err) => {
+    logger.error('UNHANDLED REJECTION (server continuing):', err && err.stack ? err.stack : err);
+  });
+  process.on('uncaughtException', (err) => {
+    logger.error('UNCAUGHT EXCEPTION (server continuing):', err && err.stack ? err.stack : err);
+  });
 };
 
 // ── Background jobs (poll expired orders) ────────────────────
