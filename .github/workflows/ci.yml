@@ -1,0 +1,53 @@
+name: CI
+
+# Runs the smoke test suite on every push and PR to main — the point is
+# to catch a broken deploy (a crash on boot, a broken auth route, a
+# leaked secret) BEFORE it reaches Hostinger, instead of finding out
+# from a live outage the way every fix in this repo's history did.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  smoke-tests:
+    name: Smoke tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Verify every source file parses (catches syntax errors early)
+        run: |
+          fail=0
+          for f in $(git ls-files '*.js' | grep -vE '^node_modules/|^public/'); do
+            node --check "$f" || fail=1
+          done
+          exit $fail
+
+      - name: Run smoke tests
+        run: npm test
+        env:
+          NODE_ENV: test
+
+      - name: Report
+        if: always()
+        run: |
+          if [ "${{ job.status }}" = "success" ]; then
+            echo "✅ Smoke tests passed — safe to deploy."
+          else
+            echo "❌ Smoke tests failed — DO NOT deploy this commit to Hostinger."
+          fi

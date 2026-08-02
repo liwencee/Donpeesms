@@ -316,6 +316,12 @@ const startBackgroundJobs = () => {
 // entirely — the process stayed up but never called app.listen(), so
 // nothing (not even static files) responded. Starting unconditionally
 // guarantees the app binds its port.
-start();
+//
+// The one exception is tests: they import `app` to make requests via
+// supertest and must not bind a port or spin up the background job
+// (that would leave open handles and hang the test run).
+if (process.env.NODE_ENV !== 'test') {
+  start();
+}
 
 module.exports = app;

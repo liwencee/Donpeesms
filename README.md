@@ -241,6 +241,21 @@ Behind nginx, expose only `/api/*` and `/health`. Set up SSL via Let's Encrypt.
 
 **Change these immediately in production.**
 
+## Testing
+
+Run the smoke test suite (no database required — it verifies the app
+boots, routes respond correctly, and no known regressions have crept
+back in):
+
+```bash
+npm test
+```
+
+These run automatically on every push via GitHub Actions
+(`.github/workflows/ci.yml`). A failing run means: **do not deploy
+this commit to Hostinger.**
+
 ## License
 
 Proprietary — All rights reserved.
+

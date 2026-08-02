@@ -26,6 +26,17 @@ const errorHandler = (err, req, res, next) => {
   else if (err.name === 'ValidationError') error = handleValidationError(err);
   else if (err.name === 'JsonWebTokenError') error = new ApiError(401, 'Invalid token');
   else if (err.name === 'TokenExpiredError') error = new ApiError(401, 'Token expired');
+  // Malformed JSON body: express.json() throws a SyntaxError with
+  // type 'entity.parse.failed'. This is a CLIENT mistake — it was
+  // falling through to a generic 500, which both misreports the fault
+  // and pollutes error logs with fake "server errors" that mask real ones.
+  else if (err.type === 'entity.parse.failed' || (err instanceof SyntaxError && 'body' in err)) {
+    error = new ApiError(400, 'Malformed JSON in request body');
+  }
+  // Body larger than the configured limit — also a client error.
+  else if (err.type === 'entity.too.large') {
+    error = new ApiError(413, 'Request body too large');
+  }
 
   if (!(error instanceof ApiError)) {
     error = new ApiError(500, 'Internal server error', false);

@@ -8,12 +8,13 @@
     "build": "echo No build step needed",
     "dev": "nodemon server.js",
     "seed": "node utils/seed.js",
-    "test": "jest --detectOpenHandles",
+    "test": "jest",
     "db:generate": "prisma generate",
     "db:migrate": "prisma migrate dev",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
-    "postinstall": "prisma generate || true"
+    "postinstall": "prisma generate || true",
+    "test:watch": "jest --watch"
   },
   "engines": {
     "node": ">=18.0.0"
