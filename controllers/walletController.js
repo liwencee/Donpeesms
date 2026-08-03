@@ -105,7 +105,10 @@ exports.creditWallet = async ({ userId, amount, bonus = 0, externalId, method, d
     p_order_id: refundFor || null,
     p_type: refundFor ? 'refund' : 'topup'
   });
-  if (error) throw new ApiError(500, error.message);
+  if (error) {
+    if (error.message === 'User not found') throw ApiError.notFound('User not found');
+    throw new ApiError(500, error.message);
+  }
 
   const row = data[0];
   return { user: { id: userId, walletBalance: row.new_balance }, tx: { id: row.transaction_id } };
