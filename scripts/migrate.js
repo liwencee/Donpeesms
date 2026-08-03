@@ -20,6 +20,11 @@ async function main() {
 
   const client = new Client({
     connectionString: process.env.DATABASE_URL,
+    // NOTE: Supabase's certificate chain includes a self-signed cert that Node.js doesn't
+    // trust by default. `ssl: true` alone fails with SELF_SIGNED_CERT_IN_CHAIN.
+    // Since this is a one-time manual script against the legitimate Supabase database,
+    // rejectUnauthorized: false is acceptable here. For production client libraries,
+    // always validate certificates.
     ssl: { rejectUnauthorized: false }
   });
   await client.connect();
