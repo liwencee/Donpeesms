@@ -1,53 +1,48 @@
 /**
- * Auth middleware — verifies JWT or API key, attaches user to req
+ * Auth middleware — verifies a Supabase-issued JWT or a developer API
+ * key, attaches the matching profile to req.
  */
 const crypto       = require('crypto');
-const { verifyAccessToken } = require('../utils/jwt');
-const { prisma }   = require('../config/db');
-const { USER_PUBLIC } = require('../models/User');
+const { supabase } = require('../config/supabase');
+const { PROFILE_COLUMNS } = require('../models/User');
 const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
+const { toCamelCase } = require('../utils/caseMapper');
 
 const extractToken = (req) => {
   if (req.headers.authorization?.startsWith('Bearer ')) {
     return req.headers.authorization.split(' ')[1];
   }
-  if (req.cookies?.accessToken) return req.cookies.accessToken;
   return null;
 };
 
 /**
- * protect — requires valid JWT (browser session)
+ * protect — requires a valid Supabase session token
  */
 const protect = asyncHandler(async (req, res, next) => {
   const token = extractToken(req);
   if (!token) throw ApiError.unauthorized('Authentication required');
 
-  let decoded;
-  try {
-    decoded = verifyAccessToken(token);
-  } catch (err) {
-    throw ApiError.unauthorized(
-      err.name === 'TokenExpiredError' ? 'Session expired, please login again' : 'Invalid token'
-    );
+  const { data: authData, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !authData?.user) {
+    throw ApiError.unauthorized('Invalid or expired session');
   }
 
-  const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: USER_PUBLIC });
-  if (!user) throw ApiError.unauthorized('User no longer exists');
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select(PROFILE_COLUMNS)
+    .eq('id', authData.user.id)
+    .single();
+
+  if (profileError || !profile) throw ApiError.unauthorized('User no longer exists');
+
+  const user = toCamelCase(profile);
   if (user.status !== 'active') throw ApiError.forbidden(`Account ${user.status}`);
 
   req.user   = user;
   req.userId = user.id;
   next();
 });
-
-/**
- * requireEmailVerified
- */
-const requireEmailVerified = (req, _res, next) => {
-  if (!req.user?.emailVerified) throw ApiError.forbidden('Email verification required');
-  next();
-};
 
 /**
  * requireRole — role-based access control
@@ -66,26 +61,23 @@ const apiKeyAuth = asyncHandler(async (req, res, next) => {
 
   if (!rawKey) throw ApiError.unauthorized('API key required');
 
-  const hash = crypto.createHash('sha256').update(rawKey).digest('hex');
-  const key  = await prisma.apiKey.findFirst({
-    where:   { keyHash: hash, active: true },
-    include: { user: { select: USER_PUBLIC } }
-  });
+  const { findByKey } = require('../models/ApiKey');
+  const key = await findByKey(rawKey);
 
-  if (!key)                                            throw ApiError.unauthorized('Invalid API key');
-  if (key.expiresAt && key.expiresAt < new Date())    throw ApiError.unauthorized('API key expired');
-  if (!key.user || key.user.status !== 'active')      throw ApiError.forbidden('User account inactive');
+  if (!key)                                        throw ApiError.unauthorized('Invalid API key');
+  if (key.expires_at && new Date(key.expires_at) < new Date()) throw ApiError.unauthorized('API key expired');
+  if (!key.profiles || key.profiles.status !== 'active')       throw ApiError.forbidden('User account inactive');
 
-  // Fire-and-forget usage stats
-  prisma.apiKey.update({
-    where: { id: key.id },
-    data:  { usageCount: { increment: 1 }, lastUsedAt: new Date(), lastUsedIp: req.ip }
-  }).catch(() => {});
+  const { supabase: sb } = require('../config/supabase');
+  sb.from('api_keys')
+    .update({ usage_count: key.usage_count + 1, last_used_at: new Date().toISOString(), last_used_ip: req.ip })
+    .eq('id', key.id)
+    .then(() => {}, () => {}); // fire-and-forget
 
-  req.user   = key.user;
-  req.userId = key.user.id;
-  req.apiKey = key;
+  req.user   = toCamelCase(key.profiles);
+  req.userId = key.profiles.id;
+  req.apiKey = toCamelCase(key);
   next();
 });
 
-module.exports = { protect, requireEmailVerified, requireRole, apiKeyAuth };
+module.exports = { protect, requireRole, apiKeyAuth };
