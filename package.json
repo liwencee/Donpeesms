@@ -17,7 +17,7 @@
     "test:watch": "jest --watch"
   },
   "engines": {
-    "node": ">=18.0.0"
+    "node": ">=22.0.0"
   },
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.3",
