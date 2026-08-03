@@ -10,7 +10,7 @@
     "seed": "node utils/seed.js",
     "test": "jest",
     "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
+    "db:migrate": "node scripts/migrate.js",
     "db:push": "prisma db push",
     "db:studio": "prisma studio",
     "postinstall": "prisma generate || true",
@@ -49,6 +49,7 @@
     "eslint-plugin-node": "^11.1.0",
     "jest": "^29.7.0",
     "nodemon": "^3.1.4",
+    "pg": "^8.13.0",
     "supertest": "^7.0.0"
   }
 }
