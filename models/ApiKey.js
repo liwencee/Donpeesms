@@ -1,9 +1,8 @@
 /**
  * ApiKey helpers
- * Controllers use prisma.apiKey directly; import helpers from here.
  */
 const crypto = require('crypto');
-const { prisma } = require('../config/db');
+const { supabase } = require('../config/supabase');
 
 const generateKey = () => {
   const raw    = 'dps_live_' + crypto.randomBytes(24).toString('hex');
@@ -12,12 +11,16 @@ const generateKey = () => {
   return { raw, hash, prefix };
 };
 
-const findByKey = (rawKey) => {
+const findByKey = async (rawKey) => {
   const hash = crypto.createHash('sha256').update(rawKey).digest('hex');
-  return prisma.apiKey.findFirst({
-    where:   { keyHash: hash, active: true },
-    include: { user: true }
-  });
+  const { data, error } = await supabase
+    .from('api_keys')
+    .select('*, profiles(*)')
+    .eq('key_hash', hash)
+    .eq('active', true)
+    .maybeSingle();
+  if (error) throw error;
+  return data;
 };
 
 module.exports = { generateKey, findByKey };
