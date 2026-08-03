@@ -2,12 +2,13 @@
  * Auth middleware — verifies a Supabase-issued JWT or a developer API
  * key, attaches the matching profile to req.
  */
-const crypto       = require('crypto');
 const { supabase } = require('../config/supabase');
 const { PROFILE_COLUMNS } = require('../models/User');
+const { findByKey } = require('../models/ApiKey');
 const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { toCamelCase } = require('../utils/caseMapper');
+const logger       = require('../utils/logger');
 
 const extractToken = (req) => {
   if (req.headers.authorization?.startsWith('Bearer ')) {
@@ -61,18 +62,14 @@ const apiKeyAuth = asyncHandler(async (req, res, next) => {
 
   if (!rawKey) throw ApiError.unauthorized('API key required');
 
-  const { findByKey } = require('../models/ApiKey');
   const key = await findByKey(rawKey);
 
   if (!key)                                        throw ApiError.unauthorized('Invalid API key');
   if (key.expires_at && new Date(key.expires_at) < new Date()) throw ApiError.unauthorized('API key expired');
   if (!key.profiles || key.profiles.status !== 'active')       throw ApiError.forbidden('User account inactive');
 
-  const { supabase: sb } = require('../config/supabase');
-  sb.from('api_keys')
-    .update({ usage_count: key.usage_count + 1, last_used_at: new Date().toISOString(), last_used_ip: req.ip })
-    .eq('id', key.id)
-    .then(() => {}, () => {}); // fire-and-forget
+  supabase.rpc('increment_api_key_usage', { p_key_id: key.id, p_ip: req.ip })
+    .then(() => {}, (err) => logger.warn('API key usage tracking failed:', err.message)); // fire-and-forget, but log if it fails
 
   req.user   = toCamelCase(key.profiles);
   req.userId = key.profiles.id;

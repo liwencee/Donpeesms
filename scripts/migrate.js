@@ -33,18 +33,25 @@ async function main() {
   console.log(`Found ${files.length} migration file(s): ${files.join(', ')}`);
 
   try {
-    await client.query('BEGIN');
     for (const file of files) {
       console.log(`Applying ${file}...`);
       const sql = fs.readFileSync(path.join(MIGRATIONS_DIR, file), 'utf8');
-      await client.query(sql);
+      try {
+        await client.query('BEGIN');
+        await client.query(sql);
+        await client.query('COMMIT');
+        console.log(`  ✓ ${file} applied successfully.`);
+      } catch (err) {
+        await client.query('ROLLBACK');
+        if (err.message.includes('already exists')) {
+          console.log(`  ⊘ ${file} already applied (skipped).`);
+        } else {
+          console.error(`  ✗ ${file} failed:`, err.message);
+          process.exitCode = 1;
+        }
+      }
     }
-    await client.query('COMMIT');
-    console.log('All migrations applied successfully.');
-  } catch (err) {
-    await client.query('ROLLBACK');
-    console.error('Migration failed, rolled back:', err.message);
-    process.exitCode = 1;
+    console.log('Migration run completed.');
   } finally {
     await client.end();
   }
