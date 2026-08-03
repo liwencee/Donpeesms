@@ -198,7 +198,10 @@ exports.buyNumber = asyncHandler(async (req, res) => {
     });
   } catch (err) {
     await provider.cancelOrder(purchase.providerOrderId).catch(() => {});
-    await supabase.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
+    const { error: cancelErr } = await supabase.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
+    if (cancelErr) {
+      logger.error(`Failed to mark order ${order.orderId} cancelled after debit failure — order may incorrectly remain active:`, cancelErr.message);
+    }
     throw err;
   }
 
@@ -333,26 +336,24 @@ exports.getOrder = asyncHandler(async (req, res) => {
 async function refundOrder(order, reason) {
   if (order.refundedAt) return;
 
-  const refundTx = await wallet.creditWallet({
-    userId: order.userId,
-    amount: order.userCost,
-    method: 'system',
-    refundFor: order.id,
-    description: `Refund for order ${order.orderId}: ${reason}`
+  const newStatus = order.status !== 'cancelled' ? 'refunded' : null;
+  const description = `Refund for order ${order.orderId}: ${reason}`;
+
+  const { data, error } = await supabase.rpc('refund_order', {
+    p_order_id: order.id,
+    p_user_id: order.userId,
+    p_amount: order.userCost,
+    p_description: description,
+    p_refund_reason: reason,
+    p_new_status: newStatus
   });
-
-  const statusUpdate = order.status !== 'cancelled' ? { status: 'refunded' } : {};
-
-  const { error } = await supabase.from('orders').update({
-    refunded_at: new Date().toISOString(),
-    refund_reason: reason,
-    refund_tx_id: refundTx.tx.id,
-    ...statusUpdate
-  }).eq('id', order.id);
-  if (error) logger.error('refundOrder update failed:', error.message);
+  if (error) {
+    logger.error(`refundOrder RPC failed for order ${order.orderId}:`, error.message);
+    throw new ApiError(500, error.message);
+  }
 
   logger.info(`Order ${order.orderId} refunded: ${reason}`);
-  return refundTx;
+  return { user: { id: order.userId }, tx: { id: data[0].transaction_id } };
 }
 
 exports._refundOrder = refundOrder;
