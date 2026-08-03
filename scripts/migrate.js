@@ -48,6 +48,7 @@ async function main() {
         } else {
           console.error(`  ✗ ${file} failed:`, err.message);
           process.exitCode = 1;
+          break; // halt further migrations on genuine failure
         }
       }
     }
