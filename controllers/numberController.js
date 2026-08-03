@@ -1,7 +1,7 @@
 /**
  * Number controller — buy, check, cancel, finish virtual numbers
  */
-const { prisma }   = require('../config/db');
+const { supabase } = require('../config/supabase');
 const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { getProvider, calculateUserPrice } = require('../services/smsProvider');
@@ -9,10 +9,8 @@ const { generateOrderId, getTimeRemaining } = require('../models/Order');
 const wallet       = require('./walletController');
 const email        = require('../services/emailService');
 const logger       = require('../utils/logger');
+const { toCamelCase } = require('../utils/caseMapper');
 
-// ═════════════════════════════════════════════
-// GET /api/numbers/countries
-// ═════════════════════════════════════════════
 const FALLBACK_COUNTRIES = [
   { code: 'US', name: 'United States',  flag: '🇺🇸' },
   { code: 'GB', name: 'United Kingdom', flag: '🇬🇧' },
@@ -44,21 +42,14 @@ const FALLBACK_COUNTRIES = [
   { code: 'TH', name: 'Thailand',       flag: '🇹🇭' }
 ];
 
-// ═════════════════════════════════════════════
-// GET /api/numbers/provider-check  (diagnostic)
-// Verifies the SMS provider API key by calling /balance and /countries.
-// ═════════════════════════════════════════════
 exports.providerCheck = asyncHandler(async (_req, res) => {
   const provider = getProvider();
   const out = { provider: provider.name, keyConfigured: false, balance: null, countriesCount: null, errors: {} };
-
-  // Is a key configured? (only relevant fields, never expose the key itself)
   try {
     const env = require('../config/env');
     out.keyConfigured = !!(env.sms.sureVerifications && env.sms.sureVerifications.apiKey);
     out.baseUrl = env.sms.sureVerifications && env.sms.sureVerifications.baseUrl;
   } catch (_e) {}
-
   if (typeof provider.getBalance === 'function') {
     try { out.balance = await provider.getBalance(); }
     catch (err) { out.errors.balance = err.response?.data || err.message; }
@@ -67,7 +58,6 @@ exports.providerCheck = asyncHandler(async (_req, res) => {
     try { const c = await provider.getCountries(); out.countriesCount = Array.isArray(c) ? c.length : 0; }
     catch (err) { out.errors.countries = err.response?.data || err.message; }
   }
-
   out.ok = out.balance !== null && Object.keys(out.errors).length === 0;
   res.json(out);
 });
@@ -77,7 +67,6 @@ exports.listCountries = asyncHandler(async (_req, res) => {
   if (typeof provider.getCountries === 'function') {
     try {
       const raw = await provider.getCountries();
-      // Normalise: provider may return array of strings or objects
       const countries = raw.map(c => {
         if (typeof c === 'string') return { code: c.toUpperCase(), name: c, flag: '' };
         return {
@@ -94,9 +83,6 @@ exports.listCountries = asyncHandler(async (_req, res) => {
   res.json({ success: true, count: FALLBACK_COUNTRIES.length, countries: FALLBACK_COUNTRIES, source: 'static' });
 });
 
-// ═════════════════════════════════════════════
-// GET /api/numbers/services
-// ═════════════════════════════════════════════
 const FALLBACK_SERVICES = [
   { code: 'whatsapp',  name: 'WhatsApp',    icon: 'whatsapp'  },
   { code: 'telegram',  name: 'Telegram',    icon: 'telegram'  },
@@ -134,33 +120,20 @@ exports.listServices = asyncHandler(async (_req, res) => {
   res.json({ success: true, services: FALLBACK_SERVICES, source: 'static' });
 });
 
-// ═════════════════════════════════════════════
-// GET /api/numbers/price?country=US&service=whatsapp
-// ═════════════════════════════════════════════
 exports.getPrice = asyncHandler(async (req, res) => {
   const { country, service = 'any' } = req.query;
   if (!country) throw ApiError.badRequest('Country required');
-
   const provider  = getProvider();
   const { cost, count, currency } = await provider.getPrice(country.toUpperCase(), service);
   const userPrice = calculateUserPrice(cost);
-
   res.json({
-    success:          true,
-    country:          country.toUpperCase(),
-    service,
-    providerCost:     cost,
-    userPrice,
-    currency:         'USD',
-    providerCurrency: currency,
-    available:        count,
-    provider:         provider.name
+    success: true, country: country.toUpperCase(), service, providerCost: cost, userPrice,
+    currency: 'USD', providerCurrency: currency, available: count, provider: provider.name
   });
 });
 
 // ═════════════════════════════════════════════
 // POST /api/numbers/buy
-// Body: { serviceType: 'whatsapp'|'sms', country, service? }
 // ═════════════════════════════════════════════
 exports.buyNumber = asyncHandler(async (req, res) => {
   const { serviceType, country, service } = req.body;
@@ -170,10 +143,6 @@ exports.buyNumber = asyncHandler(async (req, res) => {
 
   const targetService = serviceType === 'whatsapp' ? 'whatsapp' : (service || 'any');
 
-  // Fresh balance check
-  const user = await prisma.user.findUnique({ where: { id: req.userId } });
-
-  // Price + availability
   const provider = getProvider();
   let priceInfo;
   try {
@@ -183,134 +152,122 @@ exports.buyNumber = asyncHandler(async (req, res) => {
   }
 
   const userCost = calculateUserPrice(priceInfo.cost);
-  if (user.walletBalance < userCost) {
+  if (req.user.walletBalance < userCost) {
     throw ApiError.badRequest(
-      `Insufficient balance. Need $${userCost.toFixed(2)}, have $${user.walletBalance.toFixed(2)}`
+      `Insufficient balance. Need $${userCost.toFixed(2)}, have $${req.user.walletBalance.toFixed(2)}`
     );
   }
 
-  // Buy from provider
   let purchase;
   try {
     purchase = await provider.buyNumber(country.toUpperCase(), targetService);
   } catch (err) {
-    logger.error('Provider buyNumber failed:', err.message);
+    logger.error('Provider buyNumber failed:', err.stack || err.message);
     throw err;
   }
 
-  // Create order
-  const order = await prisma.order.create({
-    data: {
-      userId:          req.userId,
-      orderId:         generateOrderId(),
-      provider:        provider.name,
-      providerOrderId: purchase.providerOrderId,
-      serviceType,
-      service:         targetService,
-      country:         country.toUpperCase(),
-      phoneNumber:     purchase.phoneNumber,
-      providerCost:    priceInfo.cost,
-      userCost,
-      status:          'active',
-      activatedAt:     new Date(),
-      expiresAt:       purchase.expiresAt || new Date(Date.now() + 20 * 60 * 1000),
-      ipAddress:       req.ip,
-      userAgent:       req.get('User-Agent')
-    }
-  });
+  const expiresAtDate = purchase.expiresAt ? new Date(purchase.expiresAt) : new Date(Date.now() + 20 * 60 * 1000);
 
-  // Debit wallet
+  const { data: orderRow, error: orderErr } = await supabase.from('orders').insert({
+    user_id: req.userId,
+    order_id: generateOrderId(),
+    provider: provider.name,
+    provider_order_id: purchase.providerOrderId,
+    service_type: serviceType,
+    service: targetService,
+    country: country.toUpperCase(),
+    phone_number: purchase.phoneNumber,
+    provider_cost: priceInfo.cost,
+    user_cost: userCost,
+    status: 'active',
+    activated_at: new Date().toISOString(),
+    expires_at: expiresAtDate.toISOString(),
+    ip_address: req.ip,
+    user_agent: req.get('User-Agent')
+  }).select().single();
+  if (orderErr) throw new ApiError(500, orderErr.message);
+
+  const order = toCamelCase(orderRow);
+
   try {
     await wallet.debitWallet({
-      userId:      req.userId,
-      amount:      userCost,
-      orderId:     order.id,
+      userId: req.userId,
+      amount: userCost,
+      orderId: order.id,
       description: `${serviceType.toUpperCase()} ${country.toUpperCase()} ${order.phoneNumber}`
     });
   } catch (err) {
-    // Rollback: cancel provider order + mark cancelled
     await provider.cancelOrder(purchase.providerOrderId).catch(() => {});
-    await prisma.order.update({ where: { id: order.id }, data: { status: 'cancelled' } });
+    await supabase.from('orders').update({ status: 'cancelled' }).eq('id', order.id);
     throw err;
   }
 
-  // Confirmation email (async)
-  email.sendOrderConfirmation(req.user, order)
-    .catch(e => logger.error('Order email:', e.message));
+  email.sendOrderConfirmation(req.user, order).catch(e => logger.error('Order email:', e.stack || e.message));
 
   logger.info(`Order ${order.orderId} created: ${order.phoneNumber} ($${userCost})`);
 
   res.status(201).json({
     success: true,
     order: {
-      id:             order.id,
-      orderId:        order.orderId,
-      phoneNumber:    order.phoneNumber,
-      country:        order.country,
-      serviceType:    order.serviceType,
-      service:        order.service,
-      cost:           order.userCost,
-      status:         order.status,
-      expiresAt:      order.expiresAt,
-      timeRemainingMs: getTimeRemaining(order)
+      id: order.id, orderId: order.orderId, phoneNumber: order.phoneNumber, country: order.country,
+      serviceType: order.serviceType, service: order.service, cost: order.userCost, status: order.status,
+      expiresAt: order.expiresAt, timeRemainingMs: getTimeRemaining(order)
     }
   });
 });
+
+const fetchOwnOrder = async (id, userId) => {
+  const { data, error } = await supabase.from('orders').select('*').eq('id', id).eq('user_id', userId).maybeSingle();
+  if (error) throw new ApiError(500, error.message);
+  return data ? toCamelCase(data) : null;
+};
 
 // ═════════════════════════════════════════════
 // GET /api/numbers/orders/:id/status
 // ═════════════════════════════════════════════
 exports.checkOrderStatus = asyncHandler(async (req, res) => {
-  let order = await prisma.order.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  let order = await fetchOwnOrder(req.params.id, req.userId);
   if (!order) throw ApiError.notFound('Order not found');
 
   const now = new Date();
 
-  // If still active, poll provider
-  if (order.status === 'active' && order.expiresAt > now) {
+  if (order.status === 'active' && new Date(order.expiresAt) > now) {
     try {
       const provider = getProvider(order.provider);
       const status   = await provider.checkOrder(order.providerOrderId);
 
       if (status.sms && status.sms.length) {
-        order = await prisma.order.update({
-          where: { id: order.id },
-          data: {
-            smsMessages: status.sms,
-            otpCode:     status.otpCode,
-            status:      'received',
-            completedAt: new Date()
-          }
-        });
+        const { data, error } = await supabase.from('orders').update({
+          sms_messages: status.sms, otp_code: status.otpCode, status: 'received', completed_at: now.toISOString()
+        }).eq('id', order.id).select().single();
+        if (error) throw new ApiError(500, error.message);
+        order = toCamelCase(data);
         provider.finishOrder(order.providerOrderId).catch(() => {});
       } else if (status.status === 'cancelled') {
-        order = await prisma.order.update({
-          where: { id: order.id },
-          data:  { status: 'cancelled', cancelledAt: new Date() }
-        });
+        const { data, error } = await supabase.from('orders').update({
+          status: 'cancelled', cancelled_at: now.toISOString()
+        }).eq('id', order.id).select().single();
+        if (error) throw new ApiError(500, error.message);
+        order = toCamelCase(data);
         await refundOrder(order, 'Provider cancelled');
       }
     } catch (err) {
-      logger.error('checkOrderStatus provider error:', err.message);
+      logger.error('checkOrderStatus provider error:', err.stack || err.message);
     }
   }
 
-  // If expired with no SMS, auto-refund
-  if (order.status === 'active' && order.expiresAt < now) {
-    order = await prisma.order.update({ where: { id: order.id }, data: { status: 'expired' } });
+  if (order.status === 'active' && new Date(order.expiresAt) < now) {
+    const { data, error } = await supabase.from('orders').update({ status: 'expired' }).eq('id', order.id).select().single();
+    if (error) throw new ApiError(500, error.message);
+    order = toCamelCase(data);
     await refundOrder(order, 'No SMS received within window');
   }
 
   res.json({
     success: true,
     order: {
-      id:             order.id,
-      orderId:        order.orderId,
-      phoneNumber:    order.phoneNumber,
-      status:         order.status,
-      otpCode:        order.otpCode,
-      smsMessages:    order.smsMessages,
-      timeRemainingMs: getTimeRemaining(order)
+      id: order.id, orderId: order.orderId, phoneNumber: order.phoneNumber, status: order.status,
+      otpCode: order.otpCode, smsMessages: order.smsMessages, timeRemainingMs: getTimeRemaining(order)
     }
   });
 });
@@ -319,7 +276,7 @@ exports.checkOrderStatus = asyncHandler(async (req, res) => {
 // POST /api/numbers/orders/:id/cancel
 // ═════════════════════════════════════════════
 exports.cancelOrder = asyncHandler(async (req, res) => {
-  let order = await prisma.order.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  let order = await fetchOwnOrder(req.params.id, req.userId);
   if (!order) throw ApiError.notFound('Order not found');
   if (order.status !== 'active') throw ApiError.badRequest(`Cannot cancel order with status: ${order.status}`);
 
@@ -330,10 +287,11 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
     logger.warn('Provider cancel failed (continuing):', err.message);
   }
 
-  order = await prisma.order.update({
-    where: { id: order.id },
-    data:  { status: 'cancelled', cancelledAt: new Date() }
-  });
+  const { data, error } = await supabase.from('orders').update({
+    status: 'cancelled', cancelled_at: new Date().toISOString()
+  }).eq('id', order.id).select().single();
+  if (error) throw new ApiError(500, error.message);
+  order = toCamelCase(data);
 
   await refundOrder(order, 'User cancelled');
 
@@ -346,25 +304,19 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
 exports.listOrders = asyncHandler(async (req, res) => {
   const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
   const limit = Math.min(100, parseInt(req.query.limit, 10) || 20);
-  const skip  = (page - 1) * limit;
+  const from  = (page - 1) * limit;
+  const to    = from + limit - 1;
 
-  const where = { userId: req.userId };
-  if (req.query.status)      where.status      = req.query.status;
-  if (req.query.serviceType) where.serviceType = req.query.serviceType;
-  if (req.query.country)     where.country     = req.query.country.toUpperCase();
+  let query = supabase.from('orders').select('*', { count: 'exact' }).eq('user_id', req.userId);
+  if (req.query.status)      query = query.eq('status', req.query.status);
+  if (req.query.serviceType) query = query.eq('service_type', req.query.serviceType);
+  if (req.query.country)     query = query.eq('country', req.query.country.toUpperCase());
 
-  const [orders, total] = await Promise.all([
-    prisma.order.findMany({ where, orderBy: { createdAt: 'desc' }, skip, take: limit }),
-    prisma.order.count({ where })
-  ]);
+  const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
+  if (error) throw new ApiError(500, error.message);
 
   res.json({
-    success:    true,
-    page,
-    limit,
-    total,
-    totalPages: Math.ceil(total / limit),
-    orders
+    success: true, page, limit, total: count, totalPages: Math.ceil(count / limit), orders: toCamelCase(data)
   });
 });
 
@@ -372,7 +324,7 @@ exports.listOrders = asyncHandler(async (req, res) => {
 // GET /api/numbers/orders/:id
 // ═════════════════════════════════════════════
 exports.getOrder = asyncHandler(async (req, res) => {
-  const order = await prisma.order.findFirst({ where: { id: req.params.id, userId: req.userId } });
+  const order = await fetchOwnOrder(req.params.id, req.userId);
   if (!order) throw ApiError.notFound('Order not found');
   res.json({ success: true, order });
 });
@@ -382,24 +334,22 @@ async function refundOrder(order, reason) {
   if (order.refundedAt) return;
 
   const refundTx = await wallet.creditWallet({
-    userId:      order.userId,
-    amount:      order.userCost,
-    method:      'system',
-    refundFor:   order.id,
+    userId: order.userId,
+    amount: order.userCost,
+    method: 'system',
+    refundFor: order.id,
     description: `Refund for order ${order.orderId}: ${reason}`
   });
 
   const statusUpdate = order.status !== 'cancelled' ? { status: 'refunded' } : {};
 
-  await prisma.order.update({
-    where: { id: order.id },
-    data: {
-      refundedAt:  new Date(),
-      refundReason: reason,
-      refundTxId:  refundTx.tx.id,
-      ...statusUpdate
-    }
-  });
+  const { error } = await supabase.from('orders').update({
+    refunded_at: new Date().toISOString(),
+    refund_reason: reason,
+    refund_tx_id: refundTx.tx.id,
+    ...statusUpdate
+  }).eq('id', order.id);
+  if (error) logger.error('refundOrder update failed:', error.message);
 
   logger.info(`Order ${order.orderId} refunded: ${reason}`);
   return refundTx;
