@@ -6,7 +6,6 @@ module.exports = {
   forceExit: true,
   testTimeout: 20000,
   setupFiles: ['<rootDir>/tests/setup.js'],
-  globalTeardown: '<rootDir>/tests/teardown.js',
   // Only report coverage on our own source, not deps or the frontend bundle.
   collectCoverageFrom: [
     'controllers/**/*.js',

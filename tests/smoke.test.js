@@ -14,10 +14,9 @@
  * skips itself when DATABASE_URL isn't configured.
  */
 process.env.NODE_ENV = 'test';
-process.env.JWT_SECRET = process.env.JWT_SECRET || 'test_secret_not_used_in_production_0123456789abcdef';
-process.env.JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET || 'test_refresh_secret_not_used_in_prod_0123456789ab';
 process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0'.repeat(64);
-process.env.DATABASE_URL = process.env.DATABASE_URL || 'postgresql://u:p@127.0.0.1:5432/db';
+process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://test.supabase.co';
+process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test-service-role-key';
 
 const request = require('supertest');
 const app = require('../server');
@@ -79,33 +78,23 @@ describe('security: admin APIs reject unauthenticated callers', () => {
   });
 });
 
-describe('auth endpoints respond correctly (no 500s)', () => {
-  test('login with missing body returns a 4xx, not a crash', async () => {
+describe('protected endpoints respond correctly (no 500s)', () => {
+  test('POST to a protected route without a token returns 401, not a crash', async () => {
     const res = await request(app)
-      .post('/api/auth/login')
-      .send({})
+      .post('/api/wallet/topup')
+      .send({ amount: 10, method: 'stripe' })
       .set('Content-Type', 'application/json');
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect(res.status).toBeLessThan(500);
-  });
-
-  test('login with malformed email returns a 4xx, not a crash', async () => {
-    const res = await request(app)
-      .post('/api/auth/login')
-      .send({ email: 'not-an-email', password: 'x' })
-      .set('Content-Type', 'application/json');
-    expect(res.status).toBeGreaterThanOrEqual(400);
-    expect(res.status).toBeLessThan(500);
+    expect(res.status).toBe(401);
   });
 
   test('protected route without a token returns 401', async () => {
-    const res = await request(app).get('/api/auth/me');
+    const res = await request(app).get('/api/users/me');
     expect(res.status).toBe(401);
   });
 
   test('protected route with a garbage token returns 401 (not 500)', async () => {
     const res = await request(app)
-      .get('/api/auth/me')
+      .get('/api/users/me')
       .set('Authorization', 'Bearer not.a.real.token');
     expect(res.status).toBe(401);
   });
@@ -120,7 +109,7 @@ describe('error handling', () => {
 
   test('malformed JSON body does not crash the server', async () => {
     const res = await request(app)
-      .post('/api/auth/login')
+      .post('/api/wallet/topup')
       .set('Content-Type', 'application/json')
       .send('{"bad json"');
     expect(res.status).toBeGreaterThanOrEqual(400);
