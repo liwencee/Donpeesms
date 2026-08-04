@@ -208,16 +208,21 @@ async function handleAdminLogin(e) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Verifying...';
   try {
-    const data = await api('POST', '/auth/login', { email, password });
-    if (!data) return;
-    const user = data.user || {};
+    const { data: authData, error } = await window.sb.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message || 'Invalid email or password');
+    if (!authData.session) throw new Error('Sign-in did not return a session');
+
+    const me = await api('GET', '/users/me');
+    if (!me) return;
+    const user = me.user || me;
     if (user.role !== 'admin') {
-      _setToken(null);
+      // Signed in successfully, but not an admin — drop the session so a
+      // non-admin isn't left silently logged in on the admin screen.
+      await window.sb.auth.signOut().catch(() => {});
       state.currentUser = null;
       showToast('This account does not have admin access.', 'error');
       return;
     }
-    _setToken(data.token || data.accessToken);
     state.currentUser = user;
     showPage('admin');
     showToast('Welcome back, Admin 🛡️', 'success');
@@ -230,8 +235,7 @@ async function handleAdminLogin(e) {
 }
 
 async function adminLogout() {
-  try { await api('POST', '/auth/logout'); } catch (_e) {}
-  _setToken(null);
+  try { await window.sb.auth.signOut(); } catch (_e) {}
   state.currentUser = null;
   showPage('admin-login');
   showToast('Signed out of admin', 'info');
@@ -381,13 +385,18 @@ async function handleLogin(e) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Signing in...';
   try {
-    const data = await api('POST', '/auth/login', { email, password });
-    if (!data) return;
-    _setToken(data.token || data.accessToken);
-    state.currentUser = data.user;
+    const { data: authData, error } = await window.sb.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message || 'Invalid email or password');
+    if (!authData.session) throw new Error('Sign-in did not return a session');
+
+    // Profile (name, wallet balance, role) lives in our own API, not in
+    // the auth token.
+    const me = await api('GET', '/users/me');
+    if (!me) return;
+    state.currentUser = me.user || me;
     await _loadAndRenderUser();
     showPage('dashboard');
-    showToast('Welcome back, ' + (data.user?.firstName || 'there') + '! 👋', 'success');
+    showToast('Welcome back, ' + (state.currentUser?.firstName || 'there') + '! 👋', 'success');
   } catch (err) {
     showToast(err.message || 'Login failed. Check your credentials.', 'error');
   } finally {
@@ -409,13 +418,34 @@ async function handleRegister(e) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Creating account...';
   try {
-    const data = await api('POST', '/auth/register', { firstName, lastName: lastName || '', username: username || email.split('@')[0], email, password });
-    if (!data) return;
-    _setToken(data.token || data.accessToken);
-    state.currentUser = data.user;
+    const { data: authData, error } = await window.sb.auth.signUp({
+      email,
+      password,
+      options: {
+        // These land in raw_user_meta_data, which the handle_new_user
+        // trigger reads to populate the profiles row.
+        data: {
+          username:   username || email.split('@')[0],
+          first_name: firstName,
+          last_name:  lastName || ''
+        }
+      }
+    });
+    if (error) throw new Error(error.message || 'Registration failed');
+    if (!authData.session) {
+      // Only happens if email confirmation is enabled in the Supabase
+      // dashboard; with it off (our configuration) signUp returns a
+      // session immediately.
+      showToast('Account created! Check your email to confirm before signing in.', 'success', 6000);
+      return showPage('login');
+    }
+
+    const me = await api('GET', '/users/me');
+    if (!me) return;
+    state.currentUser = me.user || me;
     await _loadAndRenderUser();
     showPage('dashboard');
-    showToast('Account created! 🎉 Check your email to verify your account.', 'success', 6000);
+    showToast('Account created! 🎉 Welcome to DonPeeSMS.', 'success', 6000);
   } catch (err) {
     showToast(err.message || 'Registration failed. Try again.', 'error');
   } finally {
@@ -429,16 +459,13 @@ function socialLogin(provider) {
 }
 
 async function handleLogout() {
-  // Clear client session FIRST so the user is logged out even if the
+  // Clear client state FIRST so the user is logged out even if the
   // network call hangs or fails.
-  _setToken(null);
   state.currentUser = null;
   state.orders = [];
   state.transactions = [];
   state.walletBalance = 0;
-  try { localStorage.removeItem('donpee_token'); } catch (_e) {}
-  // Tell the backend to clear its auth cookies (fire and forget).
-  try { await api('POST', '/auth/logout'); } catch (_e) {}
+  try { await window.sb.auth.signOut(); } catch (_e) {}
   showPage('landing');
   showLandingPage('home');
   showToast('Signed out successfully', 'info');
