@@ -40,8 +40,12 @@ const stockText = (p) => {
 
 // GET /api/products
 exports.listPublic = asyncHandler(async (req, res) => {
-  let query = supabase.from('products').select('*, categories(*)').eq('enabled', true);
-  if (req.query.category && req.query.category !== 'all') {
+  const hasCategory = req.query.category && req.query.category !== 'all';
+  let query = supabase
+    .from('products')
+    .select(hasCategory ? '*, categories!inner(*)' : '*, categories(*)')
+    .eq('enabled', true);
+  if (hasCategory) {
     query = query.eq('categories.slug', req.query.category);
   }
   const { data, error } = await query.order('sort_order', { ascending: true }).order('created_at', { ascending: false });
