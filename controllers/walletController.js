@@ -113,7 +113,7 @@ exports.creditWallet = async ({ userId, amount, bonus = 0, externalId, method, d
   const row = data[0];
   return {
     user: { id: userId, walletBalance: row.new_balance },
-    tx: { id: row.transaction_id, amount: amount + bonus, bonusAmount: bonus, balanceAfter: row.new_balance }
+    tx: { id: row.transaction_id, amount: amount, bonusAmount: bonus, balanceAfter: row.new_balance }
   };
 };
 

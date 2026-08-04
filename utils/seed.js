@@ -10,11 +10,24 @@ const logger = require('./logger');
 const run = async () => {
   if (process.argv.includes('--fresh')) {
     logger.warn('Clearing database...');
-    const { data: allProfiles } = await supabase.from('profiles').select('id');
-    for (const p of allProfiles || []) {
-      await supabase.auth.admin.deleteUser(p.id).catch(() => {});
+    const { data: allProfiles, error: fetchErr } = await supabase.from('profiles').select('id');
+    if (fetchErr) {
+      logger.error('Failed to fetch profiles for wipe:', fetchErr.message);
+      throw fetchErr;
     }
-    logger.warn('Database cleared');
+    let failCount = 0;
+    for (const p of allProfiles || []) {
+      const { error: delErr } = await supabase.auth.admin.deleteUser(p.id);
+      if (delErr) {
+        failCount++;
+        logger.error(`Failed to delete user ${p.id}:`, delErr.message);
+      }
+    }
+    if (failCount > 0) {
+      logger.error(`Database wipe incomplete: ${failCount} user(s) failed to delete`);
+    } else {
+      logger.warn('Database cleared');
+    }
   }
 
   const { data: existingUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
