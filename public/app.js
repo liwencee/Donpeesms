@@ -722,7 +722,7 @@ function pickNumber(country) {
 }
 
 async function buyNumber(type) {
-  if (!_token) { showPage('login'); showToast('Please sign in first', 'warning'); return; }
+  if (!state.currentUser) { showPage('login'); showToast('Please sign in first', 'warning'); return; }
   const countrySelect = document.getElementById(type === 'whatsapp' ? 'waCountry' : 'smsCountry');
   const resultDiv     = document.getElementById(type === 'whatsapp' ? 'waResult'  : 'smsResult');
   const btn           = document.getElementById(type === 'whatsapp' ? 'buyWABtn'  : 'buySMSBtn');
