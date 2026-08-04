@@ -65,7 +65,10 @@ exports.toggleBan = asyncHandler(async (req, res) => {
     .from('profiles').update({ status: nextStatus }).eq('id', user.id).select('id, status').single();
   if (error) throw new ApiError(500, error.message);
 
-  res.json({ success: true, user: updated });
+  const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(user.id);
+  if (authErr) throw new ApiError(500, authErr.message);
+
+  res.json({ success: true, user: { ...updated, email: authUser.user?.email || '—' } });
 });
 
 // GET /api/admin/orders
