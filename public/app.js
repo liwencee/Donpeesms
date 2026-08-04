@@ -64,29 +64,41 @@ function nairaifyStaticText(root) {
 }
 
 // ── API CLIENT ──────────────────────────────────────────────
+// Auth is owned by Supabase: it stores the session in localStorage and
+// refreshes the access token on its own. We never hold our own token —
+// we ask for the current one on every request, so a token refreshed in
+// the background is picked up immediately.
 const API_BASE = '/api';
-let _token = localStorage.getItem('donpee_token') || null;
+
+async function _accessToken() {
+  try {
+    const { data } = await window.sb.auth.getSession();
+    return data?.session?.access_token || null;
+  } catch (_e) {
+    return null;
+  }
+}
 
 async function api(method, path, body, timeoutMs = 15000) {
   const headers = { 'Content-Type': 'application/json' };
-  if (_token) headers['Authorization'] = 'Bearer ' + _token;
+  const token = await _accessToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(API_BASE + path, {
       method,
       headers,
-      credentials: 'include',
       signal: controller.signal,
       body: body ? JSON.stringify(body) : undefined
     });
     clearTimeout(timer);
     const data = await res.json().catch(() => ({}));
-    // A 401 on the auth endpoints (login/register/etc.) is a failed
-    // credential attempt — show its real message. A 401 elsewhere while
-    // a token exists means the session actually expired.
-    const isAuthEndpoint = path.startsWith('/auth/');
-    if (res.status === 401 && !isAuthEndpoint && _token) { _handleUnauth(); return null; }
+    // A 401 now means the Supabase token was rejected by our backend —
+    // the session is genuinely dead (Supabase already had its chance to
+    // refresh it in _accessToken above), so sign out.
+    if (res.status === 401 && token) { await _handleUnauth(); return null; }
     if (!res.ok) throw new Error(data.message || data.error || 'Request failed (' + res.status + ')');
     return data;
   } catch (err) {
@@ -97,18 +109,11 @@ async function api(method, path, body, timeoutMs = 15000) {
   }
 }
 
-function _handleUnauth() {
-  _token = null;
+async function _handleUnauth() {
+  try { await window.sb.auth.signOut(); } catch (_e) {}
   state.currentUser = null;
-  localStorage.removeItem('donpee_token');
   showPage('login');
   showToast('Session expired. Please sign in again.', 'warning');
-}
-
-function _setToken(token) {
-  _token = token;
-  if (token) localStorage.setItem('donpee_token', token);
-  else localStorage.removeItem('donpee_token');
 }
 
 // ── URL ROUTING (History API) ──────────────────────────────
@@ -620,18 +625,29 @@ async function changePassword() {
 // ── AUTO-AUTH ON LOAD ────────────────────────────────────────
 async function initAuth() {
   // Resolve the session first, then render the page matching the URL.
-  if (_token) {
+  const { data: { session } } = await window.sb.auth.getSession();
+  if (session) {
     try {
-      const data = await api('GET', '/auth/me');
+      const data = await api('GET', '/users/me');
       if (data) {
         state.currentUser = data.user || data;
         await _loadAndRenderUser();
       }
     } catch (_e) {
-      _setToken(null);
+      await window.sb.auth.signOut().catch(() => {});
       state.currentUser = null;
     }
   }
+
+  // Keep this tab in sync: fires on token refresh, and on sign-out
+  // performed in another tab.
+  window.sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT' && state.currentUser) {
+      state.currentUser = null;
+      showPage('login');
+    }
+  });
+
   route();
 }
 
