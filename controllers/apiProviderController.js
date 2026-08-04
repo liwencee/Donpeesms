@@ -49,7 +49,9 @@ exports.create = asyncHandler(async (req, res) => {
     auth_header: (authHeader || 'x-api-key').trim(), api_key_enc: apiKey ? encrypt(apiKey) : null,
     notes: notes || null, enabled: enabled == null ? true : !!enabled
   }).select().single();
-  if (error) throw new ApiError(500, error.message);
+  // api_providers.name and .slug are both unique — re-throw raw so
+  // errorHandler maps 23505 to a 409 instead of a generic 500.
+  if (error) throw error;
 
   res.status(201).json({ success: true, provider: shape(data, apiKey) });
 });
@@ -69,7 +71,7 @@ exports.update = asyncHandler(async (req, res) => {
   if (b.apiKey) data.api_key_enc = encrypt(b.apiKey);
 
   const { data: provider, error } = await supabase.from('api_providers').update(data).eq('id', req.params.id).select().single();
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw error; // see create — unique name/slug clash → 409
   res.json({ success: true, provider: shape(provider, b.apiKey || null) });
 });
 

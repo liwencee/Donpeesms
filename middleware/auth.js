@@ -40,7 +40,12 @@ const protect = asyncHandler(async (req, res, next) => {
   const user = toCamelCase(profile);
   if (user.status !== 'active') throw ApiError.forbidden(`Account ${user.status}`);
 
-  req.user   = user;
+  // `email` lives in auth.users, not profiles (so it is absent from
+  // PROFILE_COLUMNS). Downstream code — Stripe checkout sessions, order
+  // and top-up confirmation emails — reads req.user.email, and without
+  // this every one of those silently sent to `undefined`. The
+  // authenticated user object already carries it: no extra query.
+  req.user   = { ...user, email: authData.user.email };
   req.userId = user.id;
   next();
 });
@@ -71,7 +76,20 @@ const apiKeyAuth = asyncHandler(async (req, res, next) => {
   supabase.rpc('increment_api_key_usage', { p_key_id: key.id, p_ip: req.ip })
     .then(() => {}, (err) => logger.warn('API key usage tracking failed:', err.message)); // fire-and-forget, but log if it fails
 
-  req.user   = toCamelCase(key.profiles);
+  // Same reason as in protect(): req.user.email is needed downstream
+  // (POST /api/v1/numbers sends an order confirmation). There is no
+  // token to read it from here, so look it up — and never fail the
+  // request over it; a missing email only costs an email.
+  let email;
+  try {
+    const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(key.profiles.id);
+    if (authErr) throw authErr;
+    email = authUser?.user?.email;
+  } catch (err) {
+    logger.warn(`apiKeyAuth: could not resolve email for user ${key.profiles.id}:`, err.message);
+  }
+
+  req.user   = { ...toCamelCase(key.profiles), email };
   req.userId = key.profiles.id;
   req.apiKey = toCamelCase(key);
   next();

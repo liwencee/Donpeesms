@@ -8,8 +8,18 @@
 // Manager, bypassing Hostinger's Environment Variables panel entirely
 // (which has a bug that drops saved values). PORT is kept from the host
 // so the LiteSpeed/Passenger proxy still finds the app.
+//
+// EXCEPTION — tests: the override is disabled when NODE_ENV=test. The
+// worktree's .env carries NODE_ENV=production and real Supabase
+// credentials, so an unconditional override would clobber the dummy
+// values tests/setup.js installs, flip NODE_ENV away from 'test', and
+// make start() bind a port and register the 60-second auto-expire /
+// auto-refund job — pointed at the live project — during `npm test`.
 const _hostPort = process.env.PORT;
-require('dotenv').config({ path: require('path').join(__dirname, '.env'), override: true });
+require('dotenv').config({
+  path: require('path').join(__dirname, '.env'),
+  override: process.env.NODE_ENV !== 'test'
+});
 if (_hostPort) process.env.PORT = _hostPort;
 
 const express      = require('express');
@@ -250,9 +260,16 @@ const startBackgroundJobs = () => {
       if (error) throw error;
 
       for (const orderRow of expired) {
+        // `.eq('status', 'active')` turns this into a claim: a user
+        // polling GET /orders/:id/status runs the identical transition,
+        // and exactly one of the two may win. No row back means the
+        // other path already expired and refunded it — skip, don't crash.
         const { data: updatedRow, error: updateErr } = await supabase
-          .from('orders').update({ status: 'expired' }).eq('id', orderRow.id).select().single();
+          .from('orders').update({ status: 'expired' })
+          .eq('id', orderRow.id).eq('status', 'active')
+          .select().maybeSingle();
         if (updateErr) { logger.error('Auto-expire update failed:', updateErr.message); continue; }
+        if (!updatedRow) continue;
 
         await numberCtrl._refundOrder(toCamelCase(updatedRow), 'No SMS received within window')
           .catch(err => logger.error(`Auto-refund failed for ${orderRow.order_id}:`, err.stack || err.message));

@@ -95,7 +95,9 @@ exports.adminCreate = asyncHandler(async (req, res) => {
     featured: !!featured,
     sort_order: sortOrder == null ? 0 : parseInt(sortOrder, 10)
   }).select('*, categories(*)').single();
-  if (error) throw new ApiError(500, error.message);
+  // Re-throw raw so errorHandler can classify constraint violations
+  // (23505 → 409, 23503 → 400) instead of burying them in a 500.
+  if (error) throw error;
 
   res.status(201).json({ success: true, product: shape(data) });
 });
@@ -121,7 +123,7 @@ exports.adminUpdate = asyncHandler(async (req, res) => {
   if (b.sortOrder != null)   data.sort_order = parseInt(b.sortOrder, 10);
 
   const { data: product, error } = await supabase.from('products').update(data).eq('id', req.params.id).select('*, categories(*)').single();
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw error; // see adminCreate — let errorHandler map constraint violations
   res.json({ success: true, product: shape(product) });
 });
 
@@ -181,7 +183,8 @@ exports.adminCreateCategory = asyncHandler(async (req, res) => {
   const { data, error } = await supabase.from('categories').insert({
     name: String(name).trim(), slug, icon: icon || null, sort_order: sortOrder == null ? 0 : parseInt(sortOrder, 10)
   }).select().single();
-  if (error) throw new ApiError(500, error.message);
+  // categories.name and .slug are both unique — a clash is a 409, not a 500.
+  if (error) throw error;
   res.status(201).json({ success: true, category: data });
 });
 
@@ -198,7 +201,7 @@ exports.adminUpdateCategory = asyncHandler(async (req, res) => {
   if (b.active != null)    data.active = !!b.active;
 
   const { data: cat, error } = await supabase.from('categories').update(data).eq('id', req.params.id).select().single();
-  if (error) throw new ApiError(500, error.message);
+  if (error) throw error; // unique name/slug clash → 409 via errorHandler
   res.json({ success: true, category: cat });
 });
 

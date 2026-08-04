@@ -18,6 +18,22 @@ process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0'.repeat(64);
 process.env.SUPABASE_URL = process.env.SUPABASE_URL || 'https://test.supabase.co';
 process.env.SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY || 'test-service-role-key';
 
+// Only the Supabase CLIENT is mocked — the Express app, its routes,
+// static file serving and the SPA fallback are all the real thing,
+// which is the whole point of this suite. Without this, the
+// "garbage token returns 401" test made a live HTTPS round-trip to
+// whatever SUPABASE_URL resolved to just to be told the token is bad.
+jest.mock('../config/supabase', () => ({
+  supabase: {
+    auth: {
+      getUser: jest.fn().mockResolvedValue({ data: { user: null }, error: { message: 'invalid JWT' } }),
+      admin: { getUserById: jest.fn().mockResolvedValue({ data: { user: null }, error: null }) }
+    },
+    from: jest.fn(),
+    rpc: jest.fn().mockResolvedValue({ data: null, error: null })
+  }
+}));
+
 const request = require('supertest');
 const app = require('../server');
 
@@ -25,6 +41,17 @@ describe('app boots', () => {
   test('server module loads and exports an Express app', () => {
     expect(app).toBeDefined();
     expect(typeof app).toBe('function'); // express app is a function
+  });
+
+  // Regression guard: server.js loads .env with `override` so a broken
+  // host env panel can't win — but the worktree .env carries
+  // NODE_ENV=production and live Supabase credentials. An unconditional
+  // override flipped NODE_ENV away from 'test', which made start() bind
+  // a port and arm the 60-second auto-expire/auto-refund job against the
+  // REAL project for the duration of the test run.
+  test('requiring server.js does not clobber the test environment', () => {
+    expect(process.env.NODE_ENV).toBe('test');
+    expect(process.env.SUPABASE_URL).toBe('https://test.supabase.co');
   });
 });
 

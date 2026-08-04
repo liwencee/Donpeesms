@@ -7,6 +7,7 @@ const asyncHandler = require('../utils/asyncHandler');
 const stripe       = require('../services/stripeService');
 const nowpay       = require('../services/nowPaymentsService');
 const paypal       = require('../services/paypalService');
+const logger       = require('../utils/logger');
 const { toCamelCase } = require('../utils/caseMapper');
 
 const calculateBonus = (amount) => {
@@ -111,8 +112,30 @@ exports.creditWallet = async ({ userId, amount, bonus = 0, externalId, method, d
   }
 
   const row = data[0];
+
+  // All three payment webhooks hand this `user` straight to
+  // email.sendTopupConfirmation, which needs an address — and `email`
+  // lives in auth.users, not profiles, so it has to be looked up.
+  //
+  // Deliberately non-fatal: the money has already moved by this point
+  // and the RPC has committed. Failing (or worse, appearing to fail)
+  // over an email address would be far more damaging than a missing
+  // confirmation email, so log and carry on.
+  let email;
+  try {
+    const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(userId);
+    if (authErr) throw authErr;
+    email = authUser?.user?.email;
+  } catch (err) {
+    logger.warn(`creditWallet: credited user ${userId} but could not resolve their email:`, err.message);
+  }
+
   return {
-    user: { id: userId, walletBalance: row.new_balance },
+    user: { id: userId, walletBalance: row.new_balance, email },
+    // NOTE: `amount` is the BASE amount, excluding the bonus. The RPC
+    // stores amount+bonus in transactions.amount; the confirmation email
+    // shows Amount and Bonus as separate lines, so double-counting the
+    // bonus here would overstate the top-up. Guarded by tests/wallet.test.js.
     tx: { id: row.transaction_id, amount: amount, bonusAmount: bonus, balanceAfter: row.new_balance }
   };
 };

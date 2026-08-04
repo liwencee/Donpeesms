@@ -260,10 +260,27 @@ exports.checkOrderStatus = asyncHandler(async (req, res) => {
   }
 
   if (order.status === 'active' && new Date(order.expiresAt) < now) {
-    const { data, error } = await supabase.from('orders').update({ status: 'expired' }).eq('id', order.id).select().single();
+    // `.eq('status', 'active')` makes the transition a claim, not a
+    // blind write: the background auto-expire job in server.js does the
+    // same update, and only one of the two can win. Losing is normal
+    // (the user polls while the job fires), not an error.
+    const { data, error } = await supabase.from('orders')
+      .update({ status: 'expired' })
+      .eq('id', order.id)
+      .eq('status', 'active')
+      .select()
+      .maybeSingle();
     if (error) throw new ApiError(500, error.message);
-    order = toCamelCase(data);
-    await refundOrder(order, 'No SMS received within window');
+
+    if (data) {
+      order = toCamelCase(data);
+      await refundOrder(order, 'No SMS received within window');
+    } else {
+      // Someone else already transitioned (and refunded) it — re-read so
+      // we report the real current state instead of a stale 'active'.
+      const fresh = await fetchOwnOrder(order.id, req.userId);
+      if (fresh) order = fresh;
+    }
   }
 
   res.json({
@@ -290,10 +307,18 @@ exports.cancelOrder = asyncHandler(async (req, res) => {
     logger.warn('Provider cancel failed (continuing):', err.message);
   }
 
+  // Same claim-don't-clobber rule as the expiry path above: the
+  // `status !== 'active'` check higher up is a read-then-act guard, so
+  // the auto-expire job (or a second cancel) can slip in between.
   const { data, error } = await supabase.from('orders').update({
     status: 'cancelled', cancelled_at: new Date().toISOString()
-  }).eq('id', order.id).select().single();
+  }).eq('id', order.id).eq('status', 'active').select().maybeSingle();
   if (error) throw new ApiError(500, error.message);
+
+  if (!data) {
+    const fresh = await fetchOwnOrder(order.id, req.userId);
+    throw ApiError.badRequest(`Cannot cancel order with status: ${fresh ? fresh.status : 'unknown'}`);
+  }
   order = toCamelCase(data);
 
   await refundOrder(order, 'User cancelled');
@@ -334,6 +359,10 @@ exports.getOrder = asyncHandler(async (req, res) => {
 
 // ── Helper: refund an order ─────────────────────────────────
 async function refundOrder(order, reason) {
+  // Cheap fast path only. This is a read-then-act check with no lock, so
+  // it cannot be trusted to prevent a double refund — the refund_order
+  // RPC's conditional `where refunded_at is null` claim is the real
+  // guard (see 0004_refund_order_idempotent.sql).
   if (order.refundedAt) return;
 
   const newStatus = order.status !== 'cancelled' ? 'refunded' : null;
@@ -349,7 +378,16 @@ async function refundOrder(order, reason) {
   });
   if (error) {
     logger.error(`refundOrder RPC failed for order ${order.orderId}:`, error.message);
+    if (error.message === 'User not found') throw ApiError.notFound('User not found');
     throw new ApiError(500, error.message);
+  }
+
+  // Zero rows = the RPC found refunded_at already set, i.e. a concurrent
+  // caller claimed this refund first. Nothing was credited; return
+  // without touching data[0] (which would throw).
+  if (!data || data.length === 0) {
+    logger.warn(`Order ${order.orderId} already refunded — skipping duplicate refund (${reason})`);
+    return;
   }
 
   logger.info(`Order ${order.orderId} refunded: ${reason}`);
