@@ -4,87 +4,55 @@
  * Run: npm run seed -- --fresh   (wipes all data first)
  */
 require('dotenv').config();
-const { prisma, connectDB, disconnectDB } = require('../config/db');
-const { hashPassword, generateReferralCode } = require('../models/User');
+const { supabase } = require('../config/supabase');
 const logger = require('./logger');
 
 const run = async () => {
-  await connectDB();
-
-  // ── Wipe everything ──────────────────────────────────────────
   if (process.argv.includes('--fresh')) {
     logger.warn('Clearing database...');
-    // Break self-referential FK first (referredById → id)
-    await prisma.user.updateMany({ data: { referredById: null } });
-    // Cascade: deleting users cascade-deletes transactions, orders, apiKeys
-    await prisma.user.deleteMany({});
+    const { data: allProfiles } = await supabase.from('profiles').select('id');
+    for (const p of allProfiles || []) {
+      await supabase.auth.admin.deleteUser(p.id).catch(() => {});
+    }
     logger.warn('Database cleared');
   }
 
-  // ── Admin user ───────────────────────────────────────────────
-  const adminExists = await prisma.user.findFirst({ where: { email: 'admin@donpeesms.com' } });
+  const { data: existingUsers } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+
+  const adminExists = existingUsers.users.find(u => u.email === 'admin@donpeesms.com');
   if (!adminExists) {
-    const admin = await prisma.user.create({
-      data: {
-        firstName:    'Admin',
-        lastName:     'User',
-        username:     'admin',
-        email:        'admin@donpeesms.com',
-        password:     await hashPassword('Admin1234!'),
-        role:         'admin',
-        emailVerified: true,
-        walletBalance: 1000,
-        referralCode: 'admin0001'
-      }
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: 'admin@donpeesms.com',
+      password: 'Admin1234!',
+      email_confirm: true,
+      user_metadata: { username: 'admin', first_name: 'Admin', last_name: 'User' }
     });
-    logger.info(`✓ Admin created: ${admin.email} / Admin1234!`);
+    if (error) throw error;
+    await supabase.from('profiles').update({ role: 'admin', wallet_balance: 1000, referral_code: 'admin0001' }).eq('id', data.user.id);
+    logger.info(`✓ Admin created: admin@donpeesms.com / Admin1234!`);
   }
 
-  // ── Demo user ────────────────────────────────────────────────
-  const demoExists = await prisma.user.findFirst({ where: { email: 'demo@donpeesms.com' } });
+  const demoExists = existingUsers.users.find(u => u.email === 'demo@donpeesms.com');
   if (!demoExists) {
-    const demo = await prisma.user.create({
-      data: {
-        firstName:    'John',
-        lastName:     'Doe',
-        username:     'johndoe',
-        email:        'demo@donpeesms.com',
-        password:     await hashPassword('Demo1234!'),
-        emailVerified: true,
-        walletBalance: 24.50,
-        referralCode: generateReferralCode('johndoe')
-      }
+    const { data, error } = await supabase.auth.admin.createUser({
+      email: 'demo@donpeesms.com',
+      password: 'Demo1234!',
+      email_confirm: true,
+      user_metadata: { username: 'johndoe', first_name: 'John', last_name: 'Doe' }
     });
+    if (error) throw error;
+    await supabase.from('profiles').update({ wallet_balance: 24.50 }).eq('id', data.user.id);
 
-    // Sample transactions
-    await prisma.transaction.createMany({
-      data: [
-        {
-          userId:      demo.id,
-          type:        'topup',
-          amount:      25,
-          balanceAfter: 25,
-          method:      'stripe',
-          status:      'success',
-          description: 'Initial top-up'
-        },
-        {
-          userId:      demo.id,
-          type:        'purchase',
-          amount:      -0.50,
-          balanceAfter: 24.50,
-          method:      'wallet',
-          status:      'success',
-          description: 'Demo purchase'
-        }
-      ]
-    });
+    const { error: txErr } = await supabase.from('transactions').insert([
+      { user_id: data.user.id, type: 'topup', amount: 25, balance_after: 25, method: 'stripe', status: 'success', description: 'Initial top-up' },
+      { user_id: data.user.id, type: 'purchase', amount: -0.50, balance_after: 24.50, method: 'wallet', status: 'success', description: 'Demo purchase' }
+    ]);
+    if (txErr) throw txErr;
 
-    logger.info(`✓ Demo user created: ${demo.email} / Demo1234!`);
+    logger.info(`✓ Demo user created: demo@donpeesms.com / Demo1234!`);
   }
 
   logger.info('✓ Seed complete');
-  await disconnectDB();
   process.exit(0);
 };
 

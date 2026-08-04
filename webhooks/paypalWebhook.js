@@ -4,12 +4,13 @@
  * POST /api/payments/paypal/webhook — async server-to-server notifications
  */
 const paypal       = require('../services/paypalService');
-const { prisma }   = require('../config/db');
+const { supabase } = require('../config/supabase');
 const wallet       = require('../controllers/walletController');
 const email        = require('../services/emailService');
 const logger       = require('../utils/logger');
 const asyncHandler = require('../utils/asyncHandler');
 const ApiError     = require('../utils/apiError');
+const { toCamelCase } = require('../utils/caseMapper');
 
 /**
  * Direct capture — frontend calls this after user approves on PayPal
@@ -18,18 +19,19 @@ exports.capturePayment = asyncHandler(async (req, res) => {
   const { paypalOrderId } = req.body;
   if (!paypalOrderId) throw ApiError.badRequest('paypalOrderId required');
 
-  const pending = await prisma.transaction.findFirst({
-    where: { externalId: paypalOrderId, userId: req.userId, status: 'pending' }
-  });
-  if (!pending) throw ApiError.notFound('Pending transaction not found');
+  const { data: pendingRow, error: findErr } = await supabase
+    .from('transactions').select('*').eq('external_id', paypalOrderId).eq('user_id', req.userId).eq('status', 'pending').maybeSingle();
+  if (findErr) throw ApiError.internal(findErr.message);
+  if (!pendingRow) throw ApiError.notFound('Pending transaction not found');
+  const pending = toCamelCase(pendingRow);
 
   const captureResult = await paypal.captureOrder(paypalOrderId);
 
   if (captureResult.status !== 'COMPLETED') {
-    await prisma.transaction.update({
-      where: { id: pending.id },
-      data:  { status: 'failed', externalStatus: captureResult.status }
-    });
+    const { error } = await supabase.from('transactions').update({
+      status: 'failed', external_status: captureResult.status
+    }).eq('id', pending.id);
+    if (error) logger.error('PayPal webhook: failed to mark tx failed:', error.message);
     throw ApiError.badRequest(`Payment status: ${captureResult.status}`);
   }
 
@@ -45,14 +47,12 @@ exports.capturePayment = asyncHandler(async (req, res) => {
     description: `PayPal top-up ($${amount})`
   });
 
-  await prisma.transaction.update({
-    where: { id: pending.id },
-    data: {
-      status:      'success',
-      balanceAfter: user.walletBalance,
-      metadata:    { ...(pending.metadata || {}), paypalCaptureId: captureResult.id }
-    }
-  });
+  const { error: updateErr } = await supabase.from('transactions').update({
+    status:        'success',
+    balance_after: user.walletBalance,
+    metadata:      { ...(pending.metadata || {}), paypalCaptureId: captureResult.id }
+  }).eq('id', pending.id);
+  if (updateErr) logger.error('PayPal webhook: failed to mark pending tx fulfilled:', updateErr.message);
 
   email.sendTopupConfirmation(user, tx)
     .catch(e => logger.error('Topup email:', e.message));

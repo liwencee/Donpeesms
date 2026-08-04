@@ -9,11 +9,7 @@
     "dev": "nodemon server.js",
     "seed": "node utils/seed.js",
     "test": "jest",
-    "db:generate": "prisma generate",
     "db:migrate": "node scripts/migrate.js",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "postinstall": "prisma generate || true",
     "test:watch": "jest --watch"
   },
   "engines": {
@@ -21,7 +17,6 @@
   },
   "dependencies": {
     "@paypal/checkout-server-sdk": "^1.0.3",
-    "@prisma/client": "^5.22.0",
     "@supabase/supabase-js": "^2.45.4",
     "axios": "^1.7.2",
     "bcryptjs": "^2.4.3",
@@ -37,7 +32,6 @@
     "jsonwebtoken": "^9.0.2",
     "morgan": "^1.10.0",
     "nodemailer": "^9.0.3",
-    "prisma": "^5.22.0",
     "qrcode": "^1.5.3",
     "speakeasy": "^2.0.0",
     "stripe": "^16.2.0",

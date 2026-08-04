@@ -4,7 +4,7 @@
 const router = require('express').Router();
 const { body, query } = require('express-validator');
 const validate = require('../middleware/validate');
-const { protect, requireEmailVerified, requireRole, apiKeyAuth } = require('../middleware/auth');
+const { protect, requireRole, apiKeyAuth } = require('../middleware/auth');
 const { purchaseLimiter } = require('../middleware/rateLimiter');
 const c = require('../controllers/numberController');
 
@@ -30,7 +30,7 @@ router.get('/provider-check', protect, requireRole('admin'), c.providerCheck);
 // ── AUTH (session) ──
 router.use(protect);
 
-router.post('/buy',                  purchaseLimiter, requireEmailVerified, buyRules, validate, c.buyNumber);
+router.post('/buy',                  purchaseLimiter, buyRules, validate, c.buyNumber);
 router.get('/orders',                c.listOrders);
 router.get('/orders/:id',            c.getOrder);
 router.get('/orders/:id/status',     c.checkOrderStatus);
