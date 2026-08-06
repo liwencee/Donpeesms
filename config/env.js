@@ -44,6 +44,11 @@ module.exports = {
     fromEmail: process.env.SMTP_FROM_EMAIL
   },
 
+  telegram: {
+    botToken: process.env.TELEGRAM_BOT_TOKEN,
+    chatId:   process.env.TELEGRAM_CHAT_ID
+  },
+
   sms: {
     provider: process.env.SMS_PROVIDER || 'sureverifications',
     fivesim: {

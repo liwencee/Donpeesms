@@ -8,6 +8,7 @@ const { getProvider, calculateUserPrice } = require('../services/smsProvider');
 const { generateOrderId, getTimeRemaining } = require('../models/Order');
 const wallet       = require('./walletController');
 const email        = require('../services/emailService');
+const telegram     = require('../services/telegramService');
 const logger       = require('../utils/logger');
 const { toCamelCase } = require('../utils/caseMapper');
 
@@ -206,6 +207,7 @@ exports.buyNumber = asyncHandler(async (req, res) => {
   }
 
   email.sendOrderConfirmation(req.user, order).catch(e => logger.error('Order email:', e.stack || e.message));
+  telegram.notifyPurchase(order).catch(() => {});
 
   logger.info(`Order ${order.orderId} created: ${order.phoneNumber} ($${userCost})`);
 
