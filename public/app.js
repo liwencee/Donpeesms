@@ -491,7 +491,6 @@ async function handleLogout() {
 
 // ── EMAIL VERIFICATION ─────────────────────────────────────
 async function verifyEmailFromUrl() {
-  const token   = new URLSearchParams(window.location.search).get('token');
   const iconEl  = document.getElementById('verifyIcon');
   const titleEl = document.getElementById('verifyTitle');
   const msgEl   = document.getElementById('verifyMsg');
@@ -508,29 +507,35 @@ async function verifyEmailFromUrl() {
     if (msgEl)   msgEl.textContent = msg;
   };
 
-  if (!token) {
-    setState('error', 'Invalid link', 'No verification token was found in the link.', 'rgba(248,113,113,.15)');
-    if (actsEl) { actsEl.style.display = 'block'; btnEl.textContent = 'Go to Login'; btnEl.onclick = () => showPage('login'); }
-    return;
-  }
+  // Supabase handles the token itself and redirects back here with the
+  // session in the URL fragment; detectSessionInUrl consumes it before
+  // this runs. So the question is simply: are we signed in now?
+  const { data: { session } } = await window.sb.auth.getSession();
+  const errorDescription = new URLSearchParams(window.location.hash.slice(1)).get('error_description');
 
-  try {
-    const data = await api('POST', '/auth/verify-email', { token });
-    if (!data) return;
-    setState('success', 'Email verified! 🎉', 'Your account is now verified. You can use all features.', 'rgba(52,211,153,.15)');
-    if (state.currentUser) { state.currentUser.emailVerified = true; _loadAndRenderUser(); }
-    if (actsEl) {
-      actsEl.style.display = 'block';
-      btnEl.textContent = state.currentUser ? 'Go to Dashboard' : 'Go to Login';
-      btnEl.onclick = () => showPage(state.currentUser ? 'dashboard' : 'login');
-    }
-  } catch (err) {
-    setState('error', 'Verification failed', err.message || 'This link is invalid or has expired.', 'rgba(248,113,113,.15)');
+  if (errorDescription) {
+    setState('error', 'Verification failed', decodeURIComponent(errorDescription.replace(/\+/g, ' ')), 'rgba(248,113,113,.15)');
     if (actsEl) {
       actsEl.style.display = 'block';
       btnEl.textContent = 'Resend Email';
       btnEl.onclick = () => resendVerification();
     }
+    return;
+  }
+
+  if (!session) {
+    setState('error', 'Invalid or expired link', 'This verification link is no longer valid. Sign in and request a new one.', 'rgba(248,113,113,.15)');
+    if (actsEl) { actsEl.style.display = 'block'; btnEl.textContent = 'Go to Login'; btnEl.onclick = () => showPage('login'); }
+    return;
+  }
+
+  setState('success', 'Email verified! 🎉', 'Your account is now verified. You can use all features.', 'rgba(52,211,153,.15)');
+  const me = await api('GET', '/users/me').catch(() => null);
+  if (me) { state.currentUser = me.user || me; _loadAndRenderUser(); }
+  if (actsEl) {
+    actsEl.style.display = 'block';
+    btnEl.textContent = 'Go to Dashboard';
+    btnEl.onclick = () => showPage('dashboard');
   }
 }
 
@@ -538,7 +543,10 @@ async function verifyEmailFromUrl() {
 async function resendVerification() {
   if (!state.currentUser) { showToast('Please sign in first to resend', 'warning'); return showPage('login'); }
   try {
-    await api('POST', '/auth/resend-verification');
+    const email = state.currentUser?.email;
+    if (!email) { showToast('Could not determine your email address', 'error'); return; }
+    const { error } = await window.sb.auth.resend({ type: 'signup', email });
+    if (error) throw new Error(error.message);
     showToast('Verification email sent — check your inbox', 'success', 5000);
   } catch (err) {
     showToast(err.message || 'Could not resend verification email', 'error');
@@ -549,7 +557,7 @@ async function resendVerification() {
 async function _loadAndRenderUser() {
   try {
     if (!state.currentUser) {
-      const data = await api('GET', '/auth/me');
+      const data = await api('GET', '/users/me');
       if (!data) return;
       state.currentUser = data.user || data;
     }
@@ -574,7 +582,10 @@ async function _loadAndRenderUser() {
     if (pFN) pFN.textContent = fullName;
     if (pED) pED.textContent = u.email;
     if (pVB) {
-      const verified = u.emailVerified === true;
+      // Email confirmation is owned by Supabase Auth, not our profiles
+      // table — read it off the session rather than the API response.
+      const { data: { user: authUser } } = await window.sb.auth.getUser();
+      const verified = !!authUser?.email_confirmed_at;
       pVB.textContent = verified ? 'Verified Account' : 'Email Not Verified';
       pVB.className = verified ? 'badge badge-success' : 'badge';
       pVB.style.cssText = verified ? '' : 'background:rgba(245,158,11,.15);color:var(--warning);cursor:pointer';
@@ -653,8 +664,17 @@ async function changePassword() {
   btn.disabled = true;
   btn.textContent = 'Updating...';
   try {
-    const data = await api('POST', '/auth/change-password', { currentPassword, newPassword });
-    if (!data) return;
+    // Supabase's updateUser() does not check the current password, so
+    // verify it by re-authenticating before allowing the change.
+    const email = state.currentUser?.email;
+    if (!email) throw new Error('Could not determine your email address');
+
+    const { error: reauthError } = await window.sb.auth.signInWithPassword({ email, password: currentPassword });
+    if (reauthError) throw new Error('Current password is incorrect');
+
+    const { error } = await window.sb.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message || 'Failed to update password');
+
     showToast('Password updated successfully', 'success');
     ['curPassword', 'newPassword', 'confirmPassword'].forEach(id => {
       const f = document.getElementById(id); if (f) f.value = '';
@@ -849,7 +869,7 @@ function _pollOrder(orderId, type) {
         showToast('OTP received: ' + o.otpCode, 'success', 6000);
         loadRecentOrders();
         // refresh balance
-        const me = await api('GET', '/auth/me');
+        const me = await api('GET', '/users/me');
         if (me) { state.walletBalance = me.user?.walletBalance || state.walletBalance; updateWalletDisplay(); }
       } else if (['cancelled','expired','refunded'].includes(o.status)) {
         clearInterval(state.activePollers[orderId]);
@@ -867,7 +887,7 @@ async function cancelOrder(orderId) {
     if (state.activePollers[orderId]) { clearInterval(state.activePollers[orderId]); delete state.activePollers[orderId]; }
     showToast('Order cancelled and refunded to wallet', 'info');
     loadRecentOrders();
-    const me = await api('GET', '/auth/me');
+    const me = await api('GET', '/users/me');
     if (me) { state.walletBalance = me.user?.walletBalance || state.walletBalance; updateWalletDisplay(); }
   } catch (err) {
     showToast(err.message || 'Cancel failed', 'error');
