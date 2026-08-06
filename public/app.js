@@ -212,7 +212,13 @@ async function handleAdminLogin(e) {
     if (error) throw new Error(error.message || 'Invalid email or password');
     if (!authData.session) throw new Error('Sign-in did not return a session');
 
-    const me = await api('GET', '/users/me');
+    let me;
+    try {
+      me = await api('GET', '/users/me');
+    } catch (_e) {
+      await window.sb.auth.signOut().catch(() => {});
+      throw new Error('Signed in, but could not verify admin access. Please try again.');
+    }
     if (!me) return;
     const user = me.user || me;
     if (user.role !== 'admin') {
@@ -391,7 +397,13 @@ async function handleLogin(e) {
 
     // Profile (name, wallet balance, role) lives in our own API, not in
     // the auth token.
-    const me = await api('GET', '/users/me');
+    let me;
+    try {
+      me = await api('GET', '/users/me');
+    } catch (_e) {
+      await window.sb.auth.signOut().catch(() => {});
+      throw new Error('Signed in, but could not load your profile. Please try again.');
+    }
     if (!me) return;
     state.currentUser = me.user || me;
     await _loadAndRenderUser();
@@ -440,7 +452,13 @@ async function handleRegister(e) {
       return showPage('login');
     }
 
-    const me = await api('GET', '/users/me');
+    let me;
+    try {
+      me = await api('GET', '/users/me');
+    } catch (_e) {
+      await window.sb.auth.signOut().catch(() => {});
+      throw new Error('Account created, but could not load your profile. Please sign in.');
+    }
     if (!me) return;
     state.currentUser = me.user || me;
     await _loadAndRenderUser();
