@@ -1252,7 +1252,7 @@
         <div class="form-group">
           <div style="display:flex;justify-content:space-between;align-items:center">
             <label class="form-label">Password</label>
-            <a href="#" style="font-size:.8rem;color:var(--p-400)">Forgot password?</a>
+            <a href="#" onclick="event.preventDefault();showPage('forgot-password')" style="font-size:.8rem;color:var(--p-400)">Forgot password?</a>
           </div>
           <div style="position:relative">
             <input type="password" class="form-input" placeholder="Enter your password" id="loginPassword" required style="padding-right:46px"/>
@@ -1287,6 +1287,52 @@
     </div>
   </div>
 </div><!-- end page-login -->
+
+<div id="page-forgot-password" class="page">
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-title">Reset your password</div>
+      <div class="auth-subtitle">Enter your email and we'll send you a reset link.</div>
+
+      <form class="auth-form" onsubmit="handleForgotPassword(event)">
+        <div class="form-group">
+          <label class="form-label">Email Address</label>
+          <input type="email" class="form-input" placeholder="you@example.com" id="forgotEmail" required/>
+        </div>
+        <button type="submit" class="btn btn-primary w-full btn-lg" id="forgotBtn">
+          Send Reset Link
+        </button>
+      </form>
+
+      <div style="text-align:center;margin-top:16px">
+        <a onclick="showPage('login')" style="font-size:.82rem;color:var(--txt-4);cursor:pointer">Back to sign in</a>
+      </div>
+    </div>
+  </div>
+</div><!-- end page-forgot-password -->
+
+<div id="page-reset-password" class="page">
+  <div class="auth-page">
+    <div class="auth-card">
+      <div class="auth-title">Choose a new password</div>
+      <div class="auth-subtitle">Enter a new password for your account.</div>
+
+      <form class="auth-form" onsubmit="handleResetPassword(event)">
+        <div class="form-group">
+          <label class="form-label">New Password</label>
+          <input type="password" class="form-input" placeholder="At least 8 characters" id="resetPassword" required/>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Confirm Password</label>
+          <input type="password" class="form-input" placeholder="Re-enter password" id="resetConfirm" required/>
+        </div>
+        <button type="submit" class="btn btn-primary w-full btn-lg" id="resetBtn">
+          Update Password
+        </button>
+      </form>
+    </div>
+  </div>
+</div><!-- end page-reset-password -->
 
 
 <!-- ═══════════════════════════════════════ REGISTER PAGE ═══ -->

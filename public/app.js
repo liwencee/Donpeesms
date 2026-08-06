@@ -127,7 +127,7 @@ const LANDING_PATHS = {
 };
 const PATH_TO_LANDING = {};
 Object.entries(LANDING_PATHS).forEach(([sec, p]) => { PATH_TO_LANDING[p] = sec; });
-const PAGE_PATHS = { login:'/login', register:'/register', dashboard:'/dashboard', admin:'/admin', 'admin-login':'/admin' };
+const PAGE_PATHS = { login:'/login', register:'/register', dashboard:'/dashboard', admin:'/admin', 'admin-login':'/admin', 'forgot-password':'/forgot-password', 'reset-password':'/reset-password' };
 
 function _setUrl(path) {
   if (_suppressUrl) return;
@@ -146,6 +146,8 @@ function route() {
     if (parts.length === 0) { showPage('landing'); showLandingPage('home'); }
     else if (parts[0] === 'login')    showPage('login');
     else if (parts[0] === 'register') showPage('register');
+    else if (parts[0] === 'forgot-password') showPage('forgot-password');
+    else if (parts[0] === 'reset-password')  showPage('reset-password');
     else if (parts[0] === 'verify-email') { showPage('verify-email'); verifyEmailFromUrl(); }
     else if (parts[0] === 'admin')    showPage('admin'); // guard redirects non-admins
     else if (parts[0] === 'dashboard') {
@@ -487,6 +489,64 @@ async function handleLogout() {
   showPage('landing');
   showLandingPage('home');
   showToast('Signed out successfully', 'info');
+}
+
+// ── PASSWORD RESET ──────────────────────────────────────────
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  const btn = document.getElementById('forgotBtn');
+  const email = document.getElementById('forgotEmail')?.value?.trim();
+  if (!email) return showToast('Enter your email address', 'warning');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Sending...';
+  try {
+    const { error } = await window.sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password'
+    });
+    if (error) throw new Error(error.message);
+    // Deliberately not revealing whether the address is registered.
+    showToast('If that email is registered, a reset link is on its way.', 'success', 6000);
+    showPage('login');
+  } catch (err) {
+    showToast(err.message || 'Could not send reset email', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Reset Link';
+  }
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const btn = document.getElementById('resetBtn');
+  const password = document.getElementById('resetPassword')?.value;
+  const confirm  = document.getElementById('resetConfirm')?.value;
+  if (!password || password.length < 8) return showToast('Password must be at least 8 characters', 'warning');
+  if (password !== confirm) return showToast('Passwords do not match', 'warning');
+
+  // Arriving from the emailed link puts a recovery session in place
+  // (detectSessionInUrl consumed it); without one, the link is stale.
+  const { data: { session } } = await window.sb.auth.getSession();
+  if (!session) {
+    showToast('This reset link has expired. Please request a new one.', 'error', 6000);
+    return showPage('forgot-password');
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Updating...';
+  try {
+    const { error } = await window.sb.auth.updateUser({ password });
+    if (error) throw new Error(error.message);
+    showToast('Password updated — you are now signed in.', 'success');
+    const me = await api('GET', '/users/me');
+    if (me) { state.currentUser = me.user || me; await _loadAndRenderUser(); }
+    showPage('dashboard');
+  } catch (err) {
+    showToast(err.message || 'Could not update password', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Update Password';
+  }
 }
 
 // ── EMAIL VERIFICATION ─────────────────────────────────────
