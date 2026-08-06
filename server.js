@@ -56,7 +56,21 @@ app.set('trust proxy', 1);
 // SECURITY MIDDLEWARE
 // ══════════════════════════════════════════
 app.use(helmet({
-  contentSecurityPolicy:      env.env === 'production',
+  // This app's UI relies throughout on inline onclick="" attributes (180+
+  // in public/index.html — tab switches, password toggles, social buttons,
+  // notifications, modals). Helmet's default CSP directives include
+  // script-src-attr 'none', which silently blocks every one of them —
+  // discovered when NODE_ENV=production made this activate for the first
+  // time and the entire site's click interactivity stopped working.
+  // script-src itself stays 'self' only, so externally injected <script>
+  // tags are still blocked; this only permits the attribute-handler
+  // pattern the app already depends on everywhere.
+  contentSecurityPolicy: env.env === 'production' ? {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      'script-src-attr': ["'unsafe-inline'"]
+    }
+  } : false,
   crossOriginEmbedderPolicy:  false
 }));
 
