@@ -68,45 +68,6 @@ const send = async ({ to, subject, html, text }) => {
   return info;
 };
 
-const sendVerificationEmail = (user, token) => {
-  const url = `${env.frontendUrl}/verify-email?token=${token}`;
-  const body = `
-    <h1 style="font-size:22px;margin:0 0 16px;color:#F8FAFC">Verify your email</h1>
-    <p style="color:#CBD5E1;line-height:1.7;margin-bottom:24px">Hi ${user.firstName}, welcome to DonPeeSMS! Please verify your email to start using your account.</p>
-    <div style="text-align:center;margin:28px 0">
-      <a href="${url}" style="display:inline-block;background:linear-gradient(135deg,#5B21B6,#8B5CF6);color:white;padding:14px 32px;border-radius:9999px;text-decoration:none;font-weight:bold">Verify Email</a>
-    </div>
-    <p style="color:#64748B;font-size:13px;line-height:1.6">Or copy this link: <a href="${url}" style="color:#A78BFA;word-break:break-all">${url}</a></p>
-    <p style="color:#64748B;font-size:12px;margin-top:24px">This link expires in 24 hours.</p>
-  `;
-  return send({ to: user.email, subject: 'Verify your DonPeeSMS email', html: baseTemplate('Verify Email', body) });
-};
-
-const sendPasswordResetEmail = (user, token) => {
-  const url = `${env.frontendUrl}/reset-password?token=${token}`;
-  const body = `
-    <h1 style="font-size:22px;margin:0 0 16px">Reset your password</h1>
-    <p style="color:#CBD5E1;line-height:1.7;margin-bottom:24px">We received a request to reset your password. Click below to choose a new one.</p>
-    <div style="text-align:center;margin:28px 0">
-      <a href="${url}" style="display:inline-block;background:linear-gradient(135deg,#5B21B6,#8B5CF6);color:white;padding:14px 32px;border-radius:9999px;text-decoration:none;font-weight:bold">Reset Password</a>
-    </div>
-    <p style="color:#64748B;font-size:13px">If you didn't request this, ignore this email. The link expires in 30 minutes.</p>
-  `;
-  return send({ to: user.email, subject: 'Reset your DonPeeSMS password', html: baseTemplate('Reset Password', body) });
-};
-
-const send2FACode = (user, code) => {
-  const body = `
-    <h1 style="font-size:22px;margin:0 0 16px">Your verification code</h1>
-    <p style="color:#CBD5E1;margin-bottom:24px">Use this code to complete sign-in:</p>
-    <div style="text-align:center;margin:28px 0">
-      <div style="display:inline-block;background:#12122A;border:1px solid #4C1D95;padding:18px 32px;border-radius:12px;font-size:32px;letter-spacing:8px;color:#A78BFA;font-weight:bold">${code}</div>
-    </div>
-    <p style="color:#64748B;font-size:13px">This code expires in 10 minutes. Never share it with anyone.</p>
-  `;
-  return send({ to: user.email, subject: `DonPeeSMS code: ${code}`, html: baseTemplate('2FA Code', body) });
-};
-
 const sendOrderConfirmation = (user, order) => {
   const body = `
     <h1 style="font-size:22px;margin:0 0 16px">Your number is ready</h1>
@@ -135,9 +96,6 @@ const sendTopupConfirmation = (user, tx) => {
 
 module.exports = {
   send,
-  sendVerificationEmail,
-  sendPasswordResetEmail,
-  send2FACode,
   sendOrderConfirmation,
   sendTopupConfirmation
 };

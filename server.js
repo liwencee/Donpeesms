@@ -8,8 +8,18 @@
 // Manager, bypassing Hostinger's Environment Variables panel entirely
 // (which has a bug that drops saved values). PORT is kept from the host
 // so the LiteSpeed/Passenger proxy still finds the app.
+//
+// EXCEPTION — tests: the override is disabled when NODE_ENV=test. The
+// worktree's .env carries NODE_ENV=production and real Supabase
+// credentials, so an unconditional override would clobber the dummy
+// values tests/setup.js installs, flip NODE_ENV away from 'test', and
+// make start() bind a port and register the 60-second auto-expire /
+// auto-refund job — pointed at the live project — during `npm test`.
 const _hostPort = process.env.PORT;
-require('dotenv').config({ path: require('path').join(__dirname, '.env'), override: true });
+require('dotenv').config({
+  path: require('path').join(__dirname, '.env'),
+  override: process.env.NODE_ENV !== 'test'
+});
 if (_hostPort) process.env.PORT = _hostPort;
 
 const express      = require('express');
@@ -21,14 +31,12 @@ const cookieParser = require('cookie-parser');
 const hpp          = require('hpp');
 
 const env           = require('./config/env');
-const { connectDB } = require('./config/db');
-const { prisma }    = require('./config/db');
+const { supabase }  = require('./config/supabase');
 const logger        = require('./utils/logger');
 const { errorHandler, notFound } = require('./middleware/errorHandler');
 const { globalLimiter }          = require('./middleware/rateLimiter');
 
 const { protect, requireRole } = require('./middleware/auth');
-const authRoutes         = require('./routes/authRoutes');
 const walletRoutes       = require('./routes/walletRoutes');
 const numberRoutesModule = require('./routes/numberRoutes');
 const numberRoutes       = numberRoutesModule;
@@ -48,7 +56,27 @@ app.set('trust proxy', 1);
 // SECURITY MIDDLEWARE
 // ══════════════════════════════════════════
 app.use(helmet({
-  contentSecurityPolicy:      env.env === 'production',
+  // This app's UI relies throughout on inline onclick="" attributes (180+
+  // in public/index.html — tab switches, password toggles, social buttons,
+  // notifications, modals). Helmet's default CSP directives include
+  // script-src-attr 'none', which silently blocks every one of them —
+  // discovered when NODE_ENV=production made this activate for the first
+  // time and the entire site's click interactivity stopped working.
+  // script-src itself stays 'self' only, so externally injected <script>
+  // tags are still blocked; this only permits the attribute-handler
+  // pattern the app already depends on everywhere.
+  contentSecurityPolicy: env.env === 'production' ? {
+    directives: {
+      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      'script-src-attr': ["'unsafe-inline'"],
+      // connect-src has no override in the defaults above, so it falls
+      // back to default-src 'self' — which silently blocks every fetch()
+      // the browser makes to Supabase's own API (a different origin).
+      // Every Supabase Auth call (signUp, signInWithPassword, etc.) failed
+      // with a bare "Failed to fetch" until this was added.
+      'connect-src': ["'self'", env.supabaseUrl]
+    }
+  } : false,
   crossOriginEmbedderPolicy:  false
 }));
 
@@ -125,49 +153,13 @@ app.get('/health', (req, res) => {
 // Admin-only: this previously leaked DB host/port details and, during a
 // prior incident, raw engine stack traces to anyone on the internet.
 app.get('/api/dbcheck', protect, requireRole('admin'), async (_req, res) => {
-  const { prisma } = require('./config/db');
-  const fs = require('fs');
-  const path = require('path');
-  const raw = process.env.DATABASE_URL || '';
-  // Mask password between ':' and '@' so we can safely show the URL shape.
-  const redacted = raw.replace(/:\/\/([^:]+):([^@]*)@/, '://$1:****@');
-  const portMatch = raw.match(/@[^/:]+:(\d+)/);
-  // Read the .env FILE directly from disk to compare against process.env.
-  let fileEnvLen = 'no-file', fileEnvPort = 'no-file', envPath = 'none';
-  for (const p of [path.join(__dirname, '.env'), path.join(process.cwd(), '.env')]) {
-    try {
-      const txt = fs.readFileSync(p, 'utf8');
-      const m = txt.match(/^\s*DATABASE_URL\s*=\s*"?([^"\n\r]+)"?/m);
-      if (m) {
-        const v = m[1].trim();
-        fileEnvLen = v.length;
-        const pm = v.match(/@[^/:]+:(\d+)/);
-        fileEnvPort = pm ? pm[1] : 'none';
-        envPath = p;
-        break;
-      }
-    } catch (_e) {}
-  }
-  const info = {
-    build: 'v5-paths',
-    hasEnv: !!raw,
-    envLen: raw.length,
-    port: portMatch ? portMatch[1] : 'none',
-    fileEnvLen, fileEnvPort, envPath,
-    // Exact folders the app reads .env from — put the .env file HERE:
-    putEnvFileHere: path.join(__dirname, '.env'),
-    alsoChecks: path.join(process.cwd(), '.env'),
-    redacted: redacted.slice(0, 140)
-  };
   const started = Date.now();
   try {
-    await Promise.race([
-      prisma.$queryRaw`SELECT 1`,
-      new Promise((_, rej) => setTimeout(() => rej(new Error('DB query timed out after 8s')), 8000))
-    ]);
-    res.json({ ok: true, ...info, latencyMs: Date.now() - started });
+    const { error } = await supabase.from('categories').select('id').limit(1);
+    if (error) throw error;
+    res.json({ ok: true, latencyMs: Date.now() - started });
   } catch (err) {
-    res.status(503).json({ ok: false, ...info, latencyMs: Date.now() - started, error: err.message });
+    res.status(503).json({ ok: false, latencyMs: Date.now() - started, error: err.message });
   }
 });
 
@@ -177,14 +169,13 @@ app.get('/api', (_req, res) => {
     version:   '1.0.0',
     docs:      '/api/docs',
     health:    '/health',
-    endpoints: ['/api/auth', '/api/wallet', '/api/numbers', '/api/users', '/api/payments', '/api/v1']
+    endpoints: ['/api/wallet', '/api/numbers', '/api/users', '/api/payments', '/api/v1']
   });
 });
 
 // ══════════════════════════════════════════
 // API ROUTES
 // ══════════════════════════════════════════
-app.use('/api/auth',    authRoutes);
 app.use('/api/wallet',  walletRoutes);
 app.use('/api/numbers', numberRoutes);
 app.use('/api/users',   userRoutes);
@@ -227,8 +218,6 @@ app.use(errorHandler);
 // STARTUP
 // ══════════════════════════════════════════
 const start = async () => {
-  await connectDB();
-
   const server = app.listen(env.port, () => {
     logger.info(`╔═══════════════════════════════════════════════╗`);
     logger.info(`║   ${env.appName} API running                       ║`);
@@ -248,7 +237,7 @@ const start = async () => {
     logger.info(`${signal} received — shutting down gracefully`);
     server.close(() => {
       logger.info('HTTP server closed');
-      require('./config/db').disconnectDB().then(() => process.exit(0));
+      process.exit(0);
     });
     setTimeout(() => process.exit(1), 10000).unref();
   };
@@ -278,34 +267,37 @@ const start = async () => {
 // ── Background jobs (poll expired orders) ────────────────────
 const startBackgroundJobs = () => {
   const numberCtrl = require('./controllers/numberController');
+  const { toCamelCase } = require('./utils/caseMapper');
 
   setInterval(async () => {
     try {
-      // Explicit keep-alive: Supabase's pooler closes idle backend
-      // connections after a few minutes. Touching the DB every 60s
-      // stops the connection from ever going idle long enough to be
-      // reaped, on top of the retry-on-stale-connection middleware in
-      // config/db.js. Kept as its own statement (not folded into the
-      // query below) so it isn't silently lost if that query changes.
-      await prisma.$queryRaw`SELECT 1`;
+      const { data: expired, error } = await supabase
+        .from('orders')
+        .select('*')
+        .eq('status', 'active')
+        .lt('expires_at', new Date().toISOString())
+        .limit(50);
+      if (error) throw error;
 
-      const expired = await prisma.order.findMany({
-        where: { status: 'active', expiresAt: { lt: new Date() } },
-        take:  50
-      });
+      for (const orderRow of expired) {
+        // `.eq('status', 'active')` turns this into a claim: a user
+        // polling GET /orders/:id/status runs the identical transition,
+        // and exactly one of the two may win. No row back means the
+        // other path already expired and refunded it — skip, don't crash.
+        const { data: updatedRow, error: updateErr } = await supabase
+          .from('orders').update({ status: 'expired' })
+          .eq('id', orderRow.id).eq('status', 'active')
+          .select().maybeSingle();
+        if (updateErr) { logger.error('Auto-expire update failed:', updateErr.message); continue; }
+        if (!updatedRow) continue;
 
-      for (const order of expired) {
-        const updatedOrder = await prisma.order.update({
-          where: { id: order.id },
-          data:  { status: 'expired' }
-        });
-        await numberCtrl._refundOrder(updatedOrder, 'No SMS received within window')
-          .catch(err => logger.error(`Auto-refund failed for ${order.orderId}:`, err.message));
+        await numberCtrl._refundOrder(toCamelCase(updatedRow), 'No SMS received within window')
+          .catch(err => logger.error(`Auto-refund failed for ${orderRow.order_id}:`, err.stack || err.message));
       }
 
       if (expired.length) logger.info(`Auto-expired ${expired.length} stale orders`);
     } catch (err) {
-      logger.error('Background job error:', err.message);
+      logger.error('Background job error:', err.stack || err.message);
     }
   }, 60_000);
 };

@@ -4,7 +4,7 @@
 const router = require('express').Router();
 const { body } = require('express-validator');
 const validate = require('../middleware/validate');
-const { protect, requireEmailVerified } = require('../middleware/auth');
+const { protect } = require('../middleware/auth');
 const c = require('../controllers/walletController');
 
 const topupRules = [
@@ -16,7 +16,7 @@ const topupRules = [
 router.use(protect);
 
 router.get('/',                            c.getWallet);
-router.post('/topup', requireEmailVerified, topupRules, validate, c.initiateTopup);
+router.post('/topup', topupRules, validate, c.initiateTopup);
 router.get('/transactions',                c.getTransactions);
 router.get('/transactions/:id',            c.getTransaction);
 

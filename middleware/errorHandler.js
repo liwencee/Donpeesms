@@ -4,28 +4,35 @@
 const logger = require('../utils/logger');
 const ApiError = require('../utils/apiError');
 
-const handleCastError = (err) =>
-  new ApiError(400, `Invalid ${err.path}: ${err.value}`);
+// Postgres / PostgREST error codes. supabase-js surfaces both kinds of
+// error with a `.code`: raw SQLSTATE for constraint violations that
+// happen in the database, and PGRST* for PostgREST's own errors.
+// Without this mapping a duplicate category or provider name came back
+// as a generic 500 — reported as our fault and unactionable for the caller.
+const PG_ERROR_CODES = new Set(['23505', '23503', '23514', 'PGRST116']);
 
-const handleDuplicateKey = (err) => {
-  const field = Object.keys(err.keyValue)[0];
-  return new ApiError(409, `${field} already exists`);
-};
-
-const handleValidationError = (err) => {
-  const messages = Object.values(err.errors).map(e => e.message);
-  return new ApiError(400, `Validation failed: ${messages.join(', ')}`);
+const handlePostgresError = (err) => {
+  switch (err.code) {
+    case '23505': {
+      // details looks like: Key (name)=(Prepaid) already exists.
+      const field = /Key \(([^)]+)\)=/.exec(err.details || '');
+      return new ApiError(409, field ? `${field[1]} already exists` : 'That record already exists');
+    }
+    case '23503':
+      return new ApiError(400, 'Referenced record does not exist');
+    case '23514':
+      return new ApiError(400, 'Value rejected by a database constraint');
+    default: // PGRST116 — no rows where exactly one was expected
+      return new ApiError(404, 'Resource not found');
+  }
 };
 
 const errorHandler = (err, req, res, next) => {
   let error = err;
 
-  // Mongoose errors
-  if (err.name === 'CastError')         error = handleCastError(err);
-  else if (err.code === 11000)          error = handleDuplicateKey(err);
-  else if (err.name === 'ValidationError') error = handleValidationError(err);
-  else if (err.name === 'JsonWebTokenError') error = new ApiError(401, 'Invalid token');
+  if (err.name === 'JsonWebTokenError') error = new ApiError(401, 'Invalid token');
   else if (err.name === 'TokenExpiredError') error = new ApiError(401, 'Token expired');
+  else if (err.code && PG_ERROR_CODES.has(err.code)) error = handlePostgresError(err);
   // Malformed JSON body: express.json() throws a SyntaxError with
   // type 'entity.parse.failed'. This is a CLIENT mistake — it was
   // falling through to a generic 500, which both misreports the fault

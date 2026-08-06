@@ -1,15 +1,15 @@
 /**
  * Wallet controller — balance, top-up initiation, transaction history
  */
-const { prisma }   = require('../config/db');
-const { USER_PUBLIC } = require('../models/User');
+const { supabase } = require('../config/supabase');
 const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const stripe       = require('../services/stripeService');
 const nowpay       = require('../services/nowPaymentsService');
 const paypal       = require('../services/paypalService');
+const logger       = require('../utils/logger');
+const { toCamelCase } = require('../utils/caseMapper');
 
-// Bonus tiers
 const calculateBonus = (amount) => {
   if (amount >= 100) return amount * 0.20;
   if (amount >= 50)  return amount * 0.15;
@@ -21,217 +21,143 @@ const calculateBonus = (amount) => {
 // GET /api/wallet
 // ═════════════════════════════════════════════
 exports.getWallet = asyncHandler(async (req, res) => {
-  const user = await prisma.user.findUnique({
-    where:  { id: req.userId },
-    select: { walletBalance: true }
-  });
-  res.json({ success: true, balance: user.walletBalance, currency: 'USD' });
+  res.json({ success: true, balance: req.user.walletBalance, currency: 'USD' });
 });
 
 // ═════════════════════════════════════════════
 // POST /api/wallet/topup
-// Body: { amount, method: 'stripe'|'nowpayments'|'paypal', payCurrency? }
 // ═════════════════════════════════════════════
 exports.initiateTopup = asyncHandler(async (req, res) => {
   const { amount, method, payCurrency } = req.body;
   const amt = parseFloat(amount);
 
-  if (!amt || amt < 1)    throw ApiError.badRequest('Minimum top-up is $1');
-  if (amt > 10000)         throw ApiError.badRequest('Maximum top-up is $10,000');
+  if (!amt || amt < 1) throw ApiError.badRequest('Minimum top-up is $1');
+  if (amt > 10000)     throw ApiError.badRequest('Maximum top-up is $10,000');
 
   const bonus = calculateBonus(amt);
 
-  // Pending transaction (not yet credited)
-  const tx = await prisma.transaction.create({
-    data: {
-      userId:      req.userId,
-      type:        'topup',
-      amount:      amt,
-      bonusAmount: bonus,
-      balanceAfter: req.user.walletBalance, // not yet credited
-      method,
-      status:      'pending',
-      description: `Top-up via ${method}`,
-      ipAddress:   req.ip,
-      userAgent:   req.get('User-Agent')
-    }
-  });
+  const { data: txRow, error: txErr } = await supabase.from('transactions').insert({
+    user_id: req.userId,
+    type: 'topup',
+    amount: amt,
+    bonus_amount: bonus,
+    balance_after: req.user.walletBalance,
+    method,
+    status: 'pending',
+    description: `Top-up via ${method}`,
+    ip_address: req.ip,
+    user_agent: req.get('User-Agent')
+  }).select().single();
+  if (txErr) throw new ApiError(500, txErr.message);
 
   let paymentData;
 
   switch (method) {
     case 'stripe': {
       const session = await stripe.createCheckoutSession({
-        userId: req.userId,
-        email:  req.user.email,
-        amount: amt,
-        bonus
+        userId: req.userId, email: req.user.email, amount: amt, bonus
       });
-      await prisma.transaction.update({
-        where: { id: tx.id },
-        data:  { externalId: session.sessionId }
-      });
+      await supabase.from('transactions').update({ external_id: session.sessionId }).eq('id', txRow.id);
       paymentData = { url: session.url, sessionId: session.sessionId };
       break;
     }
-
     case 'nowpayments': {
       const payment = await nowpay.createPayment({
-        userId:      req.userId,
-        amount:      amt,
-        bonus,
-        payCurrency: payCurrency || 'usdttrc20'
+        userId: req.userId, amount: amt, bonus, payCurrency: payCurrency || 'usdttrc20'
       });
-      await prisma.transaction.update({
-        where: { id: tx.id },
-        data: {
-          externalId:     String(payment.paymentId),
-          cryptoCurrency: payment.payCurrency,
-          cryptoAmount:   payment.payAmount,
-          cryptoAddress:  payment.payAddress
-        }
-      });
+      await supabase.from('transactions').update({
+        external_id: String(payment.paymentId),
+        crypto_currency: payment.payCurrency,
+        crypto_amount: payment.payAmount,
+        crypto_address: payment.payAddress
+      }).eq('id', txRow.id);
       paymentData = {
-        paymentId:   payment.paymentId,
-        payAddress:  payment.payAddress,
-        payAmount:   payment.payAmount,
-        payCurrency: payment.payCurrency,
-        expiresAt:   payment.expiresAt
+        paymentId: payment.paymentId, payAddress: payment.payAddress,
+        payAmount: payment.payAmount, payCurrency: payment.payCurrency, expiresAt: payment.expiresAt
       };
       break;
     }
-
     case 'paypal': {
-      const order = await paypal.createOrder({
-        userId: req.userId,
-        amount: amt,
-        bonus
-      });
-      await prisma.transaction.update({
-        where: { id: tx.id },
-        data:  { externalId: order.orderId }
-      });
+      const order = await paypal.createOrder({ userId: req.userId, amount: amt, bonus });
+      await supabase.from('transactions').update({ external_id: order.orderId }).eq('id', txRow.id);
       paymentData = { orderId: order.orderId, approvalUrl: order.approvalUrl };
       break;
     }
-
     default:
       throw ApiError.badRequest('Invalid payment method');
   }
 
   res.status(201).json({
-    success:       true,
-    transactionId: tx.id,
-    amount:        amt,
-    bonus,
-    total:         amt + bonus,
-    method,
-    payment:       paymentData
+    success: true, transactionId: txRow.id, amount: amt, bonus, total: amt + bonus, method, payment: paymentData
   });
 });
 
 // ═════════════════════════════════════════════
-// creditWallet  (internal — used by webhooks)
+// creditWallet (internal — used by webhooks + refunds)
 // ═════════════════════════════════════════════
 exports.creditWallet = async ({ userId, amount, bonus = 0, externalId, method, description, refundFor }) => {
-  const total = +(amount + bonus).toFixed(2);
-
-  const result = await prisma.$transaction(async (ctx) => {
-    const user = await ctx.user.findUnique({ where: { id: userId } });
-    if (!user) throw ApiError.notFound('User not found');
-
-    const newBalance = +(user.walletBalance + total).toFixed(2);
-
-    const updatedUser = await ctx.user.update({
-      where:  { id: userId },
-      data:   { walletBalance: newBalance },
-      select: USER_PUBLIC
-    });
-
-    const tx = await ctx.transaction.create({
-      data: {
-        userId,
-        type:         refundFor ? 'refund' : 'topup',
-        amount:       total,
-        bonusAmount:  bonus,
-        balanceAfter: newBalance,
-        method,
-        externalId,
-        status:       'success',
-        description:  description || `Credited $${total}`,
-        orderId:      refundFor || undefined
-      }
-    });
-
-    // Referral commission (10% for first top-up, not for refunds/bonuses)
-    if (!refundFor && user.referredById && method !== 'bonus') {
-      const referrer = await ctx.user.findUnique({ where: { id: user.referredById } });
-      if (referrer) {
-        const commission         = +(amount * 0.10).toFixed(2);
-        const referrerNewBalance = +(referrer.walletBalance + commission).toFixed(2);
-
-        await ctx.user.update({
-          where: { id: referrer.id },
-          data: {
-            walletBalance:    referrerNewBalance,
-            referralEarnings: +(referrer.referralEarnings + commission).toFixed(2)
-          }
-        });
-
-        await ctx.transaction.create({
-          data: {
-            userId:      referrer.id,
-            type:        'referral_payout',
-            amount:      commission,
-            balanceAfter: referrerNewBalance,
-            method:      'system',
-            status:      'success',
-            description: `Referral commission from ${user.username}`
-          }
-        });
-      }
-    }
-
-    return { user: updatedUser, tx };
+  const { data, error } = await supabase.rpc('credit_wallet', {
+    p_user_id: userId,
+    p_amount: amount,
+    p_bonus: bonus,
+    p_method: method,
+    p_external_id: externalId || null,
+    p_description: description || `Credited $${(amount + bonus).toFixed(2)}`,
+    p_order_id: refundFor || null,
+    p_type: refundFor ? 'refund' : 'topup'
   });
+  if (error) {
+    if (error.message === 'User not found') throw ApiError.notFound('User not found');
+    throw new ApiError(500, error.message);
+  }
 
-  return result;
+  const row = data[0];
+
+  // All three payment webhooks hand this `user` straight to
+  // email.sendTopupConfirmation, which needs an address — and `email`
+  // lives in auth.users, not profiles, so it has to be looked up.
+  //
+  // Deliberately non-fatal: the money has already moved by this point
+  // and the RPC has committed. Failing (or worse, appearing to fail)
+  // over an email address would be far more damaging than a missing
+  // confirmation email, so log and carry on.
+  let email;
+  try {
+    const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(userId);
+    if (authErr) throw authErr;
+    email = authUser?.user?.email;
+  } catch (err) {
+    logger.warn(`creditWallet: credited user ${userId} but could not resolve their email:`, err.message);
+  }
+
+  return {
+    user: { id: userId, walletBalance: row.new_balance, email },
+    // NOTE: `amount` is the BASE amount, excluding the bonus. The RPC
+    // stores amount+bonus in transactions.amount; the confirmation email
+    // shows Amount and Bonus as separate lines, so double-counting the
+    // bonus here would overstate the top-up. Guarded by tests/wallet.test.js.
+    tx: { id: row.transaction_id, amount: amount, bonusAmount: bonus, balanceAfter: row.new_balance }
+  };
 };
 
 // ═════════════════════════════════════════════
-// debitWallet  (internal — used by purchase controller)
+// debitWallet (internal — used by purchase controller)
 // ═════════════════════════════════════════════
 exports.debitWallet = async ({ userId, amount, orderId, description }) => {
-  const result = await prisma.$transaction(async (ctx) => {
-    const user = await ctx.user.findUnique({ where: { id: userId } });
-    if (!user) throw ApiError.notFound('User not found');
-    if (user.walletBalance < amount) throw ApiError.badRequest('Insufficient wallet balance');
-
-    const newBalance = +(user.walletBalance - amount).toFixed(2);
-
-    const updatedUser = await ctx.user.update({
-      where:  { id: userId },
-      data:   { walletBalance: newBalance },
-      select: USER_PUBLIC
-    });
-
-    const tx = await ctx.transaction.create({
-      data: {
-        userId,
-        type:        'purchase',
-        amount:      -amount,
-        balanceAfter: newBalance,
-        method:      'wallet',
-        status:      'success',
-        orderId:     orderId || undefined,
-        description: description || 'Number purchase'
-      }
-    });
-
-    return { user: updatedUser, tx };
+  const { data, error } = await supabase.rpc('debit_wallet', {
+    p_user_id: userId,
+    p_amount: amount,
+    p_order_id: orderId || null,
+    p_description: description || 'Number purchase'
   });
+  if (error) {
+    if (error.message === 'Insufficient wallet balance') throw ApiError.badRequest('Insufficient wallet balance');
+    if (error.message === 'User not found') throw ApiError.notFound('User not found');
+    throw new ApiError(500, error.message);
+  }
 
-  return result;
+  const row = data[0];
+  return { user: { id: userId, walletBalance: row.new_balance }, tx: { id: row.transaction_id } };
 };
 
 // ═════════════════════════════════════════════
@@ -240,29 +166,19 @@ exports.debitWallet = async ({ userId, amount, orderId, description }) => {
 exports.getTransactions = asyncHandler(async (req, res) => {
   const page  = Math.max(1, parseInt(req.query.page,  10) || 1);
   const limit = Math.min(100, Math.max(1, parseInt(req.query.limit, 10) || 20));
-  const skip  = (page - 1) * limit;
+  const from  = (page - 1) * limit;
+  const to    = from + limit - 1;
 
-  const where = { userId: req.userId };
-  if (req.query.type)   where.type   = req.query.type;
-  if (req.query.status) where.status = req.query.status;
+  let query = supabase.from('transactions').select('*', { count: 'exact' }).eq('user_id', req.userId);
+  if (req.query.type)   query = query.eq('type', req.query.type);
+  if (req.query.status) query = query.eq('status', req.query.status);
 
-  const [transactions, total] = await Promise.all([
-    prisma.transaction.findMany({
-      where,
-      orderBy: { createdAt: 'desc' },
-      skip,
-      take: limit
-    }),
-    prisma.transaction.count({ where })
-  ]);
+  const { data, error, count } = await query.order('created_at', { ascending: false }).range(from, to);
+  if (error) throw new ApiError(500, error.message);
 
   res.json({
-    success:    true,
-    page,
-    limit,
-    total,
-    totalPages: Math.ceil(total / limit),
-    transactions
+    success: true, page, limit, total: count, totalPages: Math.ceil(count / limit),
+    transactions: toCamelCase(data)
   });
 });
 
@@ -270,12 +186,15 @@ exports.getTransactions = asyncHandler(async (req, res) => {
 // GET /api/wallet/transactions/:id
 // ═════════════════════════════════════════════
 exports.getTransaction = asyncHandler(async (req, res) => {
-  const tx = await prisma.transaction.findFirst({
-    where:   { id: req.params.id, userId: req.userId },
-    include: { order: true }
-  });
-  if (!tx) throw ApiError.notFound('Transaction not found');
-  res.json({ success: true, transaction: tx });
+  const { data, error } = await supabase
+    .from('transactions')
+    .select('*, orders(*)')
+    .eq('id', req.params.id)
+    .eq('user_id', req.userId)
+    .maybeSingle();
+  if (error) throw new ApiError(500, error.message);
+  if (!data) throw ApiError.notFound('Transaction not found');
+  res.json({ success: true, transaction: toCamelCase(data) });
 });
 
 exports.calculateBonus = calculateBonus;

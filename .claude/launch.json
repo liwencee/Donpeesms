@@ -6,6 +6,12 @@
       "runtimeExecutable": "node",
       "runtimeArgs": ["serve.js"],
       "port": 8080
+    },
+    {
+      "name": "donpeesms-full",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["server.js"],
+      "port": 5000
     }
   ]
 }

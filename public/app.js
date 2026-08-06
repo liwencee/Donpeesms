@@ -64,29 +64,41 @@ function nairaifyStaticText(root) {
 }
 
 // ── API CLIENT ──────────────────────────────────────────────
+// Auth is owned by Supabase: it stores the session in localStorage and
+// refreshes the access token on its own. We never hold our own token —
+// we ask for the current one on every request, so a token refreshed in
+// the background is picked up immediately.
 const API_BASE = '/api';
-let _token = localStorage.getItem('donpee_token') || null;
+
+async function _accessToken() {
+  try {
+    const { data } = await window.sb.auth.getSession();
+    return data?.session?.access_token || null;
+  } catch (_e) {
+    return null;
+  }
+}
 
 async function api(method, path, body, timeoutMs = 15000) {
   const headers = { 'Content-Type': 'application/json' };
-  if (_token) headers['Authorization'] = 'Bearer ' + _token;
+  const token = await _accessToken();
+  if (token) headers['Authorization'] = 'Bearer ' + token;
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
     const res = await fetch(API_BASE + path, {
       method,
       headers,
-      credentials: 'include',
       signal: controller.signal,
       body: body ? JSON.stringify(body) : undefined
     });
     clearTimeout(timer);
     const data = await res.json().catch(() => ({}));
-    // A 401 on the auth endpoints (login/register/etc.) is a failed
-    // credential attempt — show its real message. A 401 elsewhere while
-    // a token exists means the session actually expired.
-    const isAuthEndpoint = path.startsWith('/auth/');
-    if (res.status === 401 && !isAuthEndpoint && _token) { _handleUnauth(); return null; }
+    // A 401 now means the Supabase token was rejected by our backend —
+    // the session is genuinely dead (Supabase already had its chance to
+    // refresh it in _accessToken above), so sign out.
+    if (res.status === 401 && token) { await _handleUnauth(); return null; }
     if (!res.ok) throw new Error(data.message || data.error || 'Request failed (' + res.status + ')');
     return data;
   } catch (err) {
@@ -97,18 +109,11 @@ async function api(method, path, body, timeoutMs = 15000) {
   }
 }
 
-function _handleUnauth() {
-  _token = null;
+async function _handleUnauth() {
+  try { await window.sb.auth.signOut(); } catch (_e) {}
   state.currentUser = null;
-  localStorage.removeItem('donpee_token');
   showPage('login');
   showToast('Session expired. Please sign in again.', 'warning');
-}
-
-function _setToken(token) {
-  _token = token;
-  if (token) localStorage.setItem('donpee_token', token);
-  else localStorage.removeItem('donpee_token');
 }
 
 // ── URL ROUTING (History API) ──────────────────────────────
@@ -122,7 +127,7 @@ const LANDING_PATHS = {
 };
 const PATH_TO_LANDING = {};
 Object.entries(LANDING_PATHS).forEach(([sec, p]) => { PATH_TO_LANDING[p] = sec; });
-const PAGE_PATHS = { login:'/login', register:'/register', dashboard:'/dashboard', admin:'/admin', 'admin-login':'/admin' };
+const PAGE_PATHS = { login:'/login', register:'/register', dashboard:'/dashboard', admin:'/admin', 'admin-login':'/admin', 'forgot-password':'/forgot-password', 'reset-password':'/reset-password' };
 
 function _setUrl(path) {
   if (_suppressUrl) return;
@@ -141,6 +146,8 @@ function route() {
     if (parts.length === 0) { showPage('landing'); showLandingPage('home'); }
     else if (parts[0] === 'login')    showPage('login');
     else if (parts[0] === 'register') showPage('register');
+    else if (parts[0] === 'forgot-password') showPage('forgot-password');
+    else if (parts[0] === 'reset-password')  showPage('reset-password');
     else if (parts[0] === 'verify-email') { showPage('verify-email'); verifyEmailFromUrl(); }
     else if (parts[0] === 'admin')    showPage('admin'); // guard redirects non-admins
     else if (parts[0] === 'dashboard') {
@@ -203,16 +210,27 @@ async function handleAdminLogin(e) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Verifying...';
   try {
-    const data = await api('POST', '/auth/login', { email, password });
-    if (!data) return;
-    const user = data.user || {};
+    const { data: authData, error } = await window.sb.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message || 'Invalid email or password');
+    if (!authData.session) throw new Error('Sign-in did not return a session');
+
+    let me;
+    try {
+      me = await api('GET', '/users/me');
+    } catch (_e) {
+      await window.sb.auth.signOut().catch(() => {});
+      throw new Error('Signed in, but could not verify admin access. Please try again.');
+    }
+    if (!me) return;
+    const user = me.user || me;
     if (user.role !== 'admin') {
-      _setToken(null);
+      // Signed in successfully, but not an admin — drop the session so a
+      // non-admin isn't left silently logged in on the admin screen.
+      await window.sb.auth.signOut().catch(() => {});
       state.currentUser = null;
       showToast('This account does not have admin access.', 'error');
       return;
     }
-    _setToken(data.token || data.accessToken);
     state.currentUser = user;
     showPage('admin');
     showToast('Welcome back, Admin 🛡️', 'success');
@@ -225,8 +243,7 @@ async function handleAdminLogin(e) {
 }
 
 async function adminLogout() {
-  try { await api('POST', '/auth/logout'); } catch (_e) {}
-  _setToken(null);
+  try { await window.sb.auth.signOut(); } catch (_e) {}
   state.currentUser = null;
   showPage('admin-login');
   showToast('Signed out of admin', 'info');
@@ -376,13 +393,24 @@ async function handleLogin(e) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Signing in...';
   try {
-    const data = await api('POST', '/auth/login', { email, password });
-    if (!data) return;
-    _setToken(data.token || data.accessToken);
-    state.currentUser = data.user;
+    const { data: authData, error } = await window.sb.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message || 'Invalid email or password');
+    if (!authData.session) throw new Error('Sign-in did not return a session');
+
+    // Profile (name, wallet balance, role) lives in our own API, not in
+    // the auth token.
+    let me;
+    try {
+      me = await api('GET', '/users/me');
+    } catch (_e) {
+      await window.sb.auth.signOut().catch(() => {});
+      throw new Error('Signed in, but could not load your profile. Please try again.');
+    }
+    if (!me) return;
+    state.currentUser = me.user || me;
     await _loadAndRenderUser();
     showPage('dashboard');
-    showToast('Welcome back, ' + (data.user?.firstName || 'there') + '! 👋', 'success');
+    showToast('Welcome back, ' + (state.currentUser?.firstName || 'there') + '! 👋', 'success');
   } catch (err) {
     showToast(err.message || 'Login failed. Check your credentials.', 'error');
   } finally {
@@ -404,13 +432,40 @@ async function handleRegister(e) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Creating account...';
   try {
-    const data = await api('POST', '/auth/register', { firstName, lastName: lastName || '', username: username || email.split('@')[0], email, password });
-    if (!data) return;
-    _setToken(data.token || data.accessToken);
-    state.currentUser = data.user;
+    const { data: authData, error } = await window.sb.auth.signUp({
+      email,
+      password,
+      options: {
+        // These land in raw_user_meta_data, which the handle_new_user
+        // trigger reads to populate the profiles row.
+        data: {
+          username:   username || email.split('@')[0],
+          first_name: firstName,
+          last_name:  lastName || ''
+        }
+      }
+    });
+    if (error) throw new Error(error.message || 'Registration failed');
+    if (!authData.session) {
+      // Only happens if email confirmation is enabled in the Supabase
+      // dashboard; with it off (our configuration) signUp returns a
+      // session immediately.
+      showToast('Account created! Check your email to confirm before signing in.', 'success', 6000);
+      return showPage('login');
+    }
+
+    let me;
+    try {
+      me = await api('GET', '/users/me');
+    } catch (_e) {
+      await window.sb.auth.signOut().catch(() => {});
+      throw new Error('Account created, but could not load your profile. Please sign in.');
+    }
+    if (!me) return;
+    state.currentUser = me.user || me;
     await _loadAndRenderUser();
     showPage('dashboard');
-    showToast('Account created! 🎉 Check your email to verify your account.', 'success', 6000);
+    showToast('Account created! 🎉 Welcome to DonPeeSMS.', 'success', 6000);
   } catch (err) {
     showToast(err.message || 'Registration failed. Try again.', 'error');
   } finally {
@@ -424,24 +479,78 @@ function socialLogin(provider) {
 }
 
 async function handleLogout() {
-  // Clear client session FIRST so the user is logged out even if the
+  // Clear client state FIRST so the user is logged out even if the
   // network call hangs or fails.
-  _setToken(null);
   state.currentUser = null;
   state.orders = [];
   state.transactions = [];
   state.walletBalance = 0;
-  try { localStorage.removeItem('donpee_token'); } catch (_e) {}
-  // Tell the backend to clear its auth cookies (fire and forget).
-  try { await api('POST', '/auth/logout'); } catch (_e) {}
+  try { await window.sb.auth.signOut(); } catch (_e) {}
   showPage('landing');
   showLandingPage('home');
   showToast('Signed out successfully', 'info');
 }
 
+// ── PASSWORD RESET ──────────────────────────────────────────
+async function handleForgotPassword(e) {
+  e.preventDefault();
+  const btn = document.getElementById('forgotBtn');
+  const email = document.getElementById('forgotEmail')?.value?.trim();
+  if (!email) return showToast('Enter your email address', 'warning');
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Sending...';
+  try {
+    const { error } = await window.sb.auth.resetPasswordForEmail(email, {
+      redirectTo: window.location.origin + '/reset-password'
+    });
+    if (error) throw new Error(error.message);
+    // Deliberately not revealing whether the address is registered.
+    showToast('If that email is registered, a reset link is on its way.', 'success', 6000);
+    showPage('login');
+  } catch (err) {
+    showToast(err.message || 'Could not send reset email', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Send Reset Link';
+  }
+}
+
+async function handleResetPassword(e) {
+  e.preventDefault();
+  const btn = document.getElementById('resetBtn');
+  const password = document.getElementById('resetPassword')?.value;
+  const confirm  = document.getElementById('resetConfirm')?.value;
+  if (!password || password.length < 8) return showToast('Password must be at least 8 characters', 'warning');
+  if (password !== confirm) return showToast('Passwords do not match', 'warning');
+
+  // Arriving from the emailed link puts a recovery session in place
+  // (detectSessionInUrl consumed it); without one, the link is stale.
+  const { data: { session } } = await window.sb.auth.getSession();
+  if (!session) {
+    showToast('This reset link has expired. Please request a new one.', 'error', 6000);
+    return showPage('forgot-password');
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Updating...';
+  try {
+    const { error } = await window.sb.auth.updateUser({ password });
+    if (error) throw new Error(error.message);
+    showToast('Password updated — you are now signed in.', 'success');
+    const me = await api('GET', '/users/me');
+    if (me) { state.currentUser = me.user || me; await _loadAndRenderUser(); }
+    showPage('dashboard');
+  } catch (err) {
+    showToast(err.message || 'Could not update password', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = 'Update Password';
+  }
+}
+
 // ── EMAIL VERIFICATION ─────────────────────────────────────
 async function verifyEmailFromUrl() {
-  const token   = new URLSearchParams(window.location.search).get('token');
   const iconEl  = document.getElementById('verifyIcon');
   const titleEl = document.getElementById('verifyTitle');
   const msgEl   = document.getElementById('verifyMsg');
@@ -458,29 +567,35 @@ async function verifyEmailFromUrl() {
     if (msgEl)   msgEl.textContent = msg;
   };
 
-  if (!token) {
-    setState('error', 'Invalid link', 'No verification token was found in the link.', 'rgba(248,113,113,.15)');
-    if (actsEl) { actsEl.style.display = 'block'; btnEl.textContent = 'Go to Login'; btnEl.onclick = () => showPage('login'); }
-    return;
-  }
+  // Supabase handles the token itself and redirects back here with the
+  // session in the URL fragment; detectSessionInUrl consumes it before
+  // this runs. So the question is simply: are we signed in now?
+  const { data: { session } } = await window.sb.auth.getSession();
+  const errorDescription = new URLSearchParams(window.location.hash.slice(1)).get('error_description');
 
-  try {
-    const data = await api('POST', '/auth/verify-email', { token });
-    if (!data) return;
-    setState('success', 'Email verified! 🎉', 'Your account is now verified. You can use all features.', 'rgba(52,211,153,.15)');
-    if (state.currentUser) { state.currentUser.emailVerified = true; _loadAndRenderUser(); }
-    if (actsEl) {
-      actsEl.style.display = 'block';
-      btnEl.textContent = state.currentUser ? 'Go to Dashboard' : 'Go to Login';
-      btnEl.onclick = () => showPage(state.currentUser ? 'dashboard' : 'login');
-    }
-  } catch (err) {
-    setState('error', 'Verification failed', err.message || 'This link is invalid or has expired.', 'rgba(248,113,113,.15)');
+  if (errorDescription) {
+    setState('error', 'Verification failed', decodeURIComponent(errorDescription.replace(/\+/g, ' ')), 'rgba(248,113,113,.15)');
     if (actsEl) {
       actsEl.style.display = 'block';
       btnEl.textContent = 'Resend Email';
       btnEl.onclick = () => resendVerification();
     }
+    return;
+  }
+
+  if (!session) {
+    setState('error', 'Invalid or expired link', 'This verification link is no longer valid. Sign in and request a new one.', 'rgba(248,113,113,.15)');
+    if (actsEl) { actsEl.style.display = 'block'; btnEl.textContent = 'Go to Login'; btnEl.onclick = () => showPage('login'); }
+    return;
+  }
+
+  setState('success', 'Email verified! 🎉', 'Your account is now verified. You can use all features.', 'rgba(52,211,153,.15)');
+  const me = await api('GET', '/users/me').catch(() => null);
+  if (me) { state.currentUser = me.user || me; _loadAndRenderUser(); }
+  if (actsEl) {
+    actsEl.style.display = 'block';
+    btnEl.textContent = 'Go to Dashboard';
+    btnEl.onclick = () => showPage('dashboard');
   }
 }
 
@@ -488,7 +603,10 @@ async function verifyEmailFromUrl() {
 async function resendVerification() {
   if (!state.currentUser) { showToast('Please sign in first to resend', 'warning'); return showPage('login'); }
   try {
-    await api('POST', '/auth/resend-verification');
+    const email = state.currentUser?.email;
+    if (!email) { showToast('Could not determine your email address', 'error'); return; }
+    const { error } = await window.sb.auth.resend({ type: 'signup', email });
+    if (error) throw new Error(error.message);
     showToast('Verification email sent — check your inbox', 'success', 5000);
   } catch (err) {
     showToast(err.message || 'Could not resend verification email', 'error');
@@ -499,7 +617,7 @@ async function resendVerification() {
 async function _loadAndRenderUser() {
   try {
     if (!state.currentUser) {
-      const data = await api('GET', '/auth/me');
+      const data = await api('GET', '/users/me');
       if (!data) return;
       state.currentUser = data.user || data;
     }
@@ -524,7 +642,10 @@ async function _loadAndRenderUser() {
     if (pFN) pFN.textContent = fullName;
     if (pED) pED.textContent = u.email;
     if (pVB) {
-      const verified = u.emailVerified === true;
+      // Email confirmation is owned by Supabase Auth, not our profiles
+      // table — read it off the session rather than the API response.
+      const { data: { user: authUser } } = await window.sb.auth.getUser();
+      const verified = !!authUser?.email_confirmed_at;
       pVB.textContent = verified ? 'Verified Account' : 'Email Not Verified';
       pVB.className = verified ? 'badge badge-success' : 'badge';
       pVB.style.cssText = verified ? '' : 'background:rgba(245,158,11,.15);color:var(--warning);cursor:pointer';
@@ -603,8 +724,17 @@ async function changePassword() {
   btn.disabled = true;
   btn.textContent = 'Updating...';
   try {
-    const data = await api('POST', '/auth/change-password', { currentPassword, newPassword });
-    if (!data) return;
+    // Supabase's updateUser() does not check the current password, so
+    // verify it by re-authenticating before allowing the change.
+    const email = state.currentUser?.email;
+    if (!email) throw new Error('Could not determine your email address');
+
+    const { error: reauthError } = await window.sb.auth.signInWithPassword({ email, password: currentPassword });
+    if (reauthError) throw new Error('Current password is incorrect');
+
+    const { error } = await window.sb.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message || 'Failed to update password');
+
     showToast('Password updated successfully', 'success');
     ['curPassword', 'newPassword', 'confirmPassword'].forEach(id => {
       const f = document.getElementById(id); if (f) f.value = '';
@@ -620,18 +750,29 @@ async function changePassword() {
 // ── AUTO-AUTH ON LOAD ────────────────────────────────────────
 async function initAuth() {
   // Resolve the session first, then render the page matching the URL.
-  if (_token) {
+  const { data: { session } } = await window.sb.auth.getSession();
+  if (session) {
     try {
-      const data = await api('GET', '/auth/me');
+      const data = await api('GET', '/users/me');
       if (data) {
         state.currentUser = data.user || data;
         await _loadAndRenderUser();
       }
     } catch (_e) {
-      _setToken(null);
+      await window.sb.auth.signOut().catch(() => {});
       state.currentUser = null;
     }
   }
+
+  // Keep this tab in sync: fires on token refresh, and on sign-out
+  // performed in another tab.
+  window.sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT' && state.currentUser) {
+      state.currentUser = null;
+      showPage('login');
+    }
+  });
+
   route();
 }
 
@@ -706,7 +847,7 @@ function pickNumber(country) {
 }
 
 async function buyNumber(type) {
-  if (!_token) { showPage('login'); showToast('Please sign in first', 'warning'); return; }
+  if (!state.currentUser) { showPage('login'); showToast('Please sign in first', 'warning'); return; }
   const countrySelect = document.getElementById(type === 'whatsapp' ? 'waCountry' : 'smsCountry');
   const resultDiv     = document.getElementById(type === 'whatsapp' ? 'waResult'  : 'smsResult');
   const btn           = document.getElementById(type === 'whatsapp' ? 'buyWABtn'  : 'buySMSBtn');
@@ -788,7 +929,7 @@ function _pollOrder(orderId, type) {
         showToast('OTP received: ' + o.otpCode, 'success', 6000);
         loadRecentOrders();
         // refresh balance
-        const me = await api('GET', '/auth/me');
+        const me = await api('GET', '/users/me');
         if (me) { state.walletBalance = me.user?.walletBalance || state.walletBalance; updateWalletDisplay(); }
       } else if (['cancelled','expired','refunded'].includes(o.status)) {
         clearInterval(state.activePollers[orderId]);
@@ -806,7 +947,7 @@ async function cancelOrder(orderId) {
     if (state.activePollers[orderId]) { clearInterval(state.activePollers[orderId]); delete state.activePollers[orderId]; }
     showToast('Order cancelled and refunded to wallet', 'info');
     loadRecentOrders();
-    const me = await api('GET', '/auth/me');
+    const me = await api('GET', '/users/me');
     if (me) { state.walletBalance = me.user?.walletBalance || state.walletBalance; updateWalletDisplay(); }
   } catch (err) {
     showToast(err.message || 'Cancel failed', 'error');

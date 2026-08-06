@@ -1,53 +1,54 @@
 /**
- * Auth middleware — verifies JWT or API key, attaches user to req
+ * Auth middleware — verifies a Supabase-issued JWT or a developer API
+ * key, attaches the matching profile to req.
  */
-const crypto       = require('crypto');
-const { verifyAccessToken } = require('../utils/jwt');
-const { prisma }   = require('../config/db');
-const { USER_PUBLIC } = require('../models/User');
+const { supabase } = require('../config/supabase');
+const { PROFILE_COLUMNS } = require('../models/User');
+const { findByKey } = require('../models/ApiKey');
 const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
+const { toCamelCase } = require('../utils/caseMapper');
+const logger       = require('../utils/logger');
 
 const extractToken = (req) => {
   if (req.headers.authorization?.startsWith('Bearer ')) {
     return req.headers.authorization.split(' ')[1];
   }
-  if (req.cookies?.accessToken) return req.cookies.accessToken;
   return null;
 };
 
 /**
- * protect — requires valid JWT (browser session)
+ * protect — requires a valid Supabase session token
  */
 const protect = asyncHandler(async (req, res, next) => {
   const token = extractToken(req);
   if (!token) throw ApiError.unauthorized('Authentication required');
 
-  let decoded;
-  try {
-    decoded = verifyAccessToken(token);
-  } catch (err) {
-    throw ApiError.unauthorized(
-      err.name === 'TokenExpiredError' ? 'Session expired, please login again' : 'Invalid token'
-    );
+  const { data: authData, error: authError } = await supabase.auth.getUser(token);
+  if (authError || !authData?.user) {
+    throw ApiError.unauthorized('Invalid or expired session');
   }
 
-  const user = await prisma.user.findUnique({ where: { id: decoded.id }, select: USER_PUBLIC });
-  if (!user) throw ApiError.unauthorized('User no longer exists');
+  const { data: profile, error: profileError } = await supabase
+    .from('profiles')
+    .select(PROFILE_COLUMNS)
+    .eq('id', authData.user.id)
+    .single();
+
+  if (profileError || !profile) throw ApiError.unauthorized('User no longer exists');
+
+  const user = toCamelCase(profile);
   if (user.status !== 'active') throw ApiError.forbidden(`Account ${user.status}`);
 
-  req.user   = user;
+  // `email` lives in auth.users, not profiles (so it is absent from
+  // PROFILE_COLUMNS). Downstream code — Stripe checkout sessions, order
+  // and top-up confirmation emails — reads req.user.email, and without
+  // this every one of those silently sent to `undefined`. The
+  // authenticated user object already carries it: no extra query.
+  req.user   = { ...user, email: authData.user.email };
   req.userId = user.id;
   next();
 });
-
-/**
- * requireEmailVerified
- */
-const requireEmailVerified = (req, _res, next) => {
-  if (!req.user?.emailVerified) throw ApiError.forbidden('Email verification required');
-  next();
-};
 
 /**
  * requireRole — role-based access control
@@ -66,26 +67,32 @@ const apiKeyAuth = asyncHandler(async (req, res, next) => {
 
   if (!rawKey) throw ApiError.unauthorized('API key required');
 
-  const hash = crypto.createHash('sha256').update(rawKey).digest('hex');
-  const key  = await prisma.apiKey.findFirst({
-    where:   { keyHash: hash, active: true },
-    include: { user: { select: USER_PUBLIC } }
-  });
+  const key = await findByKey(rawKey);
 
-  if (!key)                                            throw ApiError.unauthorized('Invalid API key');
-  if (key.expiresAt && key.expiresAt < new Date())    throw ApiError.unauthorized('API key expired');
-  if (!key.user || key.user.status !== 'active')      throw ApiError.forbidden('User account inactive');
+  if (!key)                                        throw ApiError.unauthorized('Invalid API key');
+  if (key.expires_at && new Date(key.expires_at) < new Date()) throw ApiError.unauthorized('API key expired');
+  if (!key.profiles || key.profiles.status !== 'active')       throw ApiError.forbidden('User account inactive');
 
-  // Fire-and-forget usage stats
-  prisma.apiKey.update({
-    where: { id: key.id },
-    data:  { usageCount: { increment: 1 }, lastUsedAt: new Date(), lastUsedIp: req.ip }
-  }).catch(() => {});
+  supabase.rpc('increment_api_key_usage', { p_key_id: key.id, p_ip: req.ip })
+    .then(() => {}, (err) => logger.warn('API key usage tracking failed:', err.message)); // fire-and-forget, but log if it fails
 
-  req.user   = key.user;
-  req.userId = key.user.id;
-  req.apiKey = key;
+  // Same reason as in protect(): req.user.email is needed downstream
+  // (POST /api/v1/numbers sends an order confirmation). There is no
+  // token to read it from here, so look it up — and never fail the
+  // request over it; a missing email only costs an email.
+  let email;
+  try {
+    const { data: authUser, error: authErr } = await supabase.auth.admin.getUserById(key.profiles.id);
+    if (authErr) throw authErr;
+    email = authUser?.user?.email;
+  } catch (err) {
+    logger.warn(`apiKeyAuth: could not resolve email for user ${key.profiles.id}:`, err.message);
+  }
+
+  req.user   = { ...toCamelCase(key.profiles), email };
+  req.userId = key.profiles.id;
+  req.apiKey = toCamelCase(key);
   next();
 });
 
-module.exports = { protect, requireEmailVerified, requireRole, apiKeyAuth };
+module.exports = { protect, requireRole, apiKeyAuth };

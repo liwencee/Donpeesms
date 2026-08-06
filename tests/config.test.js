@@ -110,11 +110,4 @@ describe('server resilience guarantees', () => {
       .replace(/\/\/.*$/gm, '');
     expect(env).not.toMatch(/process\.exit/);
   });
-
-  test('database queries are bounded by a timeout', () => {
-    // A half-open pooled connection used to hang requests forever.
-    const db = read('config/db.js');
-    expect(db).toMatch(/QUERY_TIMEOUT_MS/);
-    expect(db).toMatch(/Promise\.race/);
-  });
 });

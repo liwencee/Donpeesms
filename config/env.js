@@ -22,8 +22,8 @@ if (!process.env.JWT_REFRESH_SECRET) {
   process.env.JWT_REFRESH_SECRET = crypto.randomBytes(48).toString('hex');
   warnings.push('JWT_REFRESH_SECRET missing — using a random per-boot secret.');
 }
-if (!process.env.DATABASE_URL) {
-  warnings.push('DATABASE_URL missing — database features will fail until it is set.');
+if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+  warnings.push('SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY missing — database features will fail until they are set.');
 }
 
 if (warnings.length) {
@@ -41,7 +41,8 @@ module.exports = {
   frontendUrl: process.env.FRONTEND_URL || 'http://localhost:5173',
   backendUrl:  process.env.BACKEND_URL  || 'http://localhost:5000',
 
-  databaseUrl: process.env.DATABASE_URL,
+  supabaseUrl: process.env.SUPABASE_URL,
+  supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 
   jwt: {
     secret:           process.env.JWT_SECRET,
