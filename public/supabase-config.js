@@ -5,7 +5,7 @@
 // actually protects the data. Never put SUPABASE_SERVICE_ROLE_KEY here:
 // that key bypasses RLS and belongs only in the backend's .env.
 window.SUPABASE_URL = 'https://chhsrqazmzdwrtreskdp.supabase.co';
-window.SUPABASE_ANON_KEY = 'REPLACE_WITH_ANON_KEY';
+window.SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImNoaHNycWF6bXpkd3J0cmVza2RwIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODAyNDIzNzcsImV4cCI6MjA5NTgxODM3N30.CxyCaEymrZ7-_-IG1EG3FhQnxFnPGNhb2ClQ8J2juxY';
 
 window.sb = window.supabase.createClient(
   window.SUPABASE_URL,
