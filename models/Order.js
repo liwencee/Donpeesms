@@ -1,6 +1,5 @@
 /**
  * Order helpers
- * Controllers use prisma.order directly; import helpers from here.
  */
 
 const generateOrderId = () =>

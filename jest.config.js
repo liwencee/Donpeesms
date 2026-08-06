@@ -1,8 +1,9 @@
 module.exports = {
   testEnvironment: 'node',
   testMatch: ['**/tests/**/*.test.js'],
-  // Tests import server.js, which keeps a Prisma client around; without
-  // this Jest warns about open handles and hangs on exit.
+  // Tests import server.js; without this Jest warns about an open handle
+  // and hangs on exit (harmless — nothing to explicitly close on the
+  // Supabase client, unlike Prisma's query-engine process previously).
   forceExit: true,
   testTimeout: 20000,
   setupFiles: ['<rootDir>/tests/setup.js'],

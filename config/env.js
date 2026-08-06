@@ -1,27 +1,16 @@
 /**
  * Environment variable loader & validator
  */
-const crypto = require('crypto');
 require('dotenv').config();
 
 // IMPORTANT: never process.exit() on a missing var. This process serves
 // BOTH the frontend and the API, so exiting takes the whole site down —
-// which is exactly what happened on Hostinger when one JWT var was
+// which is exactly what happened on Hostinger when one required var was
 // missing. Instead we warn loudly and fall back so the app always boots:
-//   - JWT secrets: generate a random per-boot secret if absent (auth
-//     keeps working; tokens simply invalidate on the next restart).
-//   - DATABASE_URL: cannot be faked — DB features fail per-request, but
-//     the frontend and non-DB routes still serve.
+// Supabase vars can't be faked — DB/auth features fail per-request, but
+// the frontend and non-DB routes still serve.
 const warnings = [];
 
-if (!process.env.JWT_SECRET) {
-  process.env.JWT_SECRET = crypto.randomBytes(48).toString('hex');
-  warnings.push('JWT_SECRET missing — using a random per-boot secret (set it in env to persist sessions).');
-}
-if (!process.env.JWT_REFRESH_SECRET) {
-  process.env.JWT_REFRESH_SECRET = crypto.randomBytes(48).toString('hex');
-  warnings.push('JWT_REFRESH_SECRET missing — using a random per-boot secret.');
-}
 if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
   warnings.push('SUPABASE_URL/SUPABASE_SERVICE_ROLE_KEY missing — database features will fail until they are set.');
 }
@@ -44,15 +33,7 @@ module.exports = {
   supabaseUrl: process.env.SUPABASE_URL,
   supabaseServiceRoleKey: process.env.SUPABASE_SERVICE_ROLE_KEY,
 
-  jwt: {
-    secret:           process.env.JWT_SECRET,
-    expiresIn:        process.env.JWT_EXPIRES_IN        || '7d',
-    refreshSecret:    process.env.JWT_REFRESH_SECRET,
-    refreshExpiresIn: process.env.JWT_REFRESH_EXPIRES_IN || '30d'
-  },
-
   cookieSecret: process.env.COOKIE_SECRET || 'fallback-cookie-secret',
-  bcryptRounds: parseInt(process.env.BCRYPT_ROUNDS, 10) || 12,
 
   smtp: {
     host:      process.env.SMTP_HOST,

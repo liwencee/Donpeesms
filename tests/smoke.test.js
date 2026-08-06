@@ -10,8 +10,6 @@
  *
  * Deliberately NO database required: these must run in CI on every push
  * without secrets, so they catch "the app is broken" before deploy.
- * DB-dependent behaviour is covered separately (see db.test.js), which
- * skips itself when DATABASE_URL isn't configured.
  */
 process.env.NODE_ENV = 'test';
 process.env.ENCRYPTION_KEY = process.env.ENCRYPTION_KEY || '0'.repeat(64);

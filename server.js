@@ -1,6 +1,6 @@
 /**
  * DonPeeSMS Backend — Main Entry Point
- * Express + PostgreSQL (Prisma) + JWT + Stripe + NowPayments + PayPal + SMS providers
+ * Express + Supabase (Postgres + Auth) + Stripe + NowPayments + PayPal + SMS providers
  */
 // Load config from a .env file placed NEXT TO this file (__dirname), and
 // let it override any stale/broken values from the host's env panel.

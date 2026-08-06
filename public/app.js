@@ -196,10 +196,6 @@ function showPage(name) {
 }
 
 // ── ADMIN AUTH ─────────────────────────────────────────────
-function isAdminRoute() {
-  return /^\/admin\/?$/i.test(window.location.pathname);
-}
-
 async function handleAdminLogin(e) {
   e.preventDefault();
   const btn = document.getElementById('adminLoginBtn');
@@ -291,28 +287,7 @@ function showLandingPage(section) {
   _setUrl(LANDING_PATHS[section] || '/');
 }
 
-// ── SET ACTIVE NAV LINK (kept for compatibility) ───────────
-function setNavActive(sectionId) {
-  document.querySelectorAll('.nav-link[data-section]').forEach(link => {
-    link.classList.toggle('active', link.getAttribute('data-section') === sectionId);
-  });
-}
-
-// ── SMOOTH SCROLL TO SECTION (legacy — kept for in-page use) ─
-function scrollTo(id) {
-  const el = document.getElementById(id);
-  if (!el) return;
-  const offset = 80;
-  const top = el.getBoundingClientRect().top + window.scrollY - offset;
-  window.scrollTo({ top, behavior: 'smooth' });
-}
-
 function navScrollTo(id) { showLandingPage(id); }
-
-function scrollToTop() { showLandingPage('home'); }
-
-// ── INTERSECTION OBSERVER (disabled — no longer needed) ────
-function initNavObserver() { /* replaced by showLandingPage() */ }
 
 // ── MOBILE NAV ─────────────────────────────────────────────
 function openMobileNav() {
@@ -815,37 +790,6 @@ function copyText(text) {
 }
 
 // ── BUY NUMBER (Quick Panel) ───────────────────────────────
-const phoneNumbers = {
-  US: [],
-  GB: [],
-  DE: [],
-  IN: [],
-  BR: [],
-  NG: [],
-  RU: [],
-  FR: [],
-  CA: ['+14165550123', '+16045550199'],
-  AU: ['+61412345678', '+61498765432'],
-  PK: ['+923001234567', '+923121234567'],
-  ID: ['+6281234567890', '+6285234567890'],
-  MX: ['+5215512345678'],
-  NG2:['+23324123456'],
-  KE: ['+254712345678'],
-  ZA: ['+27712345678'],
-  EG: ['+201012345678'],
-  SA: ['+966512345678'],
-  AE: ['+971501234567'],
-  TR: ['+905321234567'],
-  PH: ['+639171234567'],
-  VN: ['+84912345678'],
-  UA: ['+380501234567']
-};
-
-function pickNumber(country) {
-  const pool = phoneNumbers[country] || ['+10000000000'];
-  return pool[Math.floor(Math.random() * pool.length)];
-}
-
 async function buyNumber(type) {
   if (!state.currentUser) { showPage('login'); showToast('Please sign in first', 'warning'); return; }
   const countrySelect = document.getElementById(type === 'whatsapp' ? 'waCountry' : 'smsCountry');
@@ -966,32 +910,6 @@ function buyNumberFull(type) {
       }
     }, 300);
   }, 500);
-}
-
-// ── SIMULATE OTP ARRIVAL ───────────────────────────────────
-function simulateOTP(type, number) {
-  const code = Math.floor(100000 + Math.random() * 900000).toString();
-  const key = number.replace(/\D/g,'');
-  const timerEl = document.getElementById('timer-' + key);
-  const parent = timerEl ? timerEl.closest('.number-result') : null;
-  if (parent) {
-    const otpDiv = document.createElement('div');
-    otpDiv.style.cssText = 'margin-top:10px';
-    otpDiv.innerHTML = `
-      <div style="font-size:.75rem;color:var(--txt-4);margin-bottom:6px;text-transform:uppercase">
-        <span class="pulse-ring"></span> OTP Received
-      </div>
-      <div class="otp-display">${code}</div>
-      <div style="text-align:center;margin-top:8px">
-        <button class="copy-btn" style="margin:0 auto" onclick="copyText('${code}')">
-          <svg width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 01-2-2V4a2 2 0 012-2h9a2 2 0 012 2v1"/></svg>
-          Copy OTP
-        </button>
-      </div>
-    `;
-    parent.appendChild(otpDiv);
-    showToast(`OTP received: ${code}`, 'success', 5000);
-  }
 }
 
 // ── COUNTDOWN TIMER ────────────────────────────────────────
@@ -2997,7 +2915,6 @@ document.addEventListener('DOMContentLoaded', () => {
   nairaifyStaticText(document.body);
   updateTopupSummary(10);
   initVerifyStageInteraction();
-  initNavObserver();
   initPWA();
   updateNotifBadge();
   updateAvailability();
