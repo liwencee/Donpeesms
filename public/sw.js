@@ -1,7 +1,16 @@
-// DonPeeSMS Service Worker v1.0.0
-const CACHE_NAME = 'donpeesms-v1';
-const STATIC_CACHE = 'donpeesms-static-v1';
-const API_CACHE    = 'donpeesms-api-v1';
+// DonPeeSMS Service Worker v2.0.0
+//
+// Bump the version suffix below on every deploy that changes app.js,
+// index.html, or styles.css. The activate handler only evicts caches
+// whose name doesn't match STATIC_CACHE/API_CACHE — if the version
+// string never changes, cacheFirst() keeps serving the first-ever
+// cached copy of these files forever, regardless of what's actually
+// been redeployed. This is what caused every returning visitor to
+// keep hitting the deleted /api/auth/login after the Supabase rewrite
+// shipped: their service worker was still serving pre-rewrite app.js.
+const CACHE_NAME = 'donpeesms-v2';
+const STATIC_CACHE = 'donpeesms-static-v2';
+const API_CACHE    = 'donpeesms-api-v2';
 
 // Assets to pre-cache on install
 const PRECACHE_ASSETS = [
