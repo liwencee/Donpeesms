@@ -632,10 +632,12 @@ async function _loadAndRenderUser() {
     const pln = document.getElementById('profileLastName');
     const pe  = document.getElementById('profileEmail');
     const pun = document.getElementById('profileUsername');
+    const ptg = document.getElementById('profileTelegram');
     if (pfn) pfn.value = u.firstName || '';
     if (pln) pln.value = u.lastName  || '';
     if (pe)  pe.value  = u.email     || '';
     if (pun) pun.value = u.username  || '';
+    if (ptg) ptg.value = u.telegram  || '';
 
     // Wallet balance
     state.walletBalance = parseFloat(u.walletBalance || 0);
@@ -658,15 +660,15 @@ async function saveProfile() {
   const btn = document.getElementById('saveProfileBtn');
   const firstName = document.getElementById('profileFirstName')?.value?.trim();
   const lastName  = document.getElementById('profileLastName')?.value?.trim();
-  const username  = document.getElementById('profileUsername')?.value?.trim();
+  const telegram  = document.getElementById('profileTelegram')?.value?.trim();
   if (!firstName) return showToast('First name is required', 'warning');
 
   btn.disabled = true;
   btn.textContent = 'Saving...';
   try {
-    const data = await api('PATCH', '/users/me', { firstName, lastName, username });
+    const data = await api('PATCH', '/users/me', { firstName, lastName, telegram });
     if (!data) return;
-    state.currentUser = { ...state.currentUser, firstName, lastName, username };
+    state.currentUser = { ...state.currentUser, firstName, lastName, telegram };
     await _loadAndRenderUser();
     showToast('Profile updated successfully!', 'success');
   } catch (err) {
@@ -793,6 +795,7 @@ function copyText(text) {
 async function buyNumber(type) {
   if (!state.currentUser) { showPage('login'); showToast('Please sign in first', 'warning'); return; }
   const countrySelect = document.getElementById(type === 'whatsapp' ? 'waCountry' : 'smsCountry');
+  const serviceSelect = type === 'sms' ? document.getElementById('smsService') : null;
   const resultDiv     = document.getElementById(type === 'whatsapp' ? 'waResult'  : 'smsResult');
   const btn           = document.getElementById(type === 'whatsapp' ? 'buyWABtn'  : 'buySMSBtn');
   if (!countrySelect?.value) { showToast('Please select a country first', 'warning'); return; }
@@ -803,7 +806,8 @@ async function buyNumber(type) {
   try {
     const data = await api('POST', '/numbers/buy', {
       serviceType: type,
-      country: countrySelect.value
+      country: countrySelect.value,
+      ...(serviceSelect?.value ? { service: serviceSelect.value } : {})
     });
     if (!data) return;
 

@@ -87,6 +87,11 @@ app.use(cors({
       env.frontendUrl,
       'http://localhost:5173',
       'http://localhost:3000',
+      // The app's own default port (config/env.js) — server.js serves the
+      // SPA itself here, so same-origin PATCH/POST/DELETE calls from a
+      // browser at this address carry an Origin header (unlike simple
+      // GETs, which browsers often omit it for) and were being rejected.
+      'http://localhost:5000',
       'https://donpeesms.com',
       'https://www.donpeesms.com',
       'https://donpeesms.netlify.app',

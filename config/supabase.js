@@ -6,12 +6,18 @@
  * Hostinger.
  */
 const { createClient } = require('@supabase/supabase-js');
+// Required on Node <22 (no global WebSocket) — supabase-js's realtime
+// client throws at construction without a transport, even though this
+// app never uses Realtime. Cheap enough to keep unconditionally rather
+// than special-case by Node version.
+const WebSocket = require('ws');
 
 const supabase = createClient(
   process.env.SUPABASE_URL,
   process.env.SUPABASE_SERVICE_ROLE_KEY,
   {
-    auth: { autoRefreshToken: false, persistSession: false }
+    auth: { autoRefreshToken: false, persistSession: false },
+    realtime: { transport: WebSocket }
   }
 );
 
