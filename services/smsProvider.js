@@ -292,6 +292,6 @@ const getProvider = (name = env.sms.provider) => {
 };
 
 const calculateUserPrice = (providerCost) =>
-  Math.round((providerCost * env.priceMarkup) * 100) / 100;
+  Math.round(providerCost * env.priceMarkup * env.ngnRate);
 
 module.exports = { getProvider, calculateUserPrice, FiveSimProvider, SmsActivateProvider, TwilioProvider, SureVerificationsProvider };
