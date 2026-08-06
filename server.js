@@ -68,7 +68,13 @@ app.use(helmet({
   contentSecurityPolicy: env.env === 'production' ? {
     directives: {
       ...helmet.contentSecurityPolicy.getDefaultDirectives(),
-      'script-src-attr': ["'unsafe-inline'"]
+      'script-src-attr': ["'unsafe-inline'"],
+      // connect-src has no override in the defaults above, so it falls
+      // back to default-src 'self' — which silently blocks every fetch()
+      // the browser makes to Supabase's own API (a different origin).
+      // Every Supabase Auth call (signUp, signInWithPassword, etc.) failed
+      // with a bare "Failed to fetch" until this was added.
+      'connect-src': ["'self'", env.supabaseUrl]
     }
   } : false,
   crossOriginEmbedderPolicy:  false
