@@ -1,34 +1,14 @@
 /**
- * Payment routes — webhooks + capture endpoints
+ * Payment routes — DrexPay webhook.
  */
-const router = require('express').Router();
+const router  = require('express').Router();
 const express = require('express');
-const { protect } = require('../middleware/auth');
 const { webhookLimiter } = require('../middleware/rateLimiter');
-const stripeWebhook = require('../webhooks/stripeWebhook');
-const npWebhook = require('../webhooks/nowPaymentsWebhook');
-const paypalWebhook = require('../webhooks/paypalWebhook');
+const drexpayWebhook = require('../webhooks/drexpayWebhook');
 
-// ── WEBHOOKS (RAW body for signature verification) ──
-router.post('/webhooks/stripe',
+router.post('/webhooks/drexpay',
   express.raw({ type: 'application/json' }),
   webhookLimiter,
-  stripeWebhook);
-
-router.post('/webhooks/nowpayments',
-  express.raw({ type: 'application/json' }),
-  webhookLimiter,
-  npWebhook);
-
-router.post('/webhooks/paypal',
-  express.json(),
-  webhookLimiter,
-  paypalWebhook.webhook);
-
-// ── PAYPAL CAPTURE (frontend-triggered after approval) ──
-router.post('/paypal/capture',
-  express.json(),
-  protect,
-  paypalWebhook.capturePayment);
+  drexpayWebhook);
 
 module.exports = router;

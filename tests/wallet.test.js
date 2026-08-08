@@ -42,6 +42,15 @@ beforeEach(() => {
 });
 
 // ═════════════════════════════════════════════
+describe('calculateBonus', () => {
+  test('always returns 0 — bonuses are disabled', () => {
+    expect(wallet.calculateBonus(10)).toBe(0);
+    expect(wallet.calculateBonus(50000)).toBe(0);
+    expect(wallet.calculateBonus(0)).toBe(0);
+  });
+});
+
+// ═════════════════════════════════════════════
 describe('debitWallet', () => {
   test("maps the RPC's 'Insufficient wallet balance' to a 400", async () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'Insufficient wallet balance' } });
@@ -80,7 +89,7 @@ describe('creditWallet', () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'User not found' } });
 
     await expect(
-      wallet.creditWallet({ userId: 'nope', amount: 10, bonus: 1, method: 'stripe' })
+      wallet.creditWallet({ userId: 'nope', amount: 10, bonus: 1, method: 'drexpay' })
     ).rejects.toMatchObject({ statusCode: 404 });
   });
 
@@ -88,7 +97,7 @@ describe('creditWallet', () => {
     supabase.rpc.mockResolvedValue({ data: null, error: { message: 'deadlock detected' } });
 
     await expect(
-      wallet.creditWallet({ userId: 'u1', amount: 10, method: 'stripe' })
+      wallet.creditWallet({ userId: 'u1', amount: 10, method: 'drexpay' })
     ).rejects.toMatchObject({ statusCode: 500 });
   });
 
@@ -99,7 +108,7 @@ describe('creditWallet', () => {
     supabase.rpc.mockResolvedValue({ data: [{ new_balance: 115, transaction_id: 'tx9' }], error: null });
 
     const { tx } = await wallet.creditWallet({
-      userId: 'u1', amount: 100, bonus: 20, method: 'stripe', externalId: 'cs_1'
+      userId: 'u1', amount: 100, bonus: 20, method: 'drexpay', externalId: 'cs_1'
     });
 
     expect(tx).toEqual({ id: 'tx9', amount: 100, bonusAmount: 20, balanceAfter: 115 });
@@ -109,7 +118,7 @@ describe('creditWallet', () => {
   test('returns the account email so the webhooks can send a confirmation', async () => {
     supabase.rpc.mockResolvedValue({ data: [{ new_balance: 50, transaction_id: 'tx2' }], error: null });
 
-    const { user } = await wallet.creditWallet({ userId: 'u1', amount: 50, method: 'paypal' });
+    const { user } = await wallet.creditWallet({ userId: 'u1', amount: 50, method: 'drexpay' });
     expect(user).toEqual({ id: 'u1', walletBalance: 50, email: 'buyer@example.com' });
   });
 
@@ -119,7 +128,7 @@ describe('creditWallet', () => {
     supabase.rpc.mockResolvedValue({ data: [{ new_balance: 50, transaction_id: 'tx3' }], error: null });
     supabase.auth.admin.getUserById.mockResolvedValue({ data: null, error: { message: 'auth down' } });
 
-    const { user, tx } = await wallet.creditWallet({ userId: 'u1', amount: 50, method: 'paypal' });
+    const { user, tx } = await wallet.creditWallet({ userId: 'u1', amount: 50, method: 'drexpay' });
     expect(user.walletBalance).toBe(50);
     expect(user.email).toBeUndefined();
     expect(tx.id).toBe('tx3');
