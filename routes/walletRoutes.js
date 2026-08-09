@@ -8,8 +8,8 @@ const { protect } = require('../middleware/auth');
 const c = require('../controllers/walletController');
 
 const topupRules = [
-  body('amount').isFloat({ min: 1, max: 10000 }).withMessage('Amount must be $1 - $10,000'),
-  body('method').isIn(['stripe','nowpayments','paypal']).withMessage('Invalid method'),
+  body('amount').isFloat({ min: 1500, max: 15000000 }).withMessage('Amount must be ₦1,500 - ₦15,000,000'),
+  body('method').isIn(['drexpay']).withMessage('Invalid method'),
   body('payCurrency').optional().isString()
 ];
 

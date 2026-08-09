@@ -107,7 +107,7 @@ describe('protected endpoints respond correctly (no 500s)', () => {
   test('POST to a protected route without a token returns 401, not a crash', async () => {
     const res = await request(app)
       .post('/api/wallet/topup')
-      .send({ amount: 10, method: 'stripe' })
+      .send({ amount: 10, method: 'drexpay' })
       .set('Content-Type', 'application/json');
     expect(res.status).toBe(401);
   });

@@ -41,7 +41,7 @@ const protect = asyncHandler(async (req, res, next) => {
   if (user.status !== 'active') throw ApiError.forbidden(`Account ${user.status}`);
 
   // `email` lives in auth.users, not profiles (so it is absent from
-  // PROFILE_COLUMNS). Downstream code — Stripe checkout sessions, order
+  // PROFILE_COLUMNS). Downstream code — DrexPay payment links, order
   // and top-up confirmation emails — reads req.user.email, and without
   // this every one of those silently sent to `undefined`. The
   // authenticated user object already carries it: no extra query.
