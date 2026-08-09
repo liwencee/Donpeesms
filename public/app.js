@@ -16,29 +16,16 @@ const state = {
 };
 
 // ── CURRENCY (Naira) ───────────────────────────────────────
-// All backend amounts are stored in USD; the UI shows Naira.
-// Change NGN_RATE here to update the exchange rate everywhere.
-const NGN_RATE = 1600;
-
-// Format a USD amount as Naira, e.g. fmtNaira(24.5) -> "₦39,200".
-function fmtNaira(usd, dp = 0) {
-  const n = (parseFloat(usd) || 0) * NGN_RATE;
-  return '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: dp, maximumFractionDigits: dp });
-}
-// Signed variant for transactions: +₦.. / -₦..
-function fmtNairaSigned(usd, dp = 0) {
-  const v = parseFloat(usd) || 0;
-  return (v >= 0 ? '+' : '-') + fmtNaira(Math.abs(v), dp);
-}
-// Format a value that's ALREADY in Naira (no exchange-rate conversion).
-// Used for admin-managed Product prices, which are entered directly in
-// Naira — unlike fmtNaira(), which converts from USD.
-function fmtNGN(ngn, dp = 0) {
+// The backend stores and returns amounts in NGN directly — no conversion.
+function fmtNaira(ngn, dp = 0) {
   const n = parseFloat(ngn) || 0;
   return '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 }
-// Convert a Naira amount entered by the user back into USD for the API.
-function nairaToUsd(naira) { return (parseFloat(naira) || 0) / NGN_RATE; }
+// Signed variant for transactions: +₦.. / -₦..
+function fmtNairaSigned(ngn, dp = 0) {
+  const v = parseFloat(ngn) || 0;
+  return (v >= 0 ? '+' : '-') + fmtNaira(Math.abs(v), dp);
+}
 
 // One-time sweep: convert any hard-coded "$N" text in the static HTML
 // into Naira. Runs once on load; skips inputs, scripts and styles.
@@ -957,30 +944,21 @@ function selectTopup(el, amount) {
   const customWrap = document.getElementById('customAmountWrap');
   if (customWrap) customWrap.classList.toggle('hidden', amount !== 'custom');
 
-  // Update modal summary (custom input is entered in Naira)
   if (amount === 'custom') {
-    const naira = document.getElementById('customAmount')?.value || 0;
-    updateTopupSummary(nairaToUsd(naira));
+    updateTopupSummary(parseFloat(document.getElementById('customAmount')?.value || 0));
   } else {
     updateTopupSummary(parseFloat(amount));
   }
 }
 
-// amount is in USD (presets) — summary is shown in Naira.
 function updateTopupSummary(amount) {
-  const bonus = amount >= 100 ? amount * 0.20 : amount >= 50 ? amount * 0.15 : amount >= 25 ? amount * 0.10 : 0;
-  const total = amount + bonus;
   const amtEl = document.getElementById('modalAmountDisplay');
-  const bonusEl = document.getElementById('modalBonus');
-  const totalEl = document.getElementById('modalTotal');
   if (amtEl) amtEl.textContent = fmtNaira(amount);
-  if (bonusEl) bonusEl.textContent = bonus > 0 ? '+' + fmtNaira(bonus) : '+₦0';
-  if (totalEl) totalEl.textContent = fmtNaira(total);
 }
 
 // Live-update the summary when the user types a custom Naira amount.
 function onCustomAmountInput(nairaVal) {
-  updateTopupSummary(nairaToUsd(nairaVal));
+  updateTopupSummary(parseFloat(nairaVal) || 0);
 }
 
 function openTopupModal() {
@@ -992,39 +970,23 @@ function closeTopupModal() {
   document.body.style.overflow = '';
 }
 
-function selectPayMethod(el) {
-  el.closest('.payment-methods').querySelectorAll('.pay-method').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-}
-
 async function processTopup() {
-  // Custom amount is entered in Naira → convert to USD for the backend.
-  // Presets are already USD values.
   const amount = state.selectedTopup === 'custom'
-    ? nairaToUsd(document.getElementById('customAmount')?.value || 0)
+    ? parseFloat(document.getElementById('customAmount')?.value || 0)
     : parseFloat(state.selectedTopup);
 
-  if (!amount || amount < 1) {
-    showToast(`Please enter a valid amount (min ${fmtNaira(1)})`, 'warning');
+  if (!amount || amount < 1500) {
+    showToast(`Please enter a valid amount (min ${fmtNaira(1500)})`, 'warning');
     return;
   }
 
-  const bonus = amount >= 100 ? amount * 0.20 : amount >= 50 ? amount * 0.15 : amount >= 25 ? amount * 0.10 : 0;
-  const total = amount + bonus;
-
-  // Detect selected payment method
-  const selected = document.querySelector('.pay-method.selected');
-  const method = selected?.dataset?.method || 'nowpayments';
-  const payCurrency = selected?.dataset?.currency || 'USDT';
-
   closeTopupModal();
-  showToast('Redirecting to payment gateway...', 'info');
+  showToast('Redirecting to DrexPay...', 'info');
 
   try {
-    const data = await api('POST', '/wallet/topup', { amount, method, payCurrency });
+    const data = await api('POST', '/wallet/topup', { amount, method: 'drexpay' });
     if (!data) return;
-    // Redirect to payment URL returned by backend
-    const url = data.paymentUrl || data.url || data.checkoutUrl || data.invoiceUrl;
+    const url = data.payment && data.payment.url;
     if (url) {
       window.open(url, '_blank');
       showToast('Complete payment in the new tab. Your balance updates automatically.', 'info', 6000);
@@ -1297,7 +1259,7 @@ function buildProducts() {
         </div>
         <div class="prod-name">${escapeHTML(p.name)}</div>
         <div class="prod-desc">${escapeHTML(p.description || '')}</div>
-        <div class="prod-price">${fmtNGN(p.price)}</div>
+        <div class="prod-price">${fmtNaira(p.price)}</div>
         <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
           onclick="${out ? "showLandingPage('contact')" : "showPage('register')"}">
           ${out ? 'Contact Sales' : 'Buy Now'}
@@ -2372,7 +2334,7 @@ function renderAdminProducts(products) {
         <div style="font-size:.75rem;color:var(--txt-4)">${escapeHTML(p.description || '')}</div>
       </td>
       <td style="color:var(--txt-3)">${p.category ? escapeHTML(p.category.name) : '—'}</td>
-      <td>${fmtNGN(p.price)}</td>
+      <td>${fmtNaira(p.price)}</td>
       <td style="color:var(--txt-3);font-size:.85rem">${stockText}</td>
       <td style="color:var(--txt-4);font-size:.82rem">${p.apiProvider === 'manual' ? 'Manual' : escapeHTML(p.apiProvider)}</td>
       <td>
@@ -2454,7 +2416,7 @@ function closeProductModal() {
 function updateProdPriceNaira() {
   const ngn = parseFloat(document.getElementById('prodPrice')?.value || 0);
   const el = document.getElementById('prodPriceNaira');
-  if (el) el.textContent = fmtNGN(ngn);
+  if (el) el.textContent = fmtNaira(ngn);
 }
 
 async function saveProduct() {
