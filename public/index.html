@@ -762,43 +762,15 @@
 
       <!-- Payment Methods -->
       <div class="pay-methods-block">
-        <div style="font-size:.8rem;color:var(--txt-4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:18px;text-align:center">Accepted Payment Methods</div>
+        <div style="font-size:.8rem;color:var(--txt-4);text-transform:uppercase;letter-spacing:.1em;margin-bottom:18px;text-align:center">Accepted Payment Method</div>
         <div class="pay-methods-row">
           <div class="pay-method-pill">
-            <img src="https://cdn.simpleicons.org/tether/26A17B" width="18" height="18" alt="USDT"/>
-            USDT
-          </div>
-          <div class="pay-method-pill">
-            <img src="https://cdn.simpleicons.org/bitcoin/F7931A" width="18" height="18" alt="BTC"/>
-            Bitcoin
-          </div>
-          <div class="pay-method-pill">
-            <img src="https://cdn.simpleicons.org/ethereum/627EEA" width="18" height="18" alt="ETH"/>
-            Ethereum
-          </div>
-          <div class="pay-method-pill">
-            <img src="https://cdn.simpleicons.org/paypal/003087" width="18" height="18" alt="PayPal"/>
-            PayPal
-          </div>
-          <div class="pay-method-pill">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="1" y="4" width="22" height="16" rx="3" stroke="var(--txt-3)" stroke-width="1.5"/><path d="M1 10h22" stroke="var(--txt-3)" stroke-width="1.5"/></svg>
-            Visa / Mastercard
-          </div>
-          <div class="pay-method-pill">
-            <img src="https://cdn.simpleicons.org/binance/F0B90B" width="18" height="18" alt="BNB"/>
-            BNB
-          </div>
-          <div class="pay-method-pill">
-            <img src="https://cdn.simpleicons.org/litecoin/345D9D" width="18" height="18" alt="LTC"/>
-            Litecoin
-          </div>
-          <div class="pay-method-pill">
             <svg width="18" height="18" fill="none" stroke="var(--txt-3)" stroke-width="1.5" viewBox="0 0 24 24"><path d="M3 3h18v4H3zM3 17h18v4H3z"/><path d="M7 12h10M7 12l2-2M7 12l2 2" stroke-linecap="round"/></svg>
-            Bank Transfer
+            Bank Transfer via DrexPay
           </div>
         </div>
         <div style="text-align:center;margin-top:16px;font-size:.83rem;color:var(--txt-4)">
-          All crypto payments processed instantly via NowPayments. No extra fees for crypto topups.
+          Instant wallet credit once your transfer is confirmed. No card or crypto needed.
         </div>
       </div>
 
@@ -1949,11 +1921,11 @@
               <div class="wb-amount" id="walletPageBalance">₦0</div>
               <div class="wb-note">Balance never expires · Used for all purchases</div>
               <div class="topup-grid">
-                <div class="topup-amount-btn" onclick="selectTopup(this,'5')">$5</div>
-                <div class="topup-amount-btn selected" onclick="selectTopup(this,'10')">$10</div>
-                <div class="topup-amount-btn" onclick="selectTopup(this,'25')">$25 <span style="font-size:.65rem;color:var(--p-300);display:block">+10%</span></div>
-                <div class="topup-amount-btn" onclick="selectTopup(this,'50')">$50 <span style="font-size:.65rem;color:var(--p-300);display:block">+15%</span></div>
-                <div class="topup-amount-btn" onclick="selectTopup(this,'100')">$100 <span style="font-size:.65rem;color:var(--p-300);display:block">+20%</span></div>
+                <div class="topup-amount-btn" onclick="selectTopup(this,'2000')">₦2,000</div>
+                <div class="topup-amount-btn selected" onclick="selectTopup(this,'5000')">₦5,000</div>
+                <div class="topup-amount-btn" onclick="selectTopup(this,'10000')">₦10,000</div>
+                <div class="topup-amount-btn" onclick="selectTopup(this,'25000')">₦25,000</div>
+                <div class="topup-amount-btn" onclick="selectTopup(this,'50000')">₦50,000</div>
                 <div class="topup-amount-btn" onclick="selectTopup(this,'custom')">Custom</div>
               </div>
               <button class="btn btn-primary w-full" onclick="openTopupModal()">
@@ -2118,13 +2090,10 @@
               <div class="settings-panel hidden" id="settings-payments">
                 <div class="card mb-6">
                   <div style="font-weight:700;font-size:1.05rem;margin-bottom:6px">Payment Methods</div>
-                  <div style="color:var(--txt-4);font-size:.85rem;margin-bottom:22px">No card is stored — you pay at top-up time. Accepted methods:</div>
+                  <div style="color:var(--txt-4);font-size:.85rem;margin-bottom:22px">No card is stored. You pay by bank transfer at top-up time.</div>
                   <div style="display:flex;flex-direction:column;gap:10px">
                     <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md)">
-                      <span style="font-size:1.1rem">₿</span><span>Crypto — USDT, BTC, ETH, BNB, Litecoin</span>
-                    </div>
-                    <div style="display:flex;align-items:center;gap:12px;padding:14px 16px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md)">
-                      <span style="font-size:1.1rem">🏦</span><span>Bank transfer & card (at checkout)</span>
+                      <span style="font-size:1.1rem">🏦</span><span>Bank Transfer via DrexPay (instant confirmation)</span>
                     </div>
                   </div>
                   <button class="btn btn-primary" style="margin-top:20px" onclick="dashNav('wallet')">Go to Wallet & Top Up</button>
@@ -2809,47 +2778,30 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
     <div style="margin-bottom:20px">
       <label class="form-label" style="margin-bottom:10px;display:block">Select Amount</label>
       <div class="topup-grid">
-        <div class="topup-amount-btn" onclick="selectTopup(this,'5')">$5</div>
-        <div class="topup-amount-btn selected" onclick="selectTopup(this,'10')">$10</div>
-        <div class="topup-amount-btn" onclick="selectTopup(this,'25')">$25<br><span style="font-size:.65rem;color:var(--p-300)">+10% bonus</span></div>
-        <div class="topup-amount-btn" onclick="selectTopup(this,'50')">$50<br><span style="font-size:.65rem;color:var(--p-300)">+15% bonus</span></div>
-        <div class="topup-amount-btn" onclick="selectTopup(this,'100')">$100<br><span style="font-size:.65rem;color:var(--p-300)">+20% bonus</span></div>
+        <div class="topup-amount-btn" onclick="selectTopup(this,'2000')">₦2,000</div>
+        <div class="topup-amount-btn selected" onclick="selectTopup(this,'5000')">₦5,000</div>
+        <div class="topup-amount-btn" onclick="selectTopup(this,'10000')">₦10,000</div>
+        <div class="topup-amount-btn" onclick="selectTopup(this,'25000')">₦25,000</div>
+        <div class="topup-amount-btn" onclick="selectTopup(this,'50000')">₦50,000</div>
         <div class="topup-amount-btn" onclick="selectTopup(this,'custom')">Custom</div>
       </div>
       <div id="customAmountWrap" class="hidden" style="margin-top:10px">
-        <input type="number" class="form-input" placeholder="Enter amount in ₦ (min ₦1,600)" min="1600" step="100" id="customAmount" oninput="onCustomAmountInput(this.value)"/>
+        <input type="number" class="form-input" placeholder="Enter amount in ₦ (min ₦1,500)" min="1500" step="100" id="customAmount" oninput="onCustomAmountInput(this.value)"/>
       </div>
     </div>
     <div style="margin-bottom:20px">
       <label class="form-label" style="margin-bottom:10px;display:block">Payment Method</label>
-      <div class="payment-methods">
-        <div class="pay-method selected" onclick="selectPayMethod(this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#26A17B"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 13.5v.5h-1v-.5c-1.66-.17-2.5-1-2.5-1l.84-1.14s.64.64 1.66.64c.76 0 1-.28 1-.6 0-.45-.54-.6-1.3-.83C10.36 12.18 9 11.7 9 10.3c0-1.2.94-1.94 2-2.12V7.75h1v.43c1.34.18 2 .95 2 .95l-.84 1.13s-.5-.58-1.5-.58c-.63 0-.93.28-.93.6 0 .42.5.57 1.24.8C13.5 11.4 15 11.9 15 13.3c0 1.3-1 2.02-2 2.2z"/></svg>
-          USDT / Crypto
-        </div>
-        <div class="pay-method" onclick="selectPayMethod(this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#003087"><path d="M7.1 11.3h1.5c.6 0 1-.2 1.2-.5.2-.3.3-.7.2-1.1-.1-.4-.4-.7-.8-.8H7.7l-.6 2.4zm-.8 3.2h1.6c.7 0 1.2-.2 1.4-.6.2-.4.3-.8.2-1.2-.1-.4-.4-.7-.9-.8H7l-.7 2.6zM20 7H4c-1.1 0-2 .9-2 2v6c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V9c0-1.1-.9-2-2-2z"/></svg>
-          PayPal
-        </div>
-        <div class="pay-method" onclick="selectPayMethod(this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="none"><rect x="2" y="5" width="20" height="14" rx="2" stroke="currentColor" stroke-width="1.5"/><path d="M2 10h20" stroke="currentColor" stroke-width="1.5"/></svg>
-          Credit Card
-        </div>
-        <div class="pay-method" onclick="selectPayMethod(this)">
-          <svg width="18" height="18" viewBox="0 0 24 24" fill="#F7931A"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1.7 7.3c.4.8.4 1.7 0 2.5.6.4 1 1.1.9 1.9-.1 1.3-1.2 2-2.5 2H9V8.2h2.9c1.2 0 2 .5 1.8 1.1z"/></svg>
-          Bitcoin
-        </div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-md);padding:12px 14px;font-size:.85rem;color:var(--txt-3)">
+        <svg width="18" height="18" fill="none" stroke="var(--p-400)" stroke-width="2" viewBox="0 0 24 24"><rect x="1" y="4" width="22" height="16" rx="2"/><path d="M1 10h22"/></svg>
+        Bank Transfer via DrexPay (instant confirmation)
       </div>
     </div>
     <div style="background:var(--bg-3);border:1px solid var(--border);border-radius:var(--radius-md);padding:14px;margin-bottom:20px;font-size:.85rem">
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--txt-4)">Top-up amount</span><span id="modalAmountDisplay">$10.00</span></div>
-      <div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="color:var(--txt-4)">Bonus credits</span><span style="color:var(--success)" id="modalBonus">+$0.00</span></div>
-      <div style="height:1px;background:var(--border);margin:8px 0"></div>
-      <div style="display:flex;justify-content:space-between;font-weight:700"><span>Total credited</span><span class="text-gradient" id="modalTotal">$10.00</span></div>
+      <div style="display:flex;justify-content:space-between"><span style="color:var(--txt-4)">Top-up amount</span><span id="modalAmountDisplay">₦5,000</span></div>
     </div>
     <button class="btn btn-primary btn-lg w-full" onclick="processTopup()">
       <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-      Proceed to Payment
+      Continue to DrexPay
     </button>
   </div>
 </div>
