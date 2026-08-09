@@ -179,6 +179,7 @@ exports.buyNumber = asyncHandler(async (req, res) => {
     phone_number: purchase.phoneNumber,
     provider_cost: priceInfo.cost,
     user_cost: userCost,
+    currency: 'NGN',
     status: 'active',
     activated_at: new Date().toISOString(),
     expires_at: expiresAtDate.toISOString(),

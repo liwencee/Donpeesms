@@ -37,6 +37,7 @@ exports.initiateTopup = asyncHandler(async (req, res) => {
     user_id: req.userId,
     type: 'topup',
     amount: amt,
+    currency: 'NGN',
     bonus_amount: bonus,
     balance_after: req.user.walletBalance,
     method,
