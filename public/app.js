@@ -1311,13 +1311,13 @@ const faqs = [
   { q:'What is a virtual phone number?', a:'A virtual phone number is a real, working phone number assigned to you temporarily. It can receive SMS messages and WhatsApp verifications just like a regular SIM card — no physical SIM, no hardware, no carrier contract required.' },
   { q:'How long does it take to get a number?', a:'Numbers are assigned instantly after purchase — usually within 2–5 seconds. Our number pool is live 24/7 with over 2.4 million active numbers ready to be assigned.' },
   { q:'What happens if I do not receive an OTP?', a:'If no OTP is received within the validity window (20 minutes for WhatsApp, 10 minutes for SMS), you get a full automatic refund to your wallet. No support ticket needed — it is fully automatic.' },
-  { q:'What payment methods are accepted?', a:'We accept USDT (TRC20/ERC20), Bitcoin, Ethereum, BNB, Litecoin, PayPal, bank transfers, Visa, and Mastercard. Crypto payments are instant with zero extra fees. Your wallet balance never expires.' },
+  { q:'What payment methods are accepted?', a:'We accept bank transfer via DrexPay — your only payment method. Transfers are confirmed instantly and your wallet is credited automatically, with zero extra fees. Your wallet balance never expires.' },
   { q:'Is there an API for bulk purchases?', a:'Yes! Our full REST API lets you automate number purchases, poll OTP status in real time, receive instant webhook events, and manage your account programmatically. API docs are in your dashboard under "API Access".' },
   { q:'Are the numbers real and private?', a:'Yes. All numbers come from legitimate telecom providers worldwide. Each number is exclusively assigned to one user per session — never shared. After your session ends, the number enters a cooldown before being reused.' },
   { q:'Which apps and services can I verify?', a:'Our numbers work with WhatsApp, Telegram, Google, Facebook, Instagram, TikTok, Discord, Twitter/X, Tinder, Snapchat, Amazon, Microsoft, Coinbase, Binance, and 500+ other services. Any service that accepts an international number will work.' },
   { q:'Can I reuse the same number?', a:'Each number covers one verification session. For multiple accounts or different services, purchase separate numbers. This ensures your privacy and prevents conflicts between users.' },
   { q:'Does my wallet balance expire?', a:'Never. Your balance carries forward indefinitely. Deposit once, spend it over months or years across any number of purchases. No inactivity fees or balance resets.' },
-  { q:'What is the minimum deposit?', a:'Just $1. This lets you try the service risk-free. For bigger savings, our Pro ($25 → $27.50 credit) and Business ($100 → $120 credit) bundles include 10% and 20% bonus credits respectively.' },
+  { q:'What is the minimum deposit?', a:'Just ₦1,500. This lets you try the service risk-free, with no bonus tiers or hidden minimums for bigger top-ups — every naira you deposit goes straight into your wallet.' },
   { q:'How does the referral program work?', a:'Share your unique referral link. Every time a referral makes a deposit, you earn 10% of the amount as instant wallet credit — automatically, forever, with no cap on earnings.' },
   { q:'Is DonPeeSMS safe and legal?', a:'Yes. Using virtual numbers for privacy, testing, and account creation is legal in most countries. All payments are SSL-encrypted. We do not support fraud and reserve the right to terminate accounts violating our Terms of Service.' },
 ];
@@ -1733,20 +1733,19 @@ const CHAT_KB = [
     keys: ['how','work','start','begin','step','process','use','get number','buy number'],
     reply: `Getting your number takes <strong>under 60 seconds</strong>! ⚡<br><br>
       <strong>1.</strong> Create a free account<br>
-      <strong>2.</strong> Top up your wallet (from ₦1,600)<br>
+      <strong>2.</strong> Top up your wallet (from ₦1,500)<br>
       <strong>3.</strong> Pick a country + service<br>
       <strong>4.</strong> Receive your OTP instantly<br><br>
       No ID, no KYC, no waiting — just instant delivery! 🚀`,
     wa: 'Hi DonPeeSMS, I want to understand how it works'
   },
   {
-    keys: ['pay','payment','crypto','bitcoin','btc','card','paypal','usdt','ethereum','deposit','fund','wallet','top up'],
-    reply: `We accept multiple payment methods: 💳<br><br>
-      • <strong>Crypto</strong> – Bitcoin, USDT, Ethereum & more<br>
-      • <strong>Debit/Credit Card</strong> – Visa, Mastercard<br>
-      • <strong>PayPal</strong><br>
-      • <strong>Bank Transfer</strong><br><br>
-      All payments are secure and instant. Your wallet is credited immediately! 🔒`,
+    keys: ['pay','payment','crypto','bitcoin','btc','card','paypal','usdt','ethereum','deposit','fund','wallet','top up','drexpay','bank transfer'],
+    reply: `Topping up is simple: 💳<br><br>
+      • <strong>Bank Transfer via DrexPay</strong> — our only payment method<br>
+      • <strong>Instant confirmation</strong> — your wallet is credited the moment the transfer clears<br>
+      • <strong>No card, crypto, or third-party wallet needed</strong><br><br>
+      Minimum top-up is just ₦1,500! 🔒`,
     wa: 'Hi DonPeeSMS, I have a payment question'
   },
   {
