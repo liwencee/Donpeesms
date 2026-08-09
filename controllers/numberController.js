@@ -128,7 +128,7 @@ exports.getPrice = asyncHandler(async (req, res) => {
   const userPrice = calculateUserPrice(cost);
   res.json({
     success: true, country: country.toUpperCase(), service, providerCost: cost, userPrice,
-    currency: 'USD', providerCurrency: currency, available: count, provider: provider.name
+    currency: 'NGN', providerCurrency: currency, available: count, provider: provider.name
   });
 });
 
@@ -154,7 +154,7 @@ exports.buyNumber = asyncHandler(async (req, res) => {
   const userCost = calculateUserPrice(priceInfo.cost);
   if (req.user.walletBalance < userCost) {
     throw ApiError.badRequest(
-      `Insufficient balance. Need $${userCost.toFixed(2)}, have $${req.user.walletBalance.toFixed(2)}`
+      `Insufficient balance. Need ₦${userCost.toFixed(2)}, have ₦${req.user.walletBalance.toFixed(2)}`
     );
   }
 
@@ -207,7 +207,7 @@ exports.buyNumber = asyncHandler(async (req, res) => {
 
   email.sendOrderConfirmation(req.user, order).catch(e => logger.error('Order email:', e.stack || e.message));
 
-  logger.info(`Order ${order.orderId} created: ${order.phoneNumber} ($${userCost})`);
+  logger.info(`Order ${order.orderId} created: ${order.phoneNumber} (₦${userCost})`);
 
   res.status(201).json({
     success: true,

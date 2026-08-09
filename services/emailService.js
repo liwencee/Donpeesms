@@ -76,7 +76,7 @@ const sendOrderConfirmation = (user, order) => {
       <div style="font-size:12px;color:#64748B;text-transform:uppercase;margin-bottom:6px">Phone Number</div>
       <div style="font-size:22px;color:#C4B5FD;font-weight:bold">${order.phoneNumber}</div>
     </div>
-    <p style="color:#94A3B8;font-size:14px">Service: ${order.serviceType.toUpperCase()} · Country: ${order.country} · Cost: $${order.userCost.toFixed(2)}</p>
+    <p style="color:#94A3B8;font-size:14px">Service: ${order.serviceType.toUpperCase()} · Country: ${order.country} · Cost: ₦${order.userCost.toFixed(2)}</p>
   `;
   return send({ to: user.email, subject: `Order ${order.orderId} active`, html: baseTemplate('Order Active', body) });
 };
@@ -86,9 +86,9 @@ const sendTopupConfirmation = (user, tx) => {
     <h1 style="font-size:22px;margin:0 0 16px">Wallet topped up</h1>
     <p style="color:#CBD5E1">Hi ${user.firstName}, your top-up was successful.</p>
     <table style="width:100%;border-collapse:collapse;margin:20px 0">
-      <tr><td style="padding:10px;border-bottom:1px solid #1E1B4B;color:#64748B">Amount</td><td style="padding:10px;border-bottom:1px solid #1E1B4B;text-align:right;color:#34D399;font-weight:bold">+$${tx.amount.toFixed(2)}</td></tr>
-      ${tx.bonusAmount > 0 ? `<tr><td style="padding:10px;border-bottom:1px solid #1E1B4B;color:#64748B">Bonus</td><td style="padding:10px;border-bottom:1px solid #1E1B4B;text-align:right;color:#34D399">+$${tx.bonusAmount.toFixed(2)}</td></tr>` : ''}
-      <tr><td style="padding:10px;color:#64748B">New balance</td><td style="padding:10px;text-align:right;color:#A78BFA;font-weight:bold">$${tx.balanceAfter.toFixed(2)}</td></tr>
+      <tr><td style="padding:10px;border-bottom:1px solid #1E1B4B;color:#64748B">Amount</td><td style="padding:10px;border-bottom:1px solid #1E1B4B;text-align:right;color:#34D399;font-weight:bold">+₦${tx.amount.toFixed(2)}</td></tr>
+      ${tx.bonusAmount > 0 ? `<tr><td style="padding:10px;border-bottom:1px solid #1E1B4B;color:#64748B">Bonus</td><td style="padding:10px;border-bottom:1px solid #1E1B4B;text-align:right;color:#34D399">+₦${tx.bonusAmount.toFixed(2)}</td></tr>` : ''}
+      <tr><td style="padding:10px;color:#64748B">New balance</td><td style="padding:10px;text-align:right;color:#A78BFA;font-weight:bold">₦${tx.balanceAfter.toFixed(2)}</td></tr>
     </table>
   `;
   return send({ to: user.email, subject: 'Top-up confirmed', html: baseTemplate('Top-up', body) });
