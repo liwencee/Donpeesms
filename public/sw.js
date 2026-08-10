@@ -8,9 +8,9 @@
 // been redeployed. This is what caused every returning visitor to
 // keep hitting the deleted /api/auth/login after the Supabase rewrite
 // shipped: their service worker was still serving pre-rewrite app.js.
-const CACHE_NAME = 'donpeesms-v2';
-const STATIC_CACHE = 'donpeesms-static-v2';
-const API_CACHE    = 'donpeesms-api-v2';
+const CACHE_NAME = 'donpeesms-v3';
+const STATIC_CACHE = 'donpeesms-static-v3';
+const API_CACHE    = 'donpeesms-api-v3';
 
 // Assets to pre-cache on install
 const PRECACHE_ASSETS = [

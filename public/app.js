@@ -97,8 +97,15 @@ async function api(method, path, body, timeoutMs = 15000) {
     const data = await res.json().catch(() => ({}));
     // A 401 now means the Supabase token was rejected by our backend —
     // the session is genuinely dead (Supabase already had its chance to
-    // refresh it in _accessToken above), so sign out.
-    if (res.status === 401 && token) { await _handleUnauth(); return null; }
+    // refresh it in _accessToken above), so sign out. Throw rather than
+    // return null: callers that do `(await api(...))?.items || []` would
+    // otherwise silently render an empty list, making a dead session look
+    // like "no data" (this hid the admin panel showing "No products yet"
+    // while 14 products existed).
+    if (res.status === 401 && token) {
+      await _handleUnauth();
+      throw new Error('Your session expired. Please sign in again.');
+    }
     if (!res.ok) throw new Error(data.message || data.error || 'Request failed (' + res.status + ')');
     return data;
   } catch (err) {
@@ -1023,8 +1030,11 @@ async function processTopup() {
   try {
     const data = await api('POST', '/wallet/topup', { amount, method, payCurrency });
     if (!data) return;
-    // Redirect to payment URL returned by backend
-    const url = data.paymentUrl || data.url || data.checkoutUrl || data.invoiceUrl;
+    // Redirect to payment URL returned by backend — nested under `payment`
+    // (Stripe/DrexPay: .url, PayPal: .approvalUrl; NowPayments has neither,
+    // it shows a pay address/amount instead, hence the no-URL branch below).
+    const p = data.payment || {};
+    const url = p.url || p.approvalUrl || p.paymentUrl || p.checkoutUrl || p.invoiceUrl;
     if (url) {
       window.open(url, '_blank');
       showToast('Complete payment in the new tab. Your balance updates automatically.', 'info', 6000);
@@ -2343,14 +2353,20 @@ async function loadAdminProducts() {
   if (!tbody) return;
   tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--txt-4);padding:26px">Loading…</td></tr>`;
   try {
-    const [prodRes, catRes, provRes] = await Promise.all([
+    // allSettled, not all: categories/providers only populate the
+    // Add/Edit dropdowns. If one of them fails there is no reason to
+    // blank the product table too — the products request is the only
+    // one whose failure should surface as an error.
+    const [prodRes, catRes, provRes] = await Promise.allSettled([
       api('GET', '/admin/products'),
       api('GET', '/admin/categories'),
       api('GET', '/admin/providers')
     ]);
-    _adminCategories = catRes?.categories || [];
-    _adminProviders  = provRes?.providers || [];
-    renderAdminProducts(prodRes?.products || []);
+    if (prodRes.status === 'rejected') throw prodRes.reason;
+
+    _adminCategories = catRes.status === 'fulfilled' ? (catRes.value?.categories || []) : [];
+    _adminProviders  = provRes.status === 'fulfilled' ? (provRes.value?.providers  || []) : [];
+    renderAdminProducts(prodRes.value?.products || []);
   } catch (err) {
     tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;color:var(--error);padding:26px">${escapeHTML(err.message || 'Failed to load products')}</td></tr>`;
   }
