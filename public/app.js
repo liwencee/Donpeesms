@@ -730,7 +730,12 @@ async function initAuth() {
         await _loadAndRenderUser();
       }
     } catch (_e) {
-      await window.sb.auth.signOut().catch(() => {});
+      // A real 401 already triggered a full sign-out inside api() via
+      // _handleUnauth(). Anything else landing here — a timeout, a
+      // network blip, a transient 5xx — is not proof the session is
+      // bad, so don't sign it out from under the user: Supabase still
+      // has a valid session in localStorage, and destroying it forces
+      // a full re-login instead of just retrying on the next load.
       state.currentUser = null;
     }
   }
