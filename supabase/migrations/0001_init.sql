@@ -1,3 +1,10 @@
+-- ⚠️  THIS FILE IS ALREADY APPLIED TO PRODUCTION. Do not re-run it, and
+-- never add `drop table` / `create table` for these tables to a NEW
+-- migration file — that is exactly what wiped the products/categories
+-- catalog once already (see utils/seedProducts.js, which was written to
+-- recover from it). Future schema changes to existing tables belong in a
+-- new migration using `alter table`, which preserves existing rows.
+--
 -- ═══════════════════════════════════════════════
 -- PROFILES (1:1 with auth.users)
 -- ═══════════════════════════════════════════════

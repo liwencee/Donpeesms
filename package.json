@@ -8,6 +8,7 @@
     "build": "echo No build step needed",
     "dev": "nodemon server.js",
     "seed": "node utils/seed.js",
+    "seed:products": "node utils/seedProducts.js",
     "test": "jest",
     "db:migrate": "node scripts/migrate.js",
     "test:watch": "jest --watch"
