@@ -41,7 +41,7 @@ const run = async () => {
       user_metadata: { username: 'admin', first_name: 'Admin', last_name: 'User' }
     });
     if (error) throw error;
-    await supabase.from('profiles').update({ role: 'admin', wallet_balance: 1000, referral_code: 'admin0001' }).eq('id', data.user.id);
+    await supabase.from('profiles').update({ role: 'admin', wallet_balance: 1600000, referral_code: 'admin0001' }).eq('id', data.user.id);
     logger.info(`✓ Admin created: admin@donpeesms.com / Admin1234!`);
   }
 
@@ -54,11 +54,11 @@ const run = async () => {
       user_metadata: { username: 'johndoe', first_name: 'John', last_name: 'Doe' }
     });
     if (error) throw error;
-    await supabase.from('profiles').update({ wallet_balance: 24.50 }).eq('id', data.user.id);
+    await supabase.from('profiles').update({ wallet_balance: 39200 }).eq('id', data.user.id);
 
     const { error: txErr } = await supabase.from('transactions').insert([
-      { user_id: data.user.id, type: 'topup', amount: 25, balance_after: 25, method: 'stripe', status: 'success', description: 'Initial top-up' },
-      { user_id: data.user.id, type: 'purchase', amount: -0.50, balance_after: 24.50, method: 'wallet', status: 'success', description: 'Demo purchase' }
+      { user_id: data.user.id, type: 'topup', amount: 40000, balance_after: 40000, method: 'drexpay', status: 'success', description: 'Initial top-up' },
+      { user_id: data.user.id, type: 'purchase', amount: -800, balance_after: 39200, method: 'wallet', status: 'success', description: 'Demo purchase' }
     ]);
     if (txErr) throw txErr;
 

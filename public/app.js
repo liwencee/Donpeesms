@@ -16,29 +16,16 @@ const state = {
 };
 
 // ── CURRENCY (Naira) ───────────────────────────────────────
-// All backend amounts are stored in USD; the UI shows Naira.
-// Change NGN_RATE here to update the exchange rate everywhere.
-const NGN_RATE = 1600;
-
-// Format a USD amount as Naira, e.g. fmtNaira(24.5) -> "₦39,200".
-function fmtNaira(usd, dp = 0) {
-  const n = (parseFloat(usd) || 0) * NGN_RATE;
-  return '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: dp, maximumFractionDigits: dp });
-}
-// Signed variant for transactions: +₦.. / -₦..
-function fmtNairaSigned(usd, dp = 0) {
-  const v = parseFloat(usd) || 0;
-  return (v >= 0 ? '+' : '-') + fmtNaira(Math.abs(v), dp);
-}
-// Format a value that's ALREADY in Naira (no exchange-rate conversion).
-// Used for admin-managed Product prices, which are entered directly in
-// Naira — unlike fmtNaira(), which converts from USD.
-function fmtNGN(ngn, dp = 0) {
+// The backend stores and returns amounts in NGN directly — no conversion.
+function fmtNaira(ngn, dp = 0) {
   const n = parseFloat(ngn) || 0;
   return '₦' + n.toLocaleString('en-NG', { minimumFractionDigits: dp, maximumFractionDigits: dp });
 }
-// Convert a Naira amount entered by the user back into USD for the API.
-function nairaToUsd(naira) { return (parseFloat(naira) || 0) / NGN_RATE; }
+// Signed variant for transactions: +₦.. / -₦..
+function fmtNairaSigned(ngn, dp = 0) {
+  const v = parseFloat(ngn) || 0;
+  return (v >= 0 ? '+' : '-') + fmtNaira(Math.abs(v), dp);
+}
 
 // One-time sweep: convert any hard-coded "$N" text in the static HTML
 // into Naira. Runs once on load; skips inputs, scripts and styles.
@@ -964,30 +951,21 @@ function selectTopup(el, amount) {
   const customWrap = document.getElementById('customAmountWrap');
   if (customWrap) customWrap.classList.toggle('hidden', amount !== 'custom');
 
-  // Update modal summary (custom input is entered in Naira)
   if (amount === 'custom') {
-    const naira = document.getElementById('customAmount')?.value || 0;
-    updateTopupSummary(nairaToUsd(naira));
+    updateTopupSummary(parseFloat(document.getElementById('customAmount')?.value || 0));
   } else {
     updateTopupSummary(parseFloat(amount));
   }
 }
 
-// amount is in USD (presets) — summary is shown in Naira.
 function updateTopupSummary(amount) {
-  const bonus = amount >= 100 ? amount * 0.20 : amount >= 50 ? amount * 0.15 : amount >= 25 ? amount * 0.10 : 0;
-  const total = amount + bonus;
   const amtEl = document.getElementById('modalAmountDisplay');
-  const bonusEl = document.getElementById('modalBonus');
-  const totalEl = document.getElementById('modalTotal');
   if (amtEl) amtEl.textContent = fmtNaira(amount);
-  if (bonusEl) bonusEl.textContent = bonus > 0 ? '+' + fmtNaira(bonus) : '+₦0';
-  if (totalEl) totalEl.textContent = fmtNaira(total);
 }
 
 // Live-update the summary when the user types a custom Naira amount.
 function onCustomAmountInput(nairaVal) {
-  updateTopupSummary(nairaToUsd(nairaVal));
+  updateTopupSummary(parseFloat(nairaVal) || 0);
 }
 
 function openTopupModal() {
@@ -999,42 +977,26 @@ function closeTopupModal() {
   document.body.style.overflow = '';
 }
 
-function selectPayMethod(el) {
-  el.closest('.payment-methods').querySelectorAll('.pay-method').forEach(b => b.classList.remove('selected'));
-  el.classList.add('selected');
-}
-
 async function processTopup() {
-  // Custom amount is entered in Naira → convert to USD for the backend.
-  // Presets are already USD values.
   const amount = state.selectedTopup === 'custom'
-    ? nairaToUsd(document.getElementById('customAmount')?.value || 0)
+    ? parseFloat(document.getElementById('customAmount')?.value || 0)
     : parseFloat(state.selectedTopup);
 
-  if (!amount || amount < 1) {
-    showToast(`Please enter a valid amount (min ${fmtNaira(1)})`, 'warning');
+  if (!amount || amount < 1500) {
+    showToast(`Please enter a valid amount (min ${fmtNaira(1500)})`, 'warning');
     return;
   }
 
-  const bonus = amount >= 100 ? amount * 0.20 : amount >= 50 ? amount * 0.15 : amount >= 25 ? amount * 0.10 : 0;
-  const total = amount + bonus;
-
-  // Detect selected payment method
-  const selected = document.querySelector('.pay-method.selected');
-  const method = selected?.dataset?.method || 'nowpayments';
-  const payCurrency = selected?.dataset?.currency || 'USDT';
-
   closeTopupModal();
-  showToast('Redirecting to payment gateway...', 'info');
+  showToast('Redirecting to DrexPay...', 'info');
 
   try {
-    const data = await api('POST', '/wallet/topup', { amount, method, payCurrency });
+    const data = await api('POST', '/wallet/topup', { amount, method: 'drexpay' });
     if (!data) return;
-    // Redirect to payment URL returned by backend — nested under `payment`
-    // (Stripe/DrexPay: .url, PayPal: .approvalUrl; NowPayments has neither,
-    // it shows a pay address/amount instead, hence the no-URL branch below).
-    const p = data.payment || {};
-    const url = p.url || p.approvalUrl || p.paymentUrl || p.checkoutUrl || p.invoiceUrl;
+    // DrexPay is the only payment provider (Stripe/PayPal/NowPayments were
+    // removed alongside it) — its response nests the checkout link under
+    // `payment.url`.
+    const url = data.payment && data.payment.url;
     if (url) {
       window.open(url, '_blank');
       showToast('Complete payment in the new tab. Your balance updates automatically.', 'info', 6000);
@@ -1307,7 +1269,7 @@ function buildProducts() {
         </div>
         <div class="prod-name">${escapeHTML(p.name)}</div>
         <div class="prod-desc">${escapeHTML(p.description || '')}</div>
-        <div class="prod-price">${fmtNGN(p.price)}</div>
+        <div class="prod-price">${fmtNaira(p.price)}</div>
         <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
           onclick="${out ? "showLandingPage('contact')" : "showPage('register')"}">
           ${out ? 'Contact Sales' : 'Buy Now'}
@@ -1359,13 +1321,13 @@ const faqs = [
   { q:'What is a virtual phone number?', a:'A virtual phone number is a real, working phone number assigned to you temporarily. It can receive SMS messages and WhatsApp verifications just like a regular SIM card — no physical SIM, no hardware, no carrier contract required.' },
   { q:'How long does it take to get a number?', a:'Numbers are assigned instantly after purchase — usually within 2–5 seconds. Our number pool is live 24/7 with over 2.4 million active numbers ready to be assigned.' },
   { q:'What happens if I do not receive an OTP?', a:'If no OTP is received within the validity window (20 minutes for WhatsApp, 10 minutes for SMS), you get a full automatic refund to your wallet. No support ticket needed — it is fully automatic.' },
-  { q:'What payment methods are accepted?', a:'We accept USDT (TRC20/ERC20), Bitcoin, Ethereum, BNB, Litecoin, PayPal, bank transfers, Visa, and Mastercard. Crypto payments are instant with zero extra fees. Your wallet balance never expires.' },
+  { q:'What payment methods are accepted?', a:'We accept bank transfer via DrexPay — your only payment method. Transfers are confirmed instantly and your wallet is credited automatically, with zero extra fees. Your wallet balance never expires.' },
   { q:'Is there an API for bulk purchases?', a:'Yes! Our full REST API lets you automate number purchases, poll OTP status in real time, receive instant webhook events, and manage your account programmatically. API docs are in your dashboard under "API Access".' },
   { q:'Are the numbers real and private?', a:'Yes. All numbers come from legitimate telecom providers worldwide. Each number is exclusively assigned to one user per session — never shared. After your session ends, the number enters a cooldown before being reused.' },
   { q:'Which apps and services can I verify?', a:'Our numbers work with WhatsApp, Telegram, Google, Facebook, Instagram, TikTok, Discord, Twitter/X, Tinder, Snapchat, Amazon, Microsoft, Coinbase, Binance, and 500+ other services. Any service that accepts an international number will work.' },
   { q:'Can I reuse the same number?', a:'Each number covers one verification session. For multiple accounts or different services, purchase separate numbers. This ensures your privacy and prevents conflicts between users.' },
   { q:'Does my wallet balance expire?', a:'Never. Your balance carries forward indefinitely. Deposit once, spend it over months or years across any number of purchases. No inactivity fees or balance resets.' },
-  { q:'What is the minimum deposit?', a:'Just $1. This lets you try the service risk-free. For bigger savings, our Pro ($25 → $27.50 credit) and Business ($100 → $120 credit) bundles include 10% and 20% bonus credits respectively.' },
+  { q:'What is the minimum deposit?', a:'Just ₦1,500. This lets you try the service risk-free, with no bonus tiers or hidden minimums for bigger top-ups — every naira you deposit goes straight into your wallet.' },
   { q:'How does the referral program work?', a:'Share your unique referral link. Every time a referral makes a deposit, you earn 10% of the amount as instant wallet credit — automatically, forever, with no cap on earnings.' },
   { q:'Is DonPeeSMS safe and legal?', a:'Yes. Using virtual numbers for privacy, testing, and account creation is legal in most countries. All payments are SSL-encrypted. We do not support fraud and reserve the right to terminate accounts violating our Terms of Service.' },
 ];
@@ -1781,20 +1743,19 @@ const CHAT_KB = [
     keys: ['how','work','start','begin','step','process','use','get number','buy number'],
     reply: `Getting your number takes <strong>under 60 seconds</strong>! ⚡<br><br>
       <strong>1.</strong> Create a free account<br>
-      <strong>2.</strong> Top up your wallet (from ₦1,600)<br>
+      <strong>2.</strong> Top up your wallet (from ₦1,500)<br>
       <strong>3.</strong> Pick a country + service<br>
       <strong>4.</strong> Receive your OTP instantly<br><br>
       No ID, no KYC, no waiting — just instant delivery! 🚀`,
     wa: 'Hi DonPeeSMS, I want to understand how it works'
   },
   {
-    keys: ['pay','payment','crypto','bitcoin','btc','card','paypal','usdt','ethereum','deposit','fund','wallet','top up'],
-    reply: `We accept multiple payment methods: 💳<br><br>
-      • <strong>Crypto</strong> – Bitcoin, USDT, Ethereum & more<br>
-      • <strong>Debit/Credit Card</strong> – Visa, Mastercard<br>
-      • <strong>PayPal</strong><br>
-      • <strong>Bank Transfer</strong><br><br>
-      All payments are secure and instant. Your wallet is credited immediately! 🔒`,
+    keys: ['pay','payment','crypto','bitcoin','btc','card','paypal','usdt','ethereum','deposit','fund','wallet','top up','drexpay','bank transfer'],
+    reply: `Topping up is simple: 💳<br><br>
+      • <strong>Bank Transfer via DrexPay</strong> — our only payment method<br>
+      • <strong>Instant confirmation</strong> — your wallet is credited the moment the transfer clears<br>
+      • <strong>No card, crypto, or third-party wallet needed</strong><br><br>
+      Minimum top-up is just ₦1,500! 🔒`,
     wa: 'Hi DonPeeSMS, I have a payment question'
   },
   {
@@ -2388,7 +2349,7 @@ function renderAdminProducts(products) {
         <div style="font-size:.75rem;color:var(--txt-4)">${escapeHTML(p.description || '')}</div>
       </td>
       <td style="color:var(--txt-3)">${p.category ? escapeHTML(p.category.name) : '—'}</td>
-      <td>${fmtNGN(p.price)}</td>
+      <td>${fmtNaira(p.price)}</td>
       <td style="color:var(--txt-3);font-size:.85rem">${stockText}</td>
       <td style="color:var(--txt-4);font-size:.82rem">${p.apiProvider === 'manual' ? 'Manual' : escapeHTML(p.apiProvider)}</td>
       <td>
@@ -2470,7 +2431,7 @@ function closeProductModal() {
 function updateProdPriceNaira() {
   const ngn = parseFloat(document.getElementById('prodPrice')?.value || 0);
   const el = document.getElementById('prodPriceNaira');
-  if (el) el.textContent = fmtNGN(ngn);
+  if (el) el.textContent = fmtNaira(ngn);
 }
 
 async function saveProduct() {

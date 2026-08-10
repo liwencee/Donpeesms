@@ -4,35 +4,32 @@
 const { supabase } = require('../config/supabase');
 const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
-const stripe       = require('../services/stripeService');
-const nowpay       = require('../services/nowPaymentsService');
-const paypal       = require('../services/paypalService');
+const drexpay      = require('../services/drexpayService');
 const logger       = require('../utils/logger');
 const { toCamelCase } = require('../utils/caseMapper');
 
-const calculateBonus = (amount) => {
-  if (amount >= 100) return amount * 0.20;
-  if (amount >= 50)  return amount * 0.15;
-  if (amount >= 25)  return amount * 0.10;
-  return 0;
-};
+// Bonuses are disabled — kept as a function (not deleted) since `bonus`
+// still flows through initiateTopup/creditWallet/transactions.bonus_amount
+// and the email template's conditional bonus line; forcing the source to
+// 0 makes all of that correctly inert without touching those call sites.
+const calculateBonus = (_amount) => 0;
 
 // ═════════════════════════════════════════════
 // GET /api/wallet
 // ═════════════════════════════════════════════
 exports.getWallet = asyncHandler(async (req, res) => {
-  res.json({ success: true, balance: req.user.walletBalance, currency: 'USD' });
+  res.json({ success: true, balance: req.user.walletBalance, currency: 'NGN' });
 });
 
 // ═════════════════════════════════════════════
 // POST /api/wallet/topup
 // ═════════════════════════════════════════════
 exports.initiateTopup = asyncHandler(async (req, res) => {
-  const { amount, method, payCurrency } = req.body;
+  const { amount, method } = req.body;
   const amt = parseFloat(amount);
 
-  if (!amt || amt < 1) throw ApiError.badRequest('Minimum top-up is $1');
-  if (amt > 10000)     throw ApiError.badRequest('Maximum top-up is $10,000');
+  if (!amt || amt < 1500)     throw ApiError.badRequest('Minimum top-up is ₦1,500');
+  if (amt > 15000000)         throw ApiError.badRequest('Maximum top-up is ₦15,000,000');
 
   const bonus = calculateBonus(amt);
 
@@ -40,6 +37,7 @@ exports.initiateTopup = asyncHandler(async (req, res) => {
     user_id: req.userId,
     type: 'topup',
     amount: amt,
+    currency: 'NGN',
     bonus_amount: bonus,
     balance_after: req.user.walletBalance,
     method,
@@ -53,34 +51,10 @@ exports.initiateTopup = asyncHandler(async (req, res) => {
   let paymentData;
 
   switch (method) {
-    case 'stripe': {
-      const session = await stripe.createCheckoutSession({
-        userId: req.userId, email: req.user.email, amount: amt, bonus
-      });
-      await supabase.from('transactions').update({ external_id: session.sessionId }).eq('id', txRow.id);
-      paymentData = { url: session.url, sessionId: session.sessionId };
-      break;
-    }
-    case 'nowpayments': {
-      const payment = await nowpay.createPayment({
-        userId: req.userId, amount: amt, bonus, payCurrency: payCurrency || 'usdttrc20'
-      });
-      await supabase.from('transactions').update({
-        external_id: String(payment.paymentId),
-        crypto_currency: payment.payCurrency,
-        crypto_amount: payment.payAmount,
-        crypto_address: payment.payAddress
-      }).eq('id', txRow.id);
-      paymentData = {
-        paymentId: payment.paymentId, payAddress: payment.payAddress,
-        payAmount: payment.payAmount, payCurrency: payment.payCurrency, expiresAt: payment.expiresAt
-      };
-      break;
-    }
-    case 'paypal': {
-      const order = await paypal.createOrder({ userId: req.userId, amount: amt, bonus });
-      await supabase.from('transactions').update({ external_id: order.orderId }).eq('id', txRow.id);
-      paymentData = { orderId: order.orderId, approvalUrl: order.approvalUrl };
+    case 'drexpay': {
+      const link = await drexpay.createPaymentLink({ email: req.user.email, amount: amt });
+      await supabase.from('transactions').update({ external_id: link.reference }).eq('id', txRow.id);
+      paymentData = { url: link.url, reference: link.reference };
       break;
     }
     default:

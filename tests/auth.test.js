@@ -70,8 +70,8 @@ describe('protect middleware', () => {
 
   // Regression guard: `email` is NOT a profiles column (it lives in
   // auth.users), so it must come off the verified token's user object.
-  // Without it, Stripe checkout and every confirmation email silently
-  // addressed `undefined`.
+  // Without it, DrexPay payment links and every confirmation email
+  // silently addressed `undefined`.
   test('attaches the account email from the verified token', async () => {
     supabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1', email: 'buyer@example.com' } }, error: null });
     supabase.from.mockReturnValue({

@@ -70,25 +70,14 @@ module.exports = {
     }
   },
 
-  stripe: {
-    secret:        process.env.STRIPE_SECRET_KEY,
-    publishable:   process.env.STRIPE_PUBLISHABLE_KEY,
-    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET
-  },
-
-  nowPayments: {
-    apiKey:    process.env.NOWPAYMENTS_API_KEY,
-    ipnSecret: process.env.NOWPAYMENTS_IPN_SECRET,
-    baseUrl:   process.env.NOWPAYMENTS_BASE_URL || 'https://api.nowpayments.io/v1'
-  },
-
-  paypal: {
-    clientId:     process.env.PAYPAL_CLIENT_ID,
-    clientSecret: process.env.PAYPAL_CLIENT_SECRET,
-    mode:         process.env.PAYPAL_MODE || 'sandbox'
+  drexpay: {
+    secretKey:     process.env.DREXPAY_SECRET_KEY,
+    webhookSecret: process.env.DREXPAY_WEBHOOK_SECRET
   },
 
   priceMarkup: parseFloat(process.env.PRICE_MARKUP) || 1.4,
+
+  ngnRate: parseFloat(process.env.NGN_RATE) || 1600,
 
   rateLimit: {
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS, 10) || 15 * 60 * 1000,
