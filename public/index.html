@@ -2625,6 +2625,30 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
 </div><!-- end page-admin -->
 
 
+<!-- ═══════════════════════════════════════ API PLAN PURCHASED MODAL ═══ -->
+<div class="modal-overlay" id="apiPlanModal">
+  <div class="modal-box" style="max-width:520px">
+    <div class="modal-header">
+      <div class="modal-title">Plan Activated 🎉</div>
+      <div class="modal-close" onclick="closeApiPlanModal()">
+        <svg width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
+      </div>
+    </div>
+    <div>
+      <div style="background:rgba(245,158,11,.1);border:1px solid rgba(245,158,11,.3);border-radius:var(--radius-md);padding:12px 14px;margin-bottom:16px;font-size:.82rem;color:var(--warning)">
+        ⚠️ Save this key now — it will not be shown again.
+      </div>
+      <div style="font-size:.75rem;color:var(--txt-4);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">Your API Key</div>
+      <div style="display:flex;align-items:center;gap:10px;background:var(--bg-3);border:1px solid var(--border-2);border-radius:var(--radius-md);padding:14px 16px;margin-bottom:16px">
+        <code id="apiPlanKeyText" style="font-size:.85rem;color:var(--p-200);flex:1;word-break:break-all"></code>
+        <button class="copy-btn" onclick="copyText(document.getElementById('apiPlanKeyText').textContent)">Copy</button>
+      </div>
+      <div id="apiPlanQuotaText" style="font-size:.85rem;color:var(--txt-3);margin-bottom:20px"></div>
+      <button class="btn btn-primary w-full" onclick="closeApiPlanModal();dashNav('api')">Go to API Access</button>
+    </div>
+  </div>
+</div>
+
 <!-- ═══════════════════════════════════════ PRODUCT MODAL ═══ -->
 <div class="modal-overlay" id="productModal">
   <div class="modal-box" style="max-width:560px;max-height:88vh;overflow-y:auto">
@@ -2891,6 +2915,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
 
 <script src="/vendor/supabase.js"></script>
 <script src="/supabase-config.js"></script>
-<script src="/app.js?v=20260810buyflow"></script>
+<script src="/app.js?v=20260810apiplans"></script>
 </body>
 </html>

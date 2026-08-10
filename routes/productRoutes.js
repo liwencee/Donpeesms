@@ -11,6 +11,11 @@ const publicRouter = express.Router();
 publicRouter.get('/', c.listPublic);
 publicRouter.get('/categories', c.listCategoriesPublic);
 
+// Purchasing a Developer API plan requires an authenticated wallet —
+// gated individually rather than router-wide since the two routes
+// above are genuinely public (landing page catalog).
+publicRouter.post('/:id/purchase-plan', protect, c.purchasePlan);
+
 // ── ADMIN (session + role: admin) ──
 const adminRouter = express.Router();
 adminRouter.use(protect, requireRole('admin'));

@@ -1285,6 +1285,38 @@ function buyProduct(productName) {
   }
 }
 
+// "Buy Now" handler for a Developer API catalog product. Debits the
+// wallet server-side and issues a real API key with that plan's
+// monthly quota (see POST /api/products/:id/purchase-plan). The raw
+// key is only ever returned once, so it's shown in a dedicated modal
+// rather than a toast that could disappear before it's copied.
+async function buyApiPlan(productId, btn) {
+  if (!state.currentUser) { showPage('register'); return; }
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Processing...';
+  try {
+    const data = await api('POST', `/products/${productId}/purchase-plan`);
+    if (!data) return;
+    await _loadAndRenderUser(); // refreshes wallet balance from the server post-debit
+    document.getElementById('apiPlanKeyText').textContent = data.apiKey.key;
+    document.getElementById('apiPlanQuotaText').textContent = data.apiKey.monthlyQuota
+      ? `${data.apiKey.monthlyQuota.toLocaleString()} verifications/month · resets ${new Date(data.apiKey.quotaResetAt).toLocaleDateString()}`
+      : 'Unlimited verifications/month';
+    document.getElementById('apiPlanModal').classList.add('open');
+    showToast('Plan activated!', 'success');
+  } catch (err) {
+    showToast(err.message || 'Purchase failed', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+}
+
+function closeApiPlanModal() {
+  document.getElementById('apiPlanModal').classList.remove('open');
+}
+
 function buildProducts() {
   const grid = document.getElementById('productsGrid');
   if (!grid) return;
@@ -1305,7 +1337,9 @@ function buildProducts() {
         <div class="prod-desc">${escapeHTML(p.description || '')}</div>
         <div class="prod-price">${fmtNaira(p.price)}</div>
         <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
-          onclick="${out ? "showLandingPage('contact')" : `buyProduct('${p.name.replace(/'/g, "\\'")}')`}">
+          onclick="${out ? "showLandingPage('contact')"
+            : p.category?.slug === 'api' ? `buyApiPlan('${p.id}', this)`
+            : `buyProduct('${p.name.replace(/'/g, "\\'")}')`}">
           ${out ? 'Contact Sales' : 'Buy Now'}
         </button>
       </div>`;

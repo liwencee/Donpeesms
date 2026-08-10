@@ -4,6 +4,8 @@
 const { supabase } = require('../config/supabase');
 const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
+const { generateKey } = require('../models/ApiKey');
+const wallet        = require('./walletController');
 
 const slugify = (s) => String(s || '')
   .toLowerCase().trim()
@@ -228,5 +230,62 @@ exports.adminListProviders = asyncHandler(async (_req, res) => {
   res.json({
     success: true,
     providers: [...builtIn, ...data.map(p => ({ id: p.slug, name: p.name, configured: !!p.api_key_enc }))]
+  });
+});
+
+// ═════════════════════════════════════════════
+// POST /api/products/:id/purchase-plan
+// Buys a Developer API catalog product: debits the wallet and issues a
+// new API key carrying that plan's monthly quota (metadata.monthlyQuota
+// on the product row; absent/null = unlimited, matching the Business
+// tier). Scoped strictly to category 'api' — other catalog categories
+// (One-Time OTP, Number Rentals) have no purchase-plan concept and are
+// rejected rather than silently accepted.
+// ═════════════════════════════════════════════
+exports.purchasePlan = asyncHandler(async (req, res) => {
+  const { data: product, error: prodErr } = await supabase
+    .from('products').select('*, categories(*)').eq('id', req.params.id).maybeSingle();
+  if (prodErr) throw new ApiError(500, prodErr.message);
+  if (!product || !product.enabled) throw ApiError.notFound('Product not found');
+  if (product.categories?.slug !== 'api') throw ApiError.badRequest('This product is not a Developer API plan');
+  if (product.stock === 0) throw ApiError.badRequest('This plan is not currently available — contact sales');
+
+  const { count: activeCount, error: countErr } = await supabase
+    .from('api_keys').select('id', { count: 'exact', head: true })
+    .eq('user_id', req.userId).eq('active', true);
+  if (countErr) throw new ApiError(500, countErr.message);
+  if (activeCount >= 5) throw ApiError.badRequest('Max 5 active API keys per account — revoke one first');
+
+  // Debit BEFORE issuing the key: if the wallet doesn't have the funds,
+  // nothing is created. debitWallet itself throws a clean 400 on
+  // insufficient balance, which asyncHandler propagates as-is.
+  await wallet.debitWallet({
+    userId: req.userId,
+    amount: product.price,
+    description: `API plan: ${product.name}`
+  });
+
+  const monthlyQuota = product.metadata?.monthlyQuota ?? null;
+  const { raw, hash, prefix } = generateKey();
+
+  const { data: keyRow, error: keyErr } = await supabase.from('api_keys').insert({
+    user_id: req.userId,
+    name: `${product.name} Plan`,
+    key_prefix: prefix,
+    key_hash: hash,
+    scopes: ['read', 'write'],
+    monthly_quota: monthlyQuota,
+    quota_used: 0,
+    quota_reset_at: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString()
+  }).select().single();
+  if (keyErr) throw new ApiError(500, keyErr.message);
+
+  res.status(201).json({
+    success: true,
+    message: 'Save this key — it will not be shown again',
+    apiKey: {
+      id: keyRow.id, name: keyRow.name, prefix, key: raw,
+      monthlyQuota, quotaResetAt: keyRow.quota_reset_at
+    }
   });
 });

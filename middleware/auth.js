@@ -73,6 +73,18 @@ const apiKeyAuth = asyncHandler(async (req, res, next) => {
   if (key.expires_at && new Date(key.expires_at) < new Date()) throw ApiError.unauthorized('API key expired');
   if (!key.profiles || key.profiles.status !== 'active')       throw ApiError.forbidden('User account inactive');
 
+  // Purchased-plan quota (see 0006_api_key_quota.sql). Awaited and
+  // blocking, unlike the usage counter below — a key with no purchased
+  // plan (monthly_quota null) returns immediately with no-op, so this
+  // is a no-op for every key created via self-service Profile > API Keys.
+  const { error: quotaErr } = await supabase.rpc('check_and_consume_api_quota', { p_key_id: key.id });
+  if (quotaErr) {
+    if (quotaErr.message?.includes('Monthly API quota exceeded')) {
+      throw ApiError.forbidden('Monthly API quota exceeded — upgrade your plan or wait for the next billing period');
+    }
+    throw new ApiError(500, quotaErr.message);
+  }
+
   supabase.rpc('increment_api_key_usage', { p_key_id: key.id, p_ip: req.ip })
     .then(() => {}, (err) => logger.warn('API key usage tracking failed:', err.message)); // fire-and-forget, but log if it fails
 

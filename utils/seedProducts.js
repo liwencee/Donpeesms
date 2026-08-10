@@ -37,9 +37,9 @@ const PRODUCTS = [
   { cat: 'rental', name: 'Number Rental — 1 Day',   desc: 'Keep one number for 24 hours, unlimited SMS.', price: 1920,  color: '#F59E0B' },
   { cat: 'rental', name: 'Number Rental — 7 Days',  desc: 'Weekly rental for repeat verifications.',      price: 9600,  color: '#F59E0B' },
   { cat: 'rental', name: 'Number Rental — 30 Days', desc: 'Long-term dedicated number for a month.',      price: 28800, color: '#F59E0B', stock: 5, stock_label: 'Limited' },
-  { cat: 'api', name: 'Developer API — Starter',  desc: '1,000 verifications/month with REST API access.', price: 72000,  color: '#3B82F6' },
-  { cat: 'api', name: 'Developer API — Growth',   desc: '5,000 verifications/month plus webhooks.',        price: 288000, color: '#3B82F6' },
-  { cat: 'api', name: 'Developer API — Business', desc: 'Unlimited volume, priority routing, SLA.',        price: 672000, color: '#3B82F6', stock: 0, stock_label: 'Contact us' }
+  { cat: 'api', name: 'Developer API — Starter',  desc: '1,000 verifications/month with REST API access.', price: 72000,  color: '#3B82F6', metadata: { monthlyQuota: 1000 } },
+  { cat: 'api', name: 'Developer API — Growth',   desc: '5,000 verifications/month plus webhooks.',        price: 288000, color: '#3B82F6', metadata: { monthlyQuota: 5000 } },
+  { cat: 'api', name: 'Developer API — Business', desc: 'Unlimited volume, priority routing, SLA.',        price: 672000, color: '#3B82F6', stock: 0, stock_label: 'Contact us', metadata: { monthlyQuota: null } }
 ];
 
 const run = async () => {
@@ -66,7 +66,8 @@ const run = async () => {
       stock: pr.stock ?? -1,
       stock_label: pr.stock_label ?? null,
       enabled: true,
-      sort_order: i
+      sort_order: i,
+      metadata: pr.metadata ?? {}
     });
     if (error) throw error;
     created++;
