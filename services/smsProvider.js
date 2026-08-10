@@ -220,40 +220,97 @@ class SureVerificationsProvider {
     }
   }
 
-  // ───────────────────────────────────────────────────────────
-  // NOTE: Only /balance and /countries make live API calls.
-  // All other SureVerifications endpoints are intentionally disabled
-  // (no HTTP request is sent) until they are ready to go live.
-  // ───────────────────────────────────────────────────────────
-
-  // Disabled — no API call. Controller falls back to its static list.
-  async getServices() {
-    throw ApiError.internal('SureVerifications services endpoint is disabled');
+  // ── GET /api/v1/{server}/services ────────────
+  async getServices(server = 'server1') {
+    try {
+      const { data } = await this.client.get(`/${server}/services`);
+      return Array.isArray(data) ? data : (data.services || data.data || []);
+    } catch (err) {
+      logger.error('SureVerifications getServices:', err.response?.data || err.message);
+      throw ApiError.internal('Failed to fetch services');
+    }
   }
 
-  // Disabled — no API call.
-  async getPrice() {
-    throw ApiError.notFound('Number purchasing is temporarily unavailable');
+  // ── GET /api/v1/{server}/price?country=&service= ──
+  // Falls back to server2 if server1 has no price for the combo.
+  async getPrice(country, service = 'whatsapp', server = 'server1') {
+    try {
+      const { data } = await this.client.get(`/${server}/price`, {
+        params: { country: String(country).toLowerCase(), service: String(service).toLowerCase() }
+      });
+      const cost  = data.price ?? data.cost ?? data.data?.price ?? 0;
+      const count = data.count ?? data.quantity ?? data.data?.count ?? 0;
+      return { cost: parseFloat(cost), count: parseInt(count, 10) || 0, currency: 'USD' };
+    } catch (err) {
+      if (server === 'server1') return this.getPrice(country, service, 'server2');
+      logger.error('SureVerifications getPrice:', err.response?.data || err.message);
+      throw ApiError.notFound('Pricing unavailable for this country/service combo');
+    }
   }
 
-  // Disabled — no API call.
-  async buyNumber() {
-    throw ApiError.badRequest('Number purchasing is temporarily unavailable');
+  // ── POST /api/v1/{server}/purchase ───────────
+  // Falls back to server2 if server1 is out of stock for the combo.
+  async buyNumber(country, service = 'whatsapp', server = 'server1') {
+    try {
+      const { data } = await this.client.post(`/${server}/purchase`, {
+        country: String(country).toLowerCase(),
+        service: String(service).toLowerCase()
+      });
+      const providerOrderId = data.id ?? data.order_id ?? data.data?.id;
+      const phone = data.phone ?? data.number ?? data.data?.phone;
+      if (!providerOrderId || !phone) throw new Error('Malformed purchase response');
+      return {
+        providerOrderId: String(providerOrderId),
+        phoneNumber: String(phone).startsWith('+') ? phone : '+' + phone,
+        cost: parseFloat(data.price ?? data.cost ?? data.data?.price ?? 0),
+        expiresAt: new Date(Date.now() + 20 * 60 * 1000),
+        server
+      };
+    } catch (err) {
+      if (server === 'server1') return this.buyNumber(country, service, 'server2');
+      logger.error('SureVerifications buyNumber:', err.response?.data || err.message);
+      throw ApiError.badRequest('No numbers available for this country/service right now');
+    }
   }
 
-  // Disabled — no API call. Returns a safe pending result.
-  async checkOrder() {
-    return { status: 'pending', sms: [], otpCode: null };
+  // ── GET /api/v1/{server}/sms/{id} ────────────
+  async checkOrder(providerOrderId, server = 'server1') {
+    try {
+      const { data } = await this.client.get(`/${server}/sms/${providerOrderId}`);
+      const raw = data.status ?? data.data?.status ?? 'pending';
+      const smsList = data.sms ?? data.messages ?? data.data?.sms ?? [];
+      const messages = (Array.isArray(smsList) ? smsList : []).map(m => ({
+        text: m.text ?? m.message ?? '', sender: m.sender ?? m.from ?? '',
+        code: m.code ?? this._extractOtp(m.text ?? m.message ?? ''),
+        receivedAt: m.created_at ? new Date(m.created_at) : new Date()
+      }));
+      return { status: this._mapStatus(raw), sms: messages, otpCode: messages[0]?.code || null };
+    } catch (err) {
+      logger.error('SureVerifications checkOrder:', err.response?.data || err.message);
+      return { status: 'pending', sms: [], otpCode: null };
+    }
   }
 
-  // Disabled — no API call.
-  async cancelOrder() {
-    return { cancelled: true };
+  // ── GET /api/v1/{server}/cancel/{id} ─────────
+  async cancelOrder(providerOrderId, server = 'server1') {
+    try {
+      await this.client.get(`/${server}/cancel/${providerOrderId}`);
+      return { cancelled: true };
+    } catch (err) {
+      logger.warn('SureVerifications cancelOrder:', err.response?.data || err.message);
+      return { cancelled: false };
+    }
   }
 
-  // Disabled — no API call.
-  async finishOrder() {
-    return { finished: true };
+  // ── GET /api/v1/{server}/finish/{id} ─────────
+  async finishOrder(providerOrderId, server = 'server1') {
+    try {
+      await this.client.get(`/${server}/finish/${providerOrderId}`);
+      return { finished: true };
+    } catch (err) {
+      logger.warn('SureVerifications finishOrder:', err.response?.data || err.message);
+      return { finished: false };
+    }
   }
 
   _mapStatus(s) {
@@ -268,7 +325,7 @@ class SureVerificationsProvider {
   }
 
   _extractOtp(text) {
-    const match = text.match(/\b\d{4,8}\b/);
+    const match = String(text || '').match(/\b\d{4,8}\b/);
     return match ? match[0] : null;
   }
 }

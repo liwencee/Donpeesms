@@ -1251,6 +1251,40 @@ function filterProducts(cat) {
   buildProducts();
 }
 
+// Maps a catalog product name to the real, working purchase flow
+// (dashboard "Buy WhatsApp/SMS Number" pages, which call the live
+// SureVerifications buyNumber() API). Only "One-Time OTP" products have
+// an actual fulfilment path — rentals and API-tier products aren't
+// backed by any purchase code yet, so they intentionally fall through
+// to the account/contact CTA instead of a dead-end buy page.
+const PRODUCT_PURCHASE_MAP = {
+  'WhatsApp Number':    { type: 'whatsapp' },
+  'Telegram Number':    { type: 'sms', service: 'telegram' },
+  'Google / Gmail':     { type: 'sms', service: 'google' },
+  'Instagram Number':   { type: 'sms', service: 'instagram' },
+  'TikTok Number':      { type: 'sms', service: 'tiktok' },
+  'Twitter / X Number': { type: 'sms', service: 'twitter' },
+  'Facebook Number':    { type: 'sms', service: 'facebook' },
+  'Any Service SMS':    { type: 'sms', service: 'any' }
+};
+
+// "Buy Now" handler for a product card. Logged-out users still need to
+// register first (no wallet to purchase from). Logged-in users land on
+// the real buy page for that product's service, with the service
+// dropdown pre-selected — they only need to pick a country and confirm.
+function buyProduct(productName) {
+  if (!state.currentUser) { showPage('register'); return; }
+  const map = PRODUCT_PURCHASE_MAP[productName];
+  if (!map) { showToast('This product isn\'t available for direct purchase yet — contact us to order.', 'info'); showLandingPage('contact'); return; }
+
+  showPage('dashboard');
+  dashNav(map.type === 'whatsapp' ? 'buy-whatsapp' : 'buy-sms');
+  if (map.type === 'sms' && map.service) {
+    const sel = document.getElementById('smsService');
+    if (sel) sel.value = map.service;
+  }
+}
+
 function buildProducts() {
   const grid = document.getElementById('productsGrid');
   if (!grid) return;
@@ -1271,7 +1305,7 @@ function buildProducts() {
         <div class="prod-desc">${escapeHTML(p.description || '')}</div>
         <div class="prod-price">${fmtNaira(p.price)}</div>
         <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
-          onclick="${out ? "showLandingPage('contact')" : "showPage('register')"}">
+          onclick="${out ? "showLandingPage('contact')" : `buyProduct('${p.name.replace(/'/g, "\\'")}')`}">
           ${out ? 'Contact Sales' : 'Buy Now'}
         </button>
       </div>`;
@@ -1292,7 +1326,7 @@ function buildProducts() {
       <div class="prod-desc">${p.desc}</div>
       <div class="prod-price">${fmtNaira(p.usd)}</div>
       <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
-        onclick="${out ? "showLandingPage('contact')" : "showPage('register')"}">
+        onclick="${out ? "showLandingPage('contact')" : `buyProduct('${p.name.replace(/'/g, "\\'")}')`}">
         ${out ? 'Contact Sales' : 'Buy Now'}
       </button>
     </div>`;
