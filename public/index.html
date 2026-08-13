@@ -2608,13 +2608,16 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
             <button class="btn btn-primary" style="margin-top:16px" onclick="showToast('Settings saved!','success')">Save Settings</button>
           </div>
           <div class="card">
-            <div style="font-weight:700;margin-bottom:20px">Maintenance Mode</div>
+            <div style="display:flex;align-items:center;gap:10px;margin-bottom:20px">
+              <div style="font-weight:700">Maintenance Mode</div>
+              <span id="maintenanceStatusBadge" style="font-size:.75rem;font-weight:600;padding:2px 10px;border-radius:99px"></span>
+            </div>
             <div style="display:flex;align-items:center;justify-content:space-between;padding:16px;background:var(--bg-3);border-radius:var(--radius-md)">
               <div>
                 <div style="font-weight:600;margin-bottom:4px">Enable Maintenance Mode</div>
-                <div style="font-size:.83rem;color:var(--txt-4)">Disables all purchases while keeping the site visible.</div>
+                <div style="font-size:.83rem;color:var(--txt-4)">Locks out the whole site — visitors see a maintenance page and the API returns 503. Only this admin panel keeps working, so you can turn it back off.</div>
               </div>
-              <div class="provider-toggle" onclick="this.classList.toggle('on');showToast('Maintenance mode toggled','warning')"></div>
+              <div class="provider-toggle" id="maintenanceToggle" style="position:static;flex-shrink:0" onclick="toggleMaintenanceMode(this)"></div>
             </div>
           </div>
         </div>
@@ -2915,6 +2918,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
 
 <script src="/vendor/supabase.js"></script>
 <script src="/supabase-config.js"></script>
-<script src="/app.js?v=20260813mintopup"></script>
+<script src="/app.js?v=20260813maintmode"></script>
 </body>
 </html>
