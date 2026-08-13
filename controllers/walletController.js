@@ -28,7 +28,7 @@ exports.initiateTopup = asyncHandler(async (req, res) => {
   const { amount, method } = req.body;
   const amt = parseFloat(amount);
 
-  if (!amt || amt < 1500)     throw ApiError.badRequest('Minimum top-up is ₦1,500');
+  if (!amt || amt < 300)      throw ApiError.badRequest('Minimum top-up is ₦300');
   if (amt > 15000000)         throw ApiError.badRequest('Maximum top-up is ₦15,000,000');
 
   const bonus = calculateBonus(amt);

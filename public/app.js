@@ -987,8 +987,8 @@ async function processTopup() {
     ? parseFloat(document.getElementById('customAmount')?.value || 0)
     : parseFloat(state.selectedTopup);
 
-  if (!amount || amount < 1500) {
-    showToast(`Please enter a valid amount (min ${fmtNaira(1500)})`, 'warning');
+  if (!amount || amount < 300) {
+    showToast(`Please enter a valid amount (min ${fmtNaira(300)})`, 'warning');
     return;
   }
 
@@ -1400,7 +1400,7 @@ const faqs = [
   { q:'Which apps and services can I verify?', a:'Our numbers work with WhatsApp, Telegram, Google, Facebook, Instagram, TikTok, Discord, Twitter/X, Tinder, Snapchat, Amazon, Microsoft, Coinbase, Binance, and 500+ other services. Any service that accepts an international number will work.' },
   { q:'Can I reuse the same number?', a:'Each number covers one verification session. For multiple accounts or different services, purchase separate numbers. This ensures your privacy and prevents conflicts between users.' },
   { q:'Does my wallet balance expire?', a:'Never. Your balance carries forward indefinitely. Deposit once, spend it over months or years across any number of purchases. No inactivity fees or balance resets.' },
-  { q:'What is the minimum deposit?', a:'Just ₦1,500. This lets you try the service risk-free, with no bonus tiers or hidden minimums for bigger top-ups — every naira you deposit goes straight into your wallet.' },
+  { q:'What is the minimum deposit?', a:'Just ₦300. This lets you try the service risk-free, with no bonus tiers or hidden minimums for bigger top-ups — every naira you deposit goes straight into your wallet.' },
   { q:'How does the referral program work?', a:'Share your unique referral link. Every time a referral makes a deposit, you earn 10% of the amount as instant wallet credit — automatically, forever, with no cap on earnings.' },
   { q:'Is DonPeeSMS safe and legal?', a:'Yes. Using virtual numbers for privacy, testing, and account creation is legal in most countries. All payments are SSL-encrypted. We do not support fraud and reserve the right to terminate accounts violating our Terms of Service.' },
 ];
@@ -1816,7 +1816,7 @@ const CHAT_KB = [
     keys: ['how','work','start','begin','step','process','use','get number','buy number'],
     reply: `Getting your number takes <strong>under 60 seconds</strong>! ⚡<br><br>
       <strong>1.</strong> Create a free account<br>
-      <strong>2.</strong> Top up your wallet (from ₦1,500)<br>
+      <strong>2.</strong> Top up your wallet (from ₦300)<br>
       <strong>3.</strong> Pick a country + service<br>
       <strong>4.</strong> Receive your OTP instantly<br><br>
       No ID, no KYC, no waiting — just instant delivery! 🚀`,
@@ -1828,7 +1828,7 @@ const CHAT_KB = [
       • <strong>Bank Transfer via DrexPay</strong> — our only payment method<br>
       • <strong>Instant confirmation</strong> — your wallet is credited the moment the transfer clears<br>
       • <strong>No card, crypto, or third-party wallet needed</strong><br><br>
-      Minimum top-up is just ₦1,500! 🔒`,
+      Minimum top-up is just ₦300! 🔒`,
     wa: 'Hi DonPeeSMS, I have a payment question'
   },
   {

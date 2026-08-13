@@ -369,7 +369,7 @@
             <tbody>
               <tr><td>Number delivery speed</td><td class="col-us check">Under 5 seconds</td><td class="cross">1–5 minutes</td></tr>
               <tr><td>Auto-refund on no OTP</td><td class="col-us check">Always automatic</td><td class="cross">Manual request</td></tr>
-              <tr><td>Minimum deposit</td><td class="col-us check">₦1,500</td><td class="cross">₦8,000 – ₦16,000</td></tr>
+              <tr><td>Minimum deposit</td><td class="col-us check">₦300</td><td class="cross">₦8,000 – ₦16,000</td></tr>
               <tr><td>Countries covered</td><td class="col-us check">150+</td><td class="cross">50 – 80</td></tr>
               <tr><td>WhatsApp support</td><td class="col-us check">Full support</td><td class="cross">Limited / extra fee</td></tr>
               <tr><td>REST API access</td><td class="col-us check">All plans</td><td class="cross">Paid plans only</td></tr>
@@ -412,7 +412,7 @@
           <div class="step-num">02</div>
           <svg class="step-arrow" width="40" height="24" fill="none" stroke="var(--p-600)" stroke-width="2" viewBox="0 0 40 24"><path d="M0 12h34M28 6l6 6-6 6"/></svg>
           <div class="step-title">Add Wallet Funds</div>
-          <div class="step-desc">Top up your account balance by bank transfer via DrexPay. Minimum deposit just ₦1,500.</div>
+          <div class="step-desc">Top up your account balance by bank transfer via DrexPay. Minimum deposit just ₦300.</div>
           <ul class="step-sub-list">
             <li><svg width="12" height="12" fill="none" stroke="var(--p-400)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> Instant transfer confirmation</li>
             <li><svg width="12" height="12" fill="none" stroke="var(--p-400)" stroke-width="2.5" viewBox="0 0 24 24"><path d="M20 6L9 17l-5-5"/></svg> No card or crypto needed</li>
@@ -714,7 +714,7 @@
         <!-- Starter -->
         <div class="pricing-card">
           <div class="pricing-plan">Starter</div>
-          <div class="pricing-amount"><sup>₦</sup>1,500</div>
+          <div class="pricing-amount"><sup>₦</sup>300</div>
           <div class="pricing-per">minimum deposit</div>
           <div class="pricing-divider"></div>
           <ul class="pricing-list">
@@ -2808,7 +2808,7 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
         <div class="topup-amount-btn" onclick="selectTopup(this,'custom')">Custom</div>
       </div>
       <div id="customAmountWrap" class="hidden" style="margin-top:10px">
-        <input type="number" class="form-input" placeholder="Enter amount in ₦ (min ₦1,500)" min="1500" step="100" id="customAmount" oninput="onCustomAmountInput(this.value)"/>
+        <input type="number" class="form-input" placeholder="Enter amount in ₦ (min ₦300)" min="300" step="100" id="customAmount" oninput="onCustomAmountInput(this.value)"/>
       </div>
     </div>
     <div style="margin-bottom:20px">
@@ -2915,6 +2915,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
 
 <script src="/vendor/supabase.js"></script>
 <script src="/supabase-config.js"></script>
-<script src="/app.js?v=20260810sessionfix"></script>
+<script src="/app.js?v=20260813mintopup"></script>
 </body>
 </html>
