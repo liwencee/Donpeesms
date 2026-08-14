@@ -7,8 +7,32 @@
  * stock as available.
  */
 jest.mock('../config/supabase', () => ({ supabase: { from: jest.fn() } }));
+jest.mock('../services/smsProvider', () => ({ getProvider: jest.fn() }));
 
+const { supabase } = require('../config/supabase');
+const { getProvider } = require('../services/smsProvider');
 const { buildCatalog, findCountryId, syncProviderProducts } = require('../utils/syncProviderProducts');
+
+// Queues one chainable+thenable "table" result per supabase.from() call, in
+// call order. select/update/insert/eq/in/maybeSingle/single all just
+// return the same object (recording their args) so any chain shape
+// resolves to the queued value — returns the recorded call log.
+const queueSupabaseResults = (results) => {
+  const log = [];
+  let i = 0;
+  supabase.from.mockImplementation((table) => {
+    const result = results[i++];
+    const record = (method) => (...args) => { log.push({ table, method, args }); return builder; };
+    const builder = {
+      select: record('select'), update: record('update'), insert: record('insert'),
+      eq: record('eq'), in: record('in'),
+      maybeSingle: () => Promise.resolve(result), single: () => Promise.resolve(result),
+      then: (resolve, reject) => Promise.resolve(result).then(resolve, reject)
+    };
+    return builder;
+  });
+  return log;
+};
 
 const fakeProvider = (services, prices) => ({
   getCountries: jest.fn().mockResolvedValue([
@@ -108,8 +132,55 @@ describe('buildCatalog', () => {
 
 describe('syncProviderProducts', () => {
   test('refuses to run without a confirmed priceToNaira function, before touching the database', async () => {
-    const { supabase } = require('../config/supabase');
     await expect(syncProviderProducts({})).rejects.toThrow('priceToNaira');
     expect(supabase.from).not.toHaveBeenCalled();
+  });
+
+  // REGRESSION: the first real run against production disabled nothing,
+  // because it filtered on api_provider = 'manual' — but seedProducts.js
+  // sets api_provider: 'sureverifications' on every category, not just
+  // this one, so old hand-picked rows and freshly-synced ones were
+  // indistinguishable by that column. Both ended up live at once (two
+  // "WhatsApp"-ish products at two different prices). The fix keys off
+  // metadata.sureVerifications.serviceId instead — present only on rows
+  // this sync itself has written.
+  test('disables only OTP rows without sureVerifications metadata, not by api_provider', async () => {
+    getProvider.mockReturnValue({
+      getCountries: jest.fn().mockResolvedValue([{ id: 159, data: { iso2: 'NG' } }]),
+      getServicesForCountry: jest.fn().mockResolvedValue([{ id: 'svc-1', name: 'Discord' }]),
+      getServicePrice: jest.fn().mockResolvedValue({ cost: 910, inStock: true, server: 'server1' })
+    });
+
+    const log = queueSupabaseResults([
+      { data: { id: 'cat-otp' }, error: null }, // categories select
+      {
+        // existing enabled OTP rows: one stale hand-picked row (no
+        // sureVerifications metadata, whatever its api_provider is) and
+        // one already-synced row from a prior run (has the metadata,
+        // must survive)
+        data: [
+          { id: 'old-discord', metadata: {} },
+          { id: 'already-synced', metadata: { sureVerifications: { serviceId: 'svc-1' } } }
+        ],
+        error: null
+      },
+      { error: null },                                  // update({enabled:false}).in('id', staleIds)
+      { data: { id: 'already-synced' }, error: null },   // find-existing by serviceId -> matches
+      { error: null }                                    // update(row).eq('id', existing.id)
+    ]);
+
+    const result = await syncProviderProducts({ priceToNaira: (raw) => raw * 2 });
+
+    expect(result).toEqual({ created: 0, updated: 1, total: 1 });
+
+    // The disable call must target exactly the stale row, never the one
+    // that's already correctly synced — this is the exact bug from the
+    // live run: it must NOT be keyed off api_provider.
+    const disableCall = log.find(c => c.method === 'in');
+    expect(disableCall.args).toEqual(['id', ['old-discord']]);
+
+    // And the price actually used the confirmed formula (raw 910 * 2).
+    const updateCall = log.find(c => c.method === 'update' && c.args[0]?.price != null);
+    expect(updateCall.args[0].price).toBe(1820);
   });
 });

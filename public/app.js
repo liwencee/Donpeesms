@@ -2388,7 +2388,11 @@ async function syncProviderProducts(btn) {
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Syncing…';
   try {
-    const data = await api('POST', '/admin/products/sync-provider');
+    // Prices every service sequentially against the live provider —
+    // routinely takes 20-30s. Default api() timeout (15s) would abort the
+    // request client-side while the sync keeps running server-side
+    // regardless, making a successful sync look like a failure.
+    const data = await api('POST', '/admin/products/sync-provider', undefined, 60000);
     if (!data) return;
     showToast(`Synced: ${data.created} added, ${data.updated} updated (${data.total} live services)`, 'success');
     loadAdminProducts();

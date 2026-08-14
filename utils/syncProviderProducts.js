@@ -69,14 +69,24 @@ const syncProviderProducts = async ({ priceToNaira, iso2 = 'NG' }) => {
   const { data: cat, error: catErr } = await supabase.from('categories').select('id').eq('slug', 'otp').single();
   if (catErr) throw catErr;
 
-  // Soft-disable the old hand-picked OTP rows rather than deleting them —
-  // reversible, and nothing else references products by id (orders are
-  // driven by country/service directly, not product_id).
-  const { error: disableErr } = await supabase.from('products')
-    .update({ enabled: false })
-    .eq('category_id', cat.id)
-    .eq('api_provider', 'manual');
-  if (disableErr) throw disableErr;
+  // Soft-disable every OTP-category row this sync didn't itself tag,
+  // rather than deleting them — reversible, and nothing else references
+  // products by id (orders are driven by country/service directly, not
+  // product_id). NOT api_provider = 'manual': the old hand-picked rows
+  // were seeded with api_provider: 'sureverifications' too (seedProducts.js
+  // sets it on every category), so that filter matched nothing on the
+  // first real run and left 8 stale rows enabled alongside their live
+  // replacements. metadata.sureVerifications.serviceId is the one marker
+  // that's actually unique to rows this sync has written.
+  const { data: existingOtp, error: existingErr } = await supabase
+    .from('products').select('id, metadata').eq('category_id', cat.id).eq('enabled', true);
+  if (existingErr) throw existingErr;
+
+  const staleIds = existingOtp.filter(p => !p.metadata?.sureVerifications?.serviceId).map(p => p.id);
+  if (staleIds.length) {
+    const { error: disableErr } = await supabase.from('products').update({ enabled: false }).in('id', staleIds);
+    if (disableErr) throw disableErr;
+  }
 
   let created = 0, updated = 0;
   for (const [i, item] of catalog.entries()) {

@@ -6,15 +6,15 @@ const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { generateKey } = require('../models/ApiKey');
 const wallet        = require('./walletController');
+const env            = require('../config/env');
 const { syncProviderProducts } = require('../utils/syncProviderProducts');
 
-// SureVerifications' raw "price" field has no documented unit or currency
-// — the naive USD conversion used elsewhere in this codebase (see
-// smsProvider.calculateUserPrice) produces an obviously-wrong number for
-// it (₦3.49M for one WhatsApp number). Deliberately null until confirmed
-// against a real amount from the account's own billing history — see
-// utils/syncProviderProducts.js's header for the full reasoning.
-const SURE_VERIFICATIONS_PRICE_TO_NAIRA = null;
+// SureVerifications' raw "price" is already NGN (confirmed against the
+// account's own dashboard — unlike the other providers, whose raw cost is
+// USD, hence smsProvider.calculateUserPrice's separate ngnRate multiply).
+// Only the markup applies here; multiplying by ngnRate too would inflate
+// it by another 1600x.
+const SURE_VERIFICATIONS_PRICE_TO_NAIRA = (rawCost) => Math.round(rawCost * env.priceMarkup);
 
 const slugify = (s) => String(s || '')
   .toLowerCase().trim()
