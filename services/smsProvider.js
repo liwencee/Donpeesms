@@ -193,6 +193,13 @@ class SureVerificationsProvider {
       },
       timeout: 15000
     });
+    // getProvider() memoizes one instance per process, so these persist
+    // for the process lifetime — the country list and service catalog
+    // rarely change, and refetching either live on every price check /
+    // purchase would add a full extra round trip (250 countries, or a
+    // per-variant price fetch per service) to every request.
+    this._countryIdCache = null; // Map<iso2, numeric country_id>
+    this._serviceIdCache = null; // Map<exact service name, opaque service id>
   }
 
   // ── GET /api/v1/balance ──────────────────────
@@ -217,21 +224,6 @@ class SureVerificationsProvider {
     } catch (err) {
       logger.error('SureVerifications getCountries:', err.response?.data || err.message);
       throw ApiError.internal('Failed to fetch countries');
-    }
-  }
-
-  // ── GET /api/v1/{server}/services ────────────
-  // Kept as-is (no countryId) for the one existing caller
-  // (numberController.listServices), which has always had this call fail
-  // and silently fall back to a static list — see getServicesForCountry
-  // below for the real, working version.
-  async getServices(server = 'server1') {
-    try {
-      const { data } = await this.client.get(`/${server}/services`);
-      return Array.isArray(data) ? data : (data.services || data.data || []);
-    } catch (err) {
-      logger.error('SureVerifications getServices:', err.response?.data || err.message);
-      throw ApiError.internal('Failed to fetch services');
     }
   }
 
@@ -276,34 +268,56 @@ class SureVerificationsProvider {
     }
   }
 
-  // ── GET /api/v1/{server}/price?country=&service= ──
-  // Falls back to server2 if server1 has no price for the combo.
-  async getPrice(country, service = 'whatsapp', server = 'server1') {
-    try {
-      const { data } = await this.client.get(`/${server}/price`, {
-        params: { country: String(country).toLowerCase(), service: String(service).toLowerCase() }
-      });
-      const cost  = data.price ?? data.cost ?? data.data?.price ?? 0;
-      const count = data.count ?? data.quantity ?? data.data?.count ?? 0;
-      return { cost: parseFloat(cost), count: parseInt(count, 10) || 0, currency: 'USD' };
-    } catch (err) {
-      if (server === 'server1') return this.getPrice(country, service, 'server2');
-      logger.error('SureVerifications getPrice:', err.response?.data || err.message);
-      throw ApiError.notFound('Pricing unavailable for this country/service combo');
+  // Resolves a 2-letter code (as the frontend's country dropdowns already
+  // send) to the numeric country_id every other real endpoint requires.
+  // Cached per process — see the constructor comment.
+  async resolveCountryId(iso2) {
+    if (!this._countryIdCache) {
+      const countries = await this.getCountries();
+      this._countryIdCache = new Map();
+      for (const c of countries) {
+        if (c.data?.iso2) this._countryIdCache.set(c.data.iso2.toUpperCase(), c.id);
+      }
     }
+    const id = this._countryIdCache.get(String(iso2).toUpperCase());
+    if (id == null) throw ApiError.badRequest(`Unknown country: ${iso2}`);
+    return id;
+  }
+
+  // Resolves an exact SureVerifications service name (e.g. "Telegram",
+  // "Whatsapp") to its opaque service id, using dedupeServicesByName's
+  // cheapest-in-stock-variant pick for names the API lists more than once
+  // (see that function's comment). Resolved once against Nigeria — service
+  // identity is the same across countries (confirmed live: identical id
+  // list for USA and Nigeria), only price/stock vary — and cached, so
+  // this never repeats dedupeServicesByName's per-variant price fetches on
+  // a normal request.
+  async resolveServiceId(name) {
+    if (!this._serviceIdCache) {
+      const referenceCountryId = await this.resolveCountryId('NG');
+      const catalog = await dedupeServicesByName(this, referenceCountryId, 'server1');
+      this._serviceIdCache = new Map(catalog.map(item => [item.name, item.id]));
+    }
+    const id = this._serviceIdCache.get(name);
+    if (!id) throw ApiError.badRequest(`"${name}" is not currently available`);
+    return id;
   }
 
   // ── POST /api/v1/{server}/purchase ───────────
-  // Falls back to server2 if server1 is out of stock for the combo.
-  async buyNumber(country, service = 'whatsapp', server = 'server1') {
+  // {country_id, service} confirmed live: a real request with no balance
+  // gets a clean 402 "Insufficient wallet balance" — past all parameter
+  // validation, i.e. the request shape itself is correct. The SUCCESS
+  // shape below is not: this account has never had a balance to complete
+  // a real purchase with, so the response field names are the same
+  // flexible best-guess pattern as the rest of this file, unverified.
+  async buyNumberForService(countryId, serviceId, server = 'server1') {
     try {
       const { data } = await this.client.post(`/${server}/purchase`, {
-        country: String(country).toLowerCase(),
-        service: String(service).toLowerCase()
+        country_id: countryId, service: serviceId
       });
       const providerOrderId = data.id ?? data.order_id ?? data.data?.id;
       const phone = data.phone ?? data.number ?? data.data?.phone;
-      if (!providerOrderId || !phone) throw new Error('Malformed purchase response');
+      if (!providerOrderId || !phone) throw new Error('Malformed purchase response: ' + JSON.stringify(data));
       return {
         providerOrderId: String(providerOrderId),
         phoneNumber: String(phone).startsWith('+') ? phone : '+' + phone,
@@ -312,13 +326,20 @@ class SureVerificationsProvider {
         server
       };
     } catch (err) {
-      if (server === 'server1') return this.buyNumber(country, service, 'server2');
-      logger.error('SureVerifications buyNumber:', err.response?.data || err.message);
+      logger.error('SureVerifications buyNumberForService:', err.response?.data || err.message);
+      if (err.response?.status === 402) throw ApiError.badRequest('Provider balance too low to fulfil this purchase — please contact support');
       throw ApiError.badRequest('No numbers available for this country/service right now');
     }
   }
 
   // ── GET /api/v1/{server}/sms/{id} ────────────
+  // UNVERIFIED — 8 plausible path variations (this one, /order/{id},
+  // /status/{id}, /check/{id}, /purchase/{id}, a query-param form, etc.)
+  // all returned the same generic "route not found" for any id, live.
+  // Left exactly as it was rather than guessing further: this account has
+  // never completed a real purchase, so there's no real response to learn
+  // the correct shape from. Needs either provider docs or one real funded
+  // purchase to resolve.
   async checkOrder(providerOrderId, server = 'server1') {
     try {
       const { data } = await this.client.get(`/${server}/sms/${providerOrderId}`);
@@ -375,6 +396,34 @@ class SureVerificationsProvider {
   }
 }
 
+// Groups a provider's per-country service list by exact name and resolves
+// each group to its cheapest in-stock variant (SureVerifications lists
+// some names — e.g. "Whatsapp" — under several different opaque ids;
+// confirmed live: 4 "Whatsapp"-family entries, 3 "Telegram" ones, on
+// server1 alone). Shared by the admin catalog sync
+// (utils/syncProviderProducts.js) and SureVerificationsProvider's own
+// resolveServiceId, so both interpret duplicates the same way.
+const dedupeServicesByName = async (provider, countryId, server = 'server1') => {
+  const services = await provider.getServicesForCountry(countryId, server);
+  const byName = {};
+  for (const s of services) (byName[s.name] ||= []).push(s);
+
+  const catalog = [];
+  for (const [name, variants] of Object.entries(byName)) {
+    let best = null;
+    for (const v of variants) {
+      const price = await provider.getServicePrice(countryId, v.id, server);
+      if (price.cost == null) continue;
+      const better = !best
+        || (price.inStock && !best.inStock)
+        || (price.inStock === best.inStock && price.cost < best.cost);
+      if (better) best = { ...price, id: v.id, name };
+    }
+    if (best) catalog.push(best);
+  }
+  return catalog.sort((a, b) => a.name.localeCompare(b.name));
+};
+
 // ═════════════════════════════════════════════
 // Provider Factory
 // ═════════════════════════════════════════════
@@ -396,4 +445,15 @@ const getProvider = (name = env.sms.provider) => {
 const calculateUserPrice = (providerCost) =>
   Math.round(providerCost * env.priceMarkup * env.ngnRate);
 
-module.exports = { getProvider, calculateUserPrice, FiveSimProvider, SmsActivateProvider, TwilioProvider, SureVerificationsProvider };
+// SureVerifications' raw cost is already NGN (confirmed against the
+// account's own billing history) — unlike the other providers above,
+// whose raw cost is USD, hence calculateUserPrice's extra ngnRate
+// multiply. Only the markup applies; ngnRate again would inflate this
+// 1600x (confirmed by the obviously-wrong number it produced: ₦3.49M
+// for a single WhatsApp number).
+const calculateSureVerificationsPrice = (rawCost) => Math.round(rawCost * env.priceMarkup);
+
+module.exports = {
+  getProvider, calculateUserPrice, calculateSureVerificationsPrice, dedupeServicesByName,
+  FiveSimProvider, SmsActivateProvider, TwilioProvider, SureVerificationsProvider
+};

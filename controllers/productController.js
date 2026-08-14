@@ -6,15 +6,8 @@ const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { generateKey } = require('../models/ApiKey');
 const wallet        = require('./walletController');
-const env            = require('../config/env');
 const { syncProviderProducts } = require('../utils/syncProviderProducts');
-
-// SureVerifications' raw "price" is already NGN (confirmed against the
-// account's own dashboard — unlike the other providers, whose raw cost is
-// USD, hence smsProvider.calculateUserPrice's separate ngnRate multiply).
-// Only the markup applies here; multiplying by ngnRate too would inflate
-// it by another 1600x.
-const SURE_VERIFICATIONS_PRICE_TO_NAIRA = (rawCost) => Math.round(rawCost * env.priceMarkup);
+const { calculateSureVerificationsPrice } = require('../services/smsProvider');
 
 const slugify = (s) => String(s || '')
   .toLowerCase().trim()
@@ -164,10 +157,7 @@ exports.adminDelete = asyncHandler(async (req, res) => {
 // service list (see utils/syncProviderProducts.js). Re-runnable any time
 // the provider's catalog changes.
 exports.syncFromProvider = asyncHandler(async (req, res) => {
-  if (typeof SURE_VERIFICATIONS_PRICE_TO_NAIRA !== 'function') {
-    throw new ApiError(500, 'Pricing conversion not yet confirmed for SureVerifications — see productController.js');
-  }
-  const result = await syncProviderProducts({ priceToNaira: SURE_VERIFICATIONS_PRICE_TO_NAIRA });
+  const result = await syncProviderProducts({ priceToNaira: calculateSureVerificationsPrice });
   res.json({ success: true, ...result });
 });
 

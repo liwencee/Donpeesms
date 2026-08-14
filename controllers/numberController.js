@@ -4,7 +4,7 @@
 const { supabase } = require('../config/supabase');
 const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
-const { getProvider, calculateUserPrice } = require('../services/smsProvider');
+const { getProvider, calculateSureVerificationsPrice, dedupeServicesByName } = require('../services/smsProvider');
 const { generateOrderId, getTimeRemaining } = require('../models/Order');
 const wallet       = require('./walletController');
 const email        = require('../services/emailService');
@@ -70,10 +70,13 @@ exports.listCountries = asyncHandler(async (_req, res) => {
       const raw = await provider.getCountries();
       const countries = raw.map(c => {
         if (typeof c === 'string') return { code: c.toUpperCase(), name: c, flag: '' };
+        // c.data.iso2 is the real shape (confirmed live) — c.code/c.iso/
+        // c.country never existed on it, so this always silently fell
+        // through to FALLBACK_COUNTRIES before.
         return {
-          code: (c.code || c.iso || c.country || '').toUpperCase(),
-          name: c.name || c.country_name || c.code || '',
-          flag: c.flag || ''
+          code: (c.data?.iso2 || c.code || c.iso || c.country || '').toUpperCase(),
+          name: c.name || c.data?.name || c.country_name || c.code || '',
+          flag: c.data?.emoji || c.flag || ''
         };
       }).filter(c => c.code);
       return res.json({ success: true, count: countries.length, countries, source: 'live' });
@@ -85,34 +88,38 @@ exports.listCountries = asyncHandler(async (_req, res) => {
 });
 
 const FALLBACK_SERVICES = [
-  { code: 'whatsapp',  name: 'WhatsApp',    icon: 'whatsapp'  },
-  { code: 'telegram',  name: 'Telegram',    icon: 'telegram'  },
-  { code: 'google',    name: 'Google',      icon: 'google'    },
-  { code: 'facebook',  name: 'Facebook',    icon: 'facebook'  },
-  { code: 'instagram', name: 'Instagram',   icon: 'instagram' },
-  { code: 'twitter',   name: 'Twitter / X', icon: 'twitter'   },
-  { code: 'tiktok',    name: 'TikTok',      icon: 'tiktok'    },
-  { code: 'uber',      name: 'Uber',        icon: 'uber'      },
-  { code: 'amazon',    name: 'Amazon',      icon: 'amazon'    },
-  { code: 'paypal',    name: 'PayPal',      icon: 'paypal'    },
-  { code: 'microsoft', name: 'Microsoft',   icon: 'microsoft' },
-  { code: 'discord',   name: 'Discord',     icon: 'discord'   },
-  { code: 'any',       name: 'Any Service', icon: 'any'       }
+  { id: 'whatsapp',  name: 'WhatsApp'  },
+  { id: 'telegram',  name: 'Telegram'  },
+  { id: 'google',    name: 'Google'    },
+  { id: 'facebook',  name: 'Facebook'  },
+  { id: 'instagram', name: 'Instagram' },
+  { id: 'tiktok',    name: 'TikTok'    },
+  { id: 'uber',      name: 'Uber'      },
+  { id: 'amazon',    name: 'Amazon'    }
 ];
+
+// Only slugs with a real, confirmed SureVerifications equivalent are
+// offered — "any"/"other" have no honest match (the provider doesn't
+// have a generic-service concept; every number is tied to one specific
+// platform) and Twitter/X isn't in its catalog at all, live-confirmed.
+const SERVICE_NAMES = {
+  whatsapp:  'Whatsapp',
+  telegram:  'Telegram',
+  google:    'Google / Gmail / Youtube',
+  facebook:  'Facebook',
+  tiktok:    'Tiktok',
+  instagram: 'Instagram',
+  uber:      'Uber',
+  amazon:    'Amazon / AWS'
+};
 
 exports.listServices = asyncHandler(async (_req, res) => {
   const provider = getProvider();
-  if (typeof provider.getServices === 'function') {
+  if (typeof provider.getServicesForCountry === 'function' && typeof provider.resolveCountryId === 'function') {
     try {
-      const raw = await provider.getServices('server1');
-      const services = raw.map(s => {
-        if (typeof s === 'string') return { code: s.toLowerCase(), name: s, icon: s.toLowerCase() };
-        return {
-          code: (s.code || s.service || s.name || '').toLowerCase(),
-          name: s.name || s.service || s.code || '',
-          icon: (s.icon || s.code || s.name || '').toLowerCase()
-        };
-      }).filter(s => s.code);
+      const countryId = await provider.resolveCountryId('NG');
+      const catalog = await dedupeServicesByName(provider, countryId, 'server1');
+      const services = catalog.map(s => ({ id: s.id, name: s.name, inStock: s.inStock }));
       return res.json({ success: true, services, source: 'live' });
     } catch (err) {
       logger.warn('Live services fetch failed, using fallback:', err.message);
@@ -122,14 +129,23 @@ exports.listServices = asyncHandler(async (_req, res) => {
 });
 
 exports.getPrice = asyncHandler(async (req, res) => {
-  const { country, service = 'any' } = req.query;
+  const { country, service } = req.query;
   if (!country) throw ApiError.badRequest('Country required');
-  const provider  = getProvider();
-  const { cost, count, currency } = await provider.getPrice(country.toUpperCase(), service);
-  const userPrice = calculateUserPrice(cost);
+  if (!service) throw ApiError.badRequest('Service required');
+
+  const serviceName = SERVICE_NAMES[service];
+  if (!serviceName) throw ApiError.badRequest(`"${service}" is not currently available`);
+
+  const provider = getProvider();
+  const countryId = await provider.resolveCountryId(country.toUpperCase());
+  const serviceId = await provider.resolveServiceId(serviceName);
+  const { cost, inStock } = await provider.getServicePrice(countryId, serviceId, 'server1');
+  if (cost == null) throw ApiError.notFound('Pricing unavailable for this country/service combo');
+
+  const userPrice = calculateSureVerificationsPrice(cost);
   res.json({
     success: true, country: country.toUpperCase(), service, providerCost: cost, userPrice,
-    currency: 'NGN', providerCurrency: currency, available: count, provider: provider.name
+    currency: 'NGN', inStock, provider: provider.name
   });
 });
 
@@ -142,17 +158,20 @@ exports.buyNumber = asyncHandler(async (req, res) => {
   if (!['whatsapp', 'sms'].includes(serviceType)) throw ApiError.badRequest('Invalid service type');
   if (!country) throw ApiError.badRequest('Country required');
 
-  const targetService = serviceType === 'whatsapp' ? 'whatsapp' : (service || 'any');
+  const targetService = serviceType === 'whatsapp' ? 'whatsapp' : service;
+  const serviceName = targetService ? SERVICE_NAMES[targetService] : null;
+  if (!serviceName) throw ApiError.badRequest(`"${targetService || 'that service'}" is not currently available`);
 
   const provider = getProvider();
-  let priceInfo;
-  try {
-    priceInfo = await provider.getPrice(country.toUpperCase(), targetService);
-  } catch (_err) {
-    throw ApiError.badRequest('Pricing unavailable for this combo');
+  const countryId = await provider.resolveCountryId(country.toUpperCase());
+  const serviceId = await provider.resolveServiceId(serviceName);
+
+  const priceInfo = await provider.getServicePrice(countryId, serviceId, 'server1');
+  if (priceInfo.cost == null || !priceInfo.inStock) {
+    throw ApiError.badRequest('This number is currently out of stock — please try a different country or service');
   }
 
-  const userCost = calculateUserPrice(priceInfo.cost);
+  const userCost = calculateSureVerificationsPrice(priceInfo.cost);
   if (req.user.walletBalance < userCost) {
     throw ApiError.badRequest(
       `Insufficient balance. Need ₦${userCost.toFixed(2)}, have ₦${req.user.walletBalance.toFixed(2)}`
@@ -161,9 +180,9 @@ exports.buyNumber = asyncHandler(async (req, res) => {
 
   let purchase;
   try {
-    purchase = await provider.buyNumber(country.toUpperCase(), targetService);
+    purchase = await provider.buyNumberForService(countryId, serviceId, 'server1');
   } catch (err) {
-    logger.error('Provider buyNumber failed:', err.stack || err.message);
+    logger.error('Provider buyNumberForService failed:', err.stack || err.message);
     throw err;
   }
 

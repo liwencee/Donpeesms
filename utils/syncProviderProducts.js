@@ -17,7 +17,7 @@
  */
 require('dotenv').config();
 const { supabase } = require('../config/supabase');
-const { getProvider } = require('../services/smsProvider');
+const { getProvider, dedupeServicesByName } = require('../services/smsProvider');
 
 const findCountryId = async (provider, iso2 = 'NG') => {
   const countries = await provider.getCountries();
@@ -28,26 +28,11 @@ const findCountryId = async (provider, iso2 = 'NG') => {
 
 // Groups services by exact name, fetches price for every variant, keeps
 // the cheapest in-stock one per name (falls back to cheapest overall if
-// nothing is in stock).
+// nothing is in stock). Delegates to smsProvider.dedupeServicesByName —
+// the live purchase pipeline's resolveServiceId needs the exact same
+// dedup behavior, so there's one implementation, not two that could drift.
 const buildCatalog = async (provider, countryId, server = 'server1') => {
-  const services = await provider.getServicesForCountry(countryId, server);
-  const byName = {};
-  for (const s of services) (byName[s.name] ||= []).push(s);
-
-  const catalog = [];
-  for (const [name, variants] of Object.entries(byName)) {
-    let best = null;
-    for (const v of variants) {
-      const price = await provider.getServicePrice(countryId, v.id, server);
-      if (price.cost == null) continue;
-      const better = !best
-        || (price.inStock && !best.inStock)
-        || (price.inStock === best.inStock && price.cost < best.cost);
-      if (better) best = { ...price, id: v.id, name };
-    }
-    if (best) catalog.push(best);
-  }
-  return catalog.sort((a, b) => a.name.localeCompare(b.name));
+  return dedupeServicesByName(provider, countryId, server);
 };
 
 // Read-only — fetches and prices the live catalog, no DB writes. Safe to

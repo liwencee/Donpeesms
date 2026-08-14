@@ -7,7 +7,12 @@
  * stock as available.
  */
 jest.mock('../config/supabase', () => ({ supabase: { from: jest.fn() } }));
-jest.mock('../services/smsProvider', () => ({ getProvider: jest.fn() }));
+// Keep the real dedupeServicesByName (buildCatalog delegates to it) —
+// only getProvider needs mocking here.
+jest.mock('../services/smsProvider', () => ({
+  ...jest.requireActual('../services/smsProvider'),
+  getProvider: jest.fn()
+}));
 
 const { supabase } = require('../config/supabase');
 const { getProvider } = require('../services/smsProvider');
