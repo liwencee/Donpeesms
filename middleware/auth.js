@@ -24,7 +24,24 @@ const protect = asyncHandler(async (req, res, next) => {
   const token = extractToken(req);
   if (!token) throw ApiError.unauthorized('Authentication required');
 
+  // Only a genuine rejection FROM the Auth server means the session is
+  // actually invalid. Any other error here — a network blip reaching
+  // Supabase, a timeout — is not proof of that, and used to be treated
+  // identically: the frontend's api() helper signs a user out on ANY 401
+  // from us, so every one of these transient cases was silently ending
+  // real, valid sessions on an unrelated hiccup, not just at login.
+  //
+  // The status code alone doesn't distinguish these — confirmed live, a
+  // malformed token comes back as {name:"AuthApiError", status:403,
+  // code:"bad_jwt"}, not 401. AuthApiError is supabase-js's real signal
+  // that the Auth server examined the token and rejected it (for any
+  // reason); a network-level failure to even reach it is a different
+  // error type (e.g. AuthRetryableFetchError), which is exactly the case
+  // this must NOT treat as an invalid session.
   const { data: authData, error: authError } = await supabase.auth.getUser(token);
+  if (authError && authError.name !== 'AuthApiError') {
+    throw new ApiError(503, 'Authentication service temporarily unavailable — please try again');
+  }
   if (authError || !authData?.user) {
     throw ApiError.unauthorized('Invalid or expired session');
   }
@@ -35,6 +52,12 @@ const protect = asyncHandler(async (req, res, next) => {
     .eq('id', authData.user.id)
     .single();
 
+  // Same distinction as above: PGRST116 is PostgREST's real "no row
+  // matched" — an actually-deleted account. Anything else (a DB timeout,
+  // a connection blip) is not that, and must not be treated as one.
+  if (profileError && profileError.code !== 'PGRST116') {
+    throw new ApiError(500, 'Failed to verify your account — please try again');
+  }
   if (profileError || !profile) throw ApiError.unauthorized('User no longer exists');
 
   const user = toCamelCase(profile);

@@ -117,11 +117,22 @@ describe('protected endpoints respond correctly (no 500s)', () => {
     expect(res.status).toBe(401);
   });
 
-  test('protected route with a garbage token returns 401 (not 500)', async () => {
+  // This suite runs against the dummy, unreachable SUPABASE_URL from
+  // tests/setup.js (test.supabase.co doesn't resolve) — so even a
+  // garbage token can't reach a real Auth server to be genuinely
+  // rejected; supabase-js reports that as AuthRetryableFetchError, not
+  // an AuthApiError. protect() correctly treats that as "can't verify
+  // right now" (503), not "definitely invalid" (401) — collapsing the
+  // two was the actual bug (see tests/auth.test.js for the precise,
+  // mocked-Supabase coverage of a real 401-worthy rejection vs. this
+  // kind of connectivity failure). The property this test actually
+  // guards — malformed input doesn't crash the server — still holds.
+  test('protected route with a garbage token returns a clean auth-related response, not a crash', async () => {
     const res = await request(app)
       .get('/api/users/me')
       .set('Authorization', 'Bearer not.a.real.token');
-    expect(res.status).toBe(401);
+    expect([401, 503]).toContain(res.status);
+    expect(res.body.success).toBe(false);
   });
 });
 

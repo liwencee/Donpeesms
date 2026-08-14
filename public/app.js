@@ -208,8 +208,11 @@ async function handleAdminLogin(e) {
     try {
       me = await api('GET', '/users/me');
     } catch (_e) {
-      await window.sb.auth.signOut().catch(() => {});
-      throw new Error('Signed in, but could not verify admin access. Please try again.');
+      // signInWithPassword just succeeded — the session is valid. A
+      // failed profile fetch right after is a transient hiccup, not
+      // proof of a bad login, so don't sign out: that would strand a
+      // real session and force a pointless re-login. Let them retry.
+      throw new Error('Signed in, but could not load your account — please try again.');
     }
     if (!me) return;
     const user = me.user || me;
@@ -372,8 +375,10 @@ async function handleLogin(e) {
     try {
       me = await api('GET', '/users/me');
     } catch (_e) {
-      await window.sb.auth.signOut().catch(() => {});
-      throw new Error('Signed in, but could not load your profile. Please try again.');
+      // Same reasoning as the admin login flow: the session Supabase just
+      // issued is valid, so a failed profile fetch here is transient —
+      // signing out would destroy a good session over an unrelated blip.
+      throw new Error('Signed in, but could not load your profile — please try again.');
     }
     if (!me) return;
     state.currentUser = me.user || me;
@@ -427,8 +432,10 @@ async function handleRegister(e) {
     try {
       me = await api('GET', '/users/me');
     } catch (_e) {
-      await window.sb.auth.signOut().catch(() => {});
-      throw new Error('Account created, but could not load your profile. Please sign in.');
+      // Same reasoning as the login flows: signUp just returned a valid
+      // session, so don't sign out over what's almost certainly a
+      // transient profile-fetch failure.
+      throw new Error('Account created, but could not load your profile — please try again.');
     }
     if (!me) return;
     state.currentUser = me.user || me;

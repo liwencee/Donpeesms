@@ -40,7 +40,15 @@ describe('protect middleware', () => {
   });
 
   test('rejects an invalid/expired token', async () => {
-    supabase.auth.getUser.mockResolvedValue({ data: { user: null }, error: { message: 'invalid JWT' } });
+    // The real shape a malformed token gets back, confirmed live against
+    // Supabase Auth — note status is 403, NOT 401. name: 'AuthApiError'
+    // is the actual signal protect() keys off (see the "transient
+    // errors" tests below for the contrast): it means the Auth server
+    // itself examined the token and rejected it, for any reason.
+    supabase.auth.getUser.mockResolvedValue({
+      data: { user: null },
+      error: { name: 'AuthApiError', status: 403, code: 'bad_jwt', message: 'invalid JWT' }
+    });
     const { req, res, next } = mockReqRes({ authorization: 'Bearer bad.token.here' });
     await protect(req, res, next);
     expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401 }));
@@ -49,11 +57,42 @@ describe('protect middleware', () => {
   test('rejects a valid token with no matching profile row', async () => {
     supabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
     supabase.from.mockReturnValue({
-      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'no rows' } }) }) })
+      // PGRST116 is PostgREST's real code for .single() matching 0 rows —
+      // an actually-deleted account, which is the case this asserts.
+      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'no rows', code: 'PGRST116' } }) }) })
     });
     const { req, res, next } = mockReqRes({ authorization: 'Bearer good.token' });
     await protect(req, res, next);
     expect(next).toHaveBeenCalledWith(expect.objectContaining({ statusCode: 401 }));
+  });
+
+  // REGRESSION: these two used to be indistinguishable from a genuinely
+  // bad session — any error from either Supabase call became a 401, and
+  // the frontend's api() helper signs a user out on ANY 401 from us. A
+  // transient Auth-service hiccup or a DB timeout was silently ending
+  // real, valid sessions on every affected request, not just at login.
+  test('a network-level failure reaching Supabase Auth (not a real rejection) is NOT treated as an invalid session', async () => {
+    // supabase-js's real signal for "couldn't reach the Auth server at
+    // all" is a different error type than AuthApiError (e.g.
+    // AuthRetryableFetchError) — this must not collapse into "bad token".
+    supabase.auth.getUser.mockResolvedValue({ data: { user: null }, error: { name: 'AuthRetryableFetchError', message: 'fetch failed' } });
+    const { req, res, next } = mockReqRes({ authorization: 'Bearer good.token' });
+    await protect(req, res, next);
+    const err = next.mock.calls[0][0];
+    expect(err.statusCode).toBe(503);
+    expect(err.statusCode).not.toBe(401);
+  });
+
+  test('a database error fetching the profile (not "no such row") is NOT treated as an invalid session', async () => {
+    supabase.auth.getUser.mockResolvedValue({ data: { user: { id: 'u1' } }, error: null });
+    supabase.from.mockReturnValue({
+      select: () => ({ eq: () => ({ single: () => Promise.resolve({ data: null, error: { message: 'connection timeout', code: '57014' } }) }) })
+    });
+    const { req, res, next } = mockReqRes({ authorization: 'Bearer good.token' });
+    await protect(req, res, next);
+    const err = next.mock.calls[0][0];
+    expect(err.statusCode).toBe(500);
+    expect(err.statusCode).not.toBe(401);
   });
 
   test('attaches req.user and req.userId on success', async () => {
