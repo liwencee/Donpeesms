@@ -221,6 +221,10 @@ class SureVerificationsProvider {
   }
 
   // ── GET /api/v1/{server}/services ────────────
+  // Kept as-is (no countryId) for the one existing caller
+  // (numberController.listServices), which has always had this call fail
+  // and silently fall back to a static list — see getServicesForCountry
+  // below for the real, working version.
   async getServices(server = 'server1') {
     try {
       const { data } = await this.client.get(`/${server}/services`);
@@ -228,6 +232,47 @@ class SureVerificationsProvider {
     } catch (err) {
       logger.error('SureVerifications getServices:', err.response?.data || err.message);
       throw ApiError.internal('Failed to fetch services');
+    }
+  }
+
+  // ── GET /api/v1/{server}/services?country_id= ──
+  // The real endpoint contract: country_id is required (confirmed against
+  // the live API — the plain getServices() above has never actually
+  // worked). Returns [{id, name}] where id is an opaque provider id, NOT
+  // a friendly slug — server1 ids are long hex-like strings and can repeat
+  // the same name more than once (e.g. multiple "Whatsapp" entries); server2
+  // ids are short codes (e.g. "am" for Amazon).
+  async getServicesForCountry(countryId, server = 'server1') {
+    try {
+      const { data } = await this.client.get(`/${server}/services`, { params: { country_id: countryId } });
+      return Array.isArray(data) ? data : (data.services || data.data || []);
+    } catch (err) {
+      logger.error('SureVerifications getServicesForCountry:', err.response?.data || err.message);
+      throw ApiError.internal('Failed to fetch services for country');
+    }
+  }
+
+  // ── GET /api/v1/{server}/price?country_id=&service= ──
+  // service must be the opaque id from getServicesForCountry, not a name.
+  // server1 returns a single price; server2 returns an array of tiers
+  // (different sellers/batches at different prices) — normalized here to
+  // the cheapest in-stock tier so callers get one consistent shape.
+  async getServicePrice(countryId, serviceId, server = 'server1') {
+    try {
+      const { data } = await this.client.get(`/${server}/price`, {
+        params: { country_id: countryId, service: serviceId }
+      });
+      if (server === 'server1') {
+        const p = data.price;
+        return { cost: parseFloat(p?.price ?? 0), inStock: p?.service?.stocks !== 0, server };
+      }
+      const tiers = (data.prices || []).filter(t => t.service?.stocks !== 0);
+      if (!tiers.length) return { cost: null, inStock: false, server };
+      const cheapest = tiers.reduce((a, b) => (b.price < a.price ? b : a));
+      return { cost: parseFloat(cheapest.price), inStock: true, server };
+    } catch (err) {
+      logger.error('SureVerifications getServicePrice:', err.response?.data || err.message);
+      return { cost: null, inStock: false, server };
     }
   }
 

@@ -25,6 +25,7 @@ adminRouter.post('/products',           c.adminCreate);
 adminRouter.patch('/products/:id',      c.adminUpdate);
 adminRouter.patch('/products/:id/toggle', c.adminToggle);
 adminRouter.delete('/products/:id',     c.adminDelete);
+adminRouter.post('/products/sync-provider', c.syncFromProvider);
 
 adminRouter.get('/categories',          c.adminListCategories);
 adminRouter.post('/categories',         c.adminCreateCategory);

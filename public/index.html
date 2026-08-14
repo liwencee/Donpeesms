@@ -2404,10 +2404,16 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
         <div class="admin-section" id="admin-products">
           <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:12px">
             <h2 style="font-family:var(--font-head);font-size:1.1rem">All Products</h2>
-            <button class="btn btn-primary btn-sm" onclick="openProductModal()">
-              <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
-              Add Product
-            </button>
+            <div style="display:flex;gap:10px">
+              <button class="btn btn-outline btn-sm" id="syncProviderBtn" onclick="syncProviderProducts(this)" title="Replaces the One-Time OTP catalog with SureVerifications' live, priced service list">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M23 4v6h-6M1 20v-6h6M3.51 9a9 9 0 0114.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0020.49 15"/></svg>
+                Sync from SureVerifications
+              </button>
+              <button class="btn btn-primary btn-sm" onclick="openProductModal()">
+                <svg width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                Add Product
+              </button>
+            </div>
           </div>
           <div style="overflow-x:auto">
             <table class="data-table">
@@ -2918,6 +2924,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
 
 <script src="/vendor/supabase.js"></script>
 <script src="/supabase-config.js"></script>
-<script src="/app.js?v=20260813maintmode"></script>
+<script src="/app.js?v=20260814contactonly"></script>
 </body>
 </html>

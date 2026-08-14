@@ -6,6 +6,15 @@ const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { generateKey } = require('../models/ApiKey');
 const wallet        = require('./walletController');
+const { syncProviderProducts } = require('../utils/syncProviderProducts');
+
+// SureVerifications' raw "price" field has no documented unit or currency
+// — the naive USD conversion used elsewhere in this codebase (see
+// smsProvider.calculateUserPrice) produces an obviously-wrong number for
+// it (₦3.49M for one WhatsApp number). Deliberately null until confirmed
+// against a real amount from the account's own billing history — see
+// utils/syncProviderProducts.js's header for the full reasoning.
+const SURE_VERIFICATIONS_PRICE_TO_NAIRA = null;
 
 const slugify = (s) => String(s || '')
   .toLowerCase().trim()
@@ -148,6 +157,18 @@ exports.adminDelete = asyncHandler(async (req, res) => {
   const { error } = await supabase.from('products').delete().eq('id', req.params.id);
   if (error) throw new ApiError(500, error.message);
   res.json({ success: true, message: 'Product deleted' });
+});
+
+// POST /api/admin/products/sync-provider
+// Replaces the "One-Time OTP" catalog with SureVerifications' live
+// service list (see utils/syncProviderProducts.js). Re-runnable any time
+// the provider's catalog changes.
+exports.syncFromProvider = asyncHandler(async (req, res) => {
+  if (typeof SURE_VERIFICATIONS_PRICE_TO_NAIRA !== 'function') {
+    throw new ApiError(500, 'Pricing conversion not yet confirmed for SureVerifications — see productController.js');
+  }
+  const result = await syncProviderProducts({ priceToNaira: SURE_VERIFICATIONS_PRICE_TO_NAIRA });
+  res.json({ success: true, ...result });
 });
 
 // ═════════════════════════════════════════════

@@ -1256,40 +1256,6 @@ function filterProducts(cat) {
   buildProducts();
 }
 
-// Maps a catalog product name to the real, working purchase flow
-// (dashboard "Buy WhatsApp/SMS Number" pages, which call the live
-// SureVerifications buyNumber() API). Only "One-Time OTP" products have
-// an actual fulfilment path — rentals and API-tier products aren't
-// backed by any purchase code yet, so they intentionally fall through
-// to the account/contact CTA instead of a dead-end buy page.
-const PRODUCT_PURCHASE_MAP = {
-  'WhatsApp Number':    { type: 'whatsapp' },
-  'Telegram Number':    { type: 'sms', service: 'telegram' },
-  'Google / Gmail':     { type: 'sms', service: 'google' },
-  'Instagram Number':   { type: 'sms', service: 'instagram' },
-  'TikTok Number':      { type: 'sms', service: 'tiktok' },
-  'Twitter / X Number': { type: 'sms', service: 'twitter' },
-  'Facebook Number':    { type: 'sms', service: 'facebook' },
-  'Any Service SMS':    { type: 'sms', service: 'any' }
-};
-
-// "Buy Now" handler for a product card. Logged-out users still need to
-// register first (no wallet to purchase from). Logged-in users land on
-// the real buy page for that product's service, with the service
-// dropdown pre-selected — they only need to pick a country and confirm.
-function buyProduct(productName) {
-  if (!state.currentUser) { showPage('register'); return; }
-  const map = PRODUCT_PURCHASE_MAP[productName];
-  if (!map) { showToast('This product isn\'t available for direct purchase yet — contact us to order.', 'info'); showLandingPage('contact'); return; }
-
-  showPage('dashboard');
-  dashNav(map.type === 'whatsapp' ? 'buy-whatsapp' : 'buy-sms');
-  if (map.type === 'sms' && map.service) {
-    const sel = document.getElementById('smsService');
-    if (sel) sel.value = map.service;
-  }
-}
-
 // "Buy Now" handler for a Developer API catalog product. Debits the
 // wallet server-side and issues a real API key with that plan's
 // monthly quota (see POST /api/products/:id/purchase-plan). The raw
@@ -1332,31 +1298,36 @@ function buildProducts() {
       ? _liveProducts
       : _liveProducts.filter(p => p.category?.slug === _activeProdCat);
     grid.innerHTML = list.map(p => {
-      const out = p.stock === 0;
+      // The Developer API tier is the only category with a real, working
+      // purchase path (POST /products/:id/purchase-plan). Everything else
+      // — One-Time OTP included — goes to Contact: OTP's own buy flow
+      // exists but the provider integration underneath it doesn't match
+      // the real SureVerifications API (see smsProvider.js), so a live
+      // "Buy Now" there would just dead-end.
+      const buyable = p.category?.slug === 'api' && p.stock !== 0;
       return `<div class="prod-card">
         <div class="prod-card-top">
           <span class="prod-dot" style="background:${p.color || '#8b5cf6'}"></span>
-          <span class="prod-stock${out ? ' low' : ''}">${escapeHTML(p.stockText || 'In stock')}</span>
+          <span class="prod-stock${p.stock === 0 ? ' low' : ''}">${escapeHTML(p.stockText || 'In stock')}</span>
         </div>
         <div class="prod-name">${escapeHTML(p.name)}</div>
         <div class="prod-desc">${escapeHTML(p.description || '')}</div>
         <div class="prod-price">${fmtNaira(p.price)}</div>
-        <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
-          onclick="${out ? "showLandingPage('contact')"
-            : p.category?.slug === 'api' ? `buyApiPlan('${p.id}', this)`
-            : `buyProduct('${p.name.replace(/'/g, "\\'")}')`}">
-          ${out ? 'Contact Sales' : 'Buy Now'}
+        <button class="btn ${buyable ? 'btn-primary' : 'btn-outline'} w-full btn-sm"
+          onclick="${buyable ? `buyApiPlan('${p.id}', this)` : "showLandingPage('contact')"}">
+          ${buyable ? 'Buy Now' : 'Contact Sales'}
         </button>
       </div>`;
     }).join('');
     return;
   }
 
-  // Fallback: static catalog.
+  // Fallback: static catalog (shown only until loadLiveProducts() resolves).
+  // No real product ids exist here to buy against, so every card is
+  // Contact Sales regardless of category — matches the live grid's
+  // behavior for anything it can't actually sell either.
   const list = _activeProdCat === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === _activeProdCat);
-  grid.innerHTML = list.map(p => {
-    const out = p.stock === 'Contact us';
-    return `<div class="prod-card">
+  grid.innerHTML = list.map(p => `<div class="prod-card">
       <div class="prod-card-top">
         <span class="prod-dot" style="background:${p.color}"></span>
         <span class="prod-stock${p.stock === 'Limited' ? ' low' : ''}">${p.stock}</span>
@@ -1364,12 +1335,10 @@ function buildProducts() {
       <div class="prod-name">${p.name}</div>
       <div class="prod-desc">${p.desc}</div>
       <div class="prod-price">${fmtNaira(p.usd)}</div>
-      <button class="btn ${out ? 'btn-outline' : 'btn-primary'} w-full btn-sm"
-        onclick="${out ? "showLandingPage('contact')" : `buyProduct('${p.name.replace(/'/g, "\\'")}')`}">
-        ${out ? 'Contact Sales' : 'Buy Now'}
+      <button class="btn btn-outline w-full btn-sm" onclick="showLandingPage('contact')">
+        Contact Sales
       </button>
-    </div>`;
-  }).join('');
+    </div>`).join('');
 }
 
 function buildAppChips() {
@@ -2410,6 +2379,24 @@ async function toggleMaintenanceMode(el) {
     showToast(data.enabled ? 'Maintenance mode is ON — the site is locked out.' : 'Maintenance mode is OFF — the site is live again.', data.enabled ? 'warning' : 'success');
   } catch (err) {
     showToast(err.message || 'Failed to update maintenance mode', 'error');
+  }
+}
+
+async function syncProviderProducts(btn) {
+  if (!confirm('This replaces the current One-Time OTP catalog with SureVerifications\' live service list. Continue?')) return;
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Syncing…';
+  try {
+    const data = await api('POST', '/admin/products/sync-provider');
+    if (!data) return;
+    showToast(`Synced: ${data.created} added, ${data.updated} updated (${data.total} live services)`, 'success');
+    loadAdminProducts();
+  } catch (err) {
+    showToast(err.message || 'Sync failed', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
   }
 }
 
