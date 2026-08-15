@@ -230,6 +230,20 @@ app.use(errorHandler);
 const start = async () => {
   await require('./utils/maintenanceState').load();
 
+  // Warm SureVerifications' service-id cache in the background — not
+  // awaited, so it never delays app.listen(). resolveServiceId's cache
+  // is empty on every fresh process (every deploy restarts it), and
+  // filling it costs a real ~2-5s of provider calls even after
+  // parallelizing (was 17-30s sequential) — enough to blow the
+  // frontend's request timeout if the first real customer buy is what
+  // triggers it instead of this.
+  if (env.sms.provider === 'sureverifications') {
+    require('./services/smsProvider').getProvider('sureverifications')
+      .resolveServiceId('Whatsapp')
+      .then(() => logger.info('SureVerifications service cache warmed'))
+      .catch(err => logger.warn('SureVerifications cache warm-up failed (will retry on first real request):', err.message));
+  }
+
   const server = app.listen(env.port, () => {
     logger.info(`╔═══════════════════════════════════════════════╗`);
     logger.info(`║   ${env.appName} API running                       ║`);

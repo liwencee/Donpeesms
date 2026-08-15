@@ -405,19 +405,36 @@ class SureVerificationsProvider {
 // resolveServiceId, so both interpret duplicates the same way.
 const dedupeServicesByName = async (provider, countryId, server = 'server1') => {
   const services = await provider.getServicesForCountry(countryId, server);
+
+  // Pricing every variant one at a time took 17-30s for ~50 services on
+  // server1 (confirmed live) — long enough to blow past the frontend's
+  // request timeout on the very first call after every process restart,
+  // since resolveServiceId's cache is empty then. A small worker pool
+  // gets the same total work done in a few seconds without firing 50
+  // requests at the provider simultaneously.
+  const CONCURRENCY = 8;
+  const priced = new Array(services.length);
+  let next = 0;
+  const worker = async () => {
+    while (next < services.length) {
+      const i = next++;
+      priced[i] = { ...services[i], price: await provider.getServicePrice(countryId, services[i].id, server) };
+    }
+  };
+  await Promise.all(Array.from({ length: Math.min(CONCURRENCY, services.length) }, worker));
+
   const byName = {};
-  for (const s of services) (byName[s.name] ||= []).push(s);
+  for (const { id, name, price } of priced) (byName[name] ||= []).push({ id, price });
 
   const catalog = [];
   for (const [name, variants] of Object.entries(byName)) {
     let best = null;
-    for (const v of variants) {
-      const price = await provider.getServicePrice(countryId, v.id, server);
+    for (const { id, price } of variants) {
       if (price.cost == null) continue;
       const better = !best
         || (price.inStock && !best.inStock)
         || (price.inStock === best.inStock && price.cost < best.cost);
-      if (better) best = { ...price, id: v.id, name };
+      if (better) best = { ...price, id, name };
     }
     if (best) catalog.push(best);
   }

@@ -810,11 +810,15 @@ async function buyNumber(type) {
   btn.innerHTML = '<span class="spinner"></span> Finding number...';
 
   try {
+    // Longer than the default 15s: resolving a service id against
+    // SureVerifications is normally instant (server-side cache, warmed
+    // at boot) but costs a real few seconds on an uncached provider
+    // process, and this call should not race that.
     const data = await api('POST', '/numbers/buy', {
       serviceType: type,
       country: countrySelect.value,
       ...(serviceSelect?.value ? { service: serviceSelect.value } : {})
-    });
+    }, 30000);
     if (!data) return;
 
     const order  = data.order;
