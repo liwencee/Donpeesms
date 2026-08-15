@@ -8,9 +8,16 @@
 // been redeployed. This is what caused every returning visitor to
 // keep hitting the deleted /api/auth/login after the Supabase rewrite
 // shipped: their service worker was still serving pre-rewrite app.js.
-const CACHE_NAME = 'donpeesms-v3';
-const STATIC_CACHE = 'donpeesms-static-v3';
-const API_CACHE    = 'donpeesms-api-v3';
+//
+// v3 -> v4: PRECACHE_ASSETS caches '/app.js' with no query string, so
+// this eviction is what actually invalidates it for a returning
+// visitor's service worker — bumping index.html's own ?v= tag alone
+// doesn't touch what a previously-installed SW has already precached.
+// Several app.js/index.html/styles.css deploys landed since v3 without
+// this being bumped alongside them.
+const CACHE_NAME = 'donpeesms-v4';
+const STATIC_CACHE = 'donpeesms-static-v4';
+const API_CACHE    = 'donpeesms-api-v4';
 
 // Assets to pre-cache on install
 const PRECACHE_ASSETS = [
