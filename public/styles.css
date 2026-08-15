@@ -1387,7 +1387,11 @@ h1,h2,h3,h4,h5,h6 { font-family: var(--font-head); font-weight: 700; line-height
 .user-name { font-size: .9rem; font-weight: 600; }
 .user-email { font-size: .75rem; color: var(--txt-4); }
 
-.dash-content { padding: 32px; }
+/* Extra bottom clearance beyond the uniform 32px so the last section
+   (typically the Recent Orders table header — search box + View All)
+   never sits underneath .chat-fab, which is pinned to the viewport's
+   bottom-right corner regardless of scroll position. */
+.dash-content { padding: 32px 32px 100px; }
 
 /* ── STATS ROW ── */
 .stats-row {

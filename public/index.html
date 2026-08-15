@@ -1790,7 +1790,7 @@
                   <svg width="16" height="16" fill="none" stroke="var(--p-400)" stroke-width="2" viewBox="0 0 24 24" style="flex-shrink:0;margin-top:2px"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
                   WhatsApp number is valid for 20 minutes. You will receive a full refund if no OTP arrives.
                 </div>
-                <button class="btn btn-success btn-lg w-full" onclick="buyNumberFull('whatsapp')">
+                <button class="btn btn-success btn-lg w-full" onclick="buyNumber('whatsapp', 'Full')" id="buyWABtnFull">
                   <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                   Get WhatsApp Number Instantly
                 </button>
@@ -1807,51 +1807,39 @@
               <div class="buy-form">
                 <div class="form-group">
                   <label class="form-label">Select Country</label>
-                  <select class="form-select">
+                  <select class="form-select" id="smsCountryFull">
                     <option value="">-- Choose Country --</option>
-                    <option>🇺🇸 United States (₦128)</option>
-                    <option>🇬🇧 United Kingdom (₦112)</option>
-                    <option>🇩🇪 Germany (₦112)</option>
-                    <option>🇮🇳 India (₦80)</option>
-                    <option>🇧🇷 Brazil (₦96)</option>
-                    <option>🇷🇺 Russia (₦96)</option>
-                    <option>🇫🇷 France (₦112)</option>
-                    <option>🇨🇦 Canada (₦128)</option>
-                    <option>🇳🇬 Nigeria (₦80)</option>
-                    <option>🇵🇰 Pakistan (₦80)</option>
-                    <option>🇵🇭 Philippines (₦80)</option>
-                    <option>🇻🇳 Vietnam (₦80)</option>
-                    <option>🇺🇦 Ukraine (₦96)</option>
-                    <option>🇹🇷 Turkey (₦96)</option>
-                    <option>🇮🇩 Indonesia (₦80)</option>
-                    <option>🇯🇵 Japan (₦224)</option>
-                    <option>🇰🇷 South Korea (₦192)</option>
-                    <option>🇲🇾 Malaysia (₦96)</option>
-                    <option>🇸🇬 Singapore (₦160)</option>
-                    <option>🇹🇭 Thailand (₦96)</option>
+                    <option value="US">🇺🇸 United States (₦128)</option>
+                    <option value="GB">🇬🇧 United Kingdom (₦112)</option>
+                    <option value="DE">🇩🇪 Germany (₦112)</option>
+                    <option value="IN">🇮🇳 India (₦80)</option>
+                    <option value="BR">🇧🇷 Brazil (₦96)</option>
+                    <option value="NG">🇳🇬 Nigeria (₦80)</option>
+                    <option value="RU">🇷🇺 Russia (₦96)</option>
+                    <option value="FR">🇫🇷 France (₦112)</option>
+                    <option value="CA">🇨🇦 Canada (₦128)</option>
+                    <option value="AU">🇦🇺 Australia (₦144)</option>
+                    <option value="PK">🇵🇰 Pakistan (₦80)</option>
+                    <option value="PH">🇵🇭 Philippines (₦80)</option>
+                    <option value="VN">🇻🇳 Vietnam (₦80)</option>
+                    <option value="UA">🇺🇦 Ukraine (₦96)</option>
+                    <option value="TR">🇹🇷 Turkey (₦96)</option>
                   </select>
                 </div>
                 <div class="form-group">
                   <label class="form-label">Service / Platform</label>
-                  <select class="form-select">
-                    <option>Any Service</option>
-                    <option>Telegram</option>
-                    <option>Google / Gmail</option>
-                    <option>Facebook / Meta</option>
-                    <option>Instagram</option>
-                    <option>Twitter / X</option>
-                    <option>TikTok</option>
-                    <option>Uber / Lyft</option>
-                    <option>Amazon</option>
-                    <option>PayPal</option>
-                    <option>Microsoft</option>
-                    <option>Apple ID</option>
-                    <option>Snapchat</option>
-                    <option>Discord</option>
-                    <option>Other</option>
+                  <select class="form-select" id="smsServiceFull">
+                    <option value="telegram">Telegram</option>
+                    <option value="google">Google</option>
+                    <option value="facebook">Facebook / Meta</option>
+                    <option value="tiktok">TikTok</option>
+                    <option value="instagram">Instagram</option>
+                    <option value="uber">Uber</option>
+                    <option value="amazon">Amazon</option>
                   </select>
                 </div>
-                <button class="btn btn-primary btn-lg w-full" onclick="buyNumberFull('sms')">
+                <div id="smsResultFull" class="hidden"></div>
+                <button class="btn btn-primary btn-lg w-full" onclick="buyNumber('sms', 'Full')" id="buySMSBtnFull">
                   <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>
                   Get SMS Number Instantly
                 </button>
@@ -2925,6 +2913,6 @@ curl https://api.donpeesms.com/v1/numbers/{id}/otp \
 
 <script src="/vendor/supabase.js"></script>
 <script src="/supabase-config.js"></script>
-<script src="/app.js?v=20260814contactonly"></script>
+<script src="/app.js?v=20260815dedicatedbuy"></script>
 </body>
 </html>

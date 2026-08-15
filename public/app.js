@@ -798,12 +798,18 @@ function copyText(text) {
 }
 
 // ── BUY NUMBER (Quick Panel) ───────────────────────────────
-async function buyNumber(type) {
+// variant selects which set of form elements to read/write: '' for the
+// Overview page's quick-buy panel (waCountry/smsCountry/...), 'Full' for
+// the dedicated WhatsApp/SMS Numbers pages (waCountryFull/smsCountryFull/
+// ...) — same real purchase flow either way, just a different form on
+// screen. The dedicated pages used to just redirect to the quick-buy
+// panel instead of actually buying anything from their own form.
+async function buyNumber(type, variant = '') {
   if (!state.currentUser) { showPage('login'); showToast('Please sign in first', 'warning'); return; }
-  const countrySelect = document.getElementById(type === 'whatsapp' ? 'waCountry' : 'smsCountry');
-  const serviceSelect = type === 'sms' ? document.getElementById('smsService') : null;
-  const resultDiv     = document.getElementById(type === 'whatsapp' ? 'waResult'  : 'smsResult');
-  const btn           = document.getElementById(type === 'whatsapp' ? 'buyWABtn'  : 'buySMSBtn');
+  const countrySelect = document.getElementById((type === 'whatsapp' ? 'waCountry' : 'smsCountry') + variant);
+  const serviceSelect = type === 'sms' ? document.getElementById('smsService' + variant) : null;
+  const resultDiv     = document.getElementById((type === 'whatsapp' ? 'waResult'  : 'smsResult') + variant);
+  const btn           = document.getElementById((type === 'whatsapp' ? 'buyWABtn'  : 'buySMSBtn') + variant);
   if (!countrySelect?.value) { showToast('Please select a country first', 'warning'); return; }
 
   btn.disabled = true;
@@ -910,20 +916,6 @@ async function cancelOrder(orderId) {
   } catch (err) {
     showToast(err.message || 'Cancel failed', 'error');
   }
-}
-
-// Full page buy (dedicated sections)
-function buyNumberFull(type) {
-  showToast(`Processing ${type} number request...`, 'info');
-  setTimeout(() => {
-    dashNav('overview');
-    setTimeout(() => {
-      const btn = document.getElementById(type === 'whatsapp' ? 'buyWABtn' : 'buySMSBtn');
-      if (btn) {
-        showToast(`Switched to quick buy panel. Select your country.`, 'info');
-      }
-    }, 300);
-  }, 500);
 }
 
 // ── COUNTDOWN TIMER ────────────────────────────────────────
