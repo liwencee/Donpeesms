@@ -162,6 +162,32 @@ function route() {
 }
 window.addEventListener('popstate', route);
 
+// A returning visitor with a still-valid session shouldn't be asked to log
+// in again just because they're back on the marketing site — the nav's
+// Login button becomes a direct link to their dashboard instead. Only
+// touches .nav-login-btn (both the desktop and mobile-menu copies), not
+// the Login/Register tab switcher inside the auth forms themselves.
+//
+// data-i18n is removed while in "Dashboard" mode and restored when
+// logged out again — setLang() re-applies every data-i18n element's text
+// on a language change, which would otherwise silently overwrite
+// "Dashboard" back to a translated "Login" the next time the visitor
+// switched languages.
+function _updateNavAuthState() {
+  const loggedIn = !!state.currentUser;
+  document.querySelectorAll('.nav-login-btn').forEach(btn => {
+    if (loggedIn) {
+      btn.textContent = 'Dashboard';
+      btn.removeAttribute('data-i18n');
+      btn.onclick = () => showPage('dashboard');
+    } else {
+      btn.setAttribute('data-i18n', 'nav.login');
+      btn.textContent = t('nav.login');
+      btn.onclick = () => showPage('login');
+    }
+  });
+}
+
 // ── PAGE ROUTER ────────────────────────────────────────────
 function showPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
@@ -170,6 +196,7 @@ function showPage(name) {
     target.classList.add('active');
     window.scrollTo(0, 0);
   }
+  if (name === 'landing') _updateNavAuthState();
   if (name === 'dashboard') initDashboard();
   if (name === 'admin') {
     // Hard guard: only an authenticated admin-role user may view the panel.
