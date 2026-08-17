@@ -400,9 +400,9 @@ class SureVerificationsProvider {
 // each group to its cheapest in-stock variant (SureVerifications lists
 // some names — e.g. "Whatsapp" — under several different opaque ids;
 // confirmed live: 4 "Whatsapp"-family entries, 3 "Telegram" ones, on
-// server1 alone). Shared by the admin catalog sync
-// (utils/syncProviderProducts.js) and SureVerificationsProvider's own
-// resolveServiceId, so both interpret duplicates the same way.
+// server1 alone). Used by SureVerificationsProvider's own resolveServiceId
+// (the real number-purchase pipeline) and by numberController.listServices
+// to populate the SMS-buy dropdown with real services.
 const dedupeServicesByName = async (provider, countryId, server = 'server1') => {
   const services = await provider.getServicesForCountry(countryId, server);
 

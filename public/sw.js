@@ -15,9 +15,9 @@
 // doesn't touch what a previously-installed SW has already precached.
 // Several app.js/index.html/styles.css deploys landed since v3 without
 // this being bumped alongside them.
-const CACHE_NAME = 'donpeesms-v4';
-const STATIC_CACHE = 'donpeesms-static-v4';
-const API_CACHE    = 'donpeesms-api-v4';
+const CACHE_NAME = 'donpeesms-v5';
+const STATIC_CACHE = 'donpeesms-static-v5';
+const API_CACHE    = 'donpeesms-api-v5';
 
 // Assets to pre-cache on install
 const PRECACHE_ASSETS = [

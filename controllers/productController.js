@@ -6,8 +6,6 @@ const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
 const { generateKey } = require('../models/ApiKey');
 const wallet        = require('./walletController');
-const { syncProviderProducts } = require('../utils/syncProviderProducts');
-const { calculateSureVerificationsPrice } = require('../services/smsProvider');
 
 const slugify = (s) => String(s || '')
   .toLowerCase().trim()
@@ -150,15 +148,6 @@ exports.adminDelete = asyncHandler(async (req, res) => {
   const { error } = await supabase.from('products').delete().eq('id', req.params.id);
   if (error) throw new ApiError(500, error.message);
   res.json({ success: true, message: 'Product deleted' });
-});
-
-// POST /api/admin/products/sync-provider
-// Replaces the "One-Time OTP" catalog with SureVerifications' live
-// service list (see utils/syncProviderProducts.js). Re-runnable any time
-// the provider's catalog changes.
-exports.syncFromProvider = asyncHandler(async (req, res) => {
-  const result = await syncProviderProducts({ priceToNaira: calculateSureVerificationsPrice });
-  res.json({ success: true, ...result });
 });
 
 // ═════════════════════════════════════════════

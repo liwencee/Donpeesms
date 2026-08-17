@@ -2412,28 +2412,6 @@ async function toggleMaintenanceMode(el) {
   }
 }
 
-async function syncProviderProducts(btn) {
-  if (!confirm('This replaces the current One-Time OTP catalog with SureVerifications\' live service list. Continue?')) return;
-  const original = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<span class="spinner"></span> Syncing…';
-  try {
-    // Prices every service sequentially against the live provider —
-    // routinely takes 20-30s. Default api() timeout (15s) would abort the
-    // request client-side while the sync keeps running server-side
-    // regardless, making a successful sync look like a failure.
-    const data = await api('POST', '/admin/products/sync-provider', undefined, 60000);
-    if (!data) return;
-    showToast(`Synced: ${data.created} added, ${data.updated} updated (${data.total} live services)`, 'success');
-    loadAdminProducts();
-  } catch (err) {
-    showToast(err.message || 'Sync failed', 'error');
-  } finally {
-    btn.disabled = false;
-    btn.innerHTML = original;
-  }
-}
-
 // ═════════════════════════════════════════════
 // ADMIN — PRODUCT MANAGEMENT (CRUD)
 // ═════════════════════════════════════════════
