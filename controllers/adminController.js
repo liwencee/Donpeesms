@@ -5,7 +5,6 @@
 const { supabase } = require('../config/supabase');
 const ApiError     = require('../utils/apiError');
 const asyncHandler = require('../utils/asyncHandler');
-const maintenanceState = require('../utils/maintenanceState');
 
 // GET /api/admin/users
 exports.listUsers = asyncHandler(async (req, res) => {
@@ -105,16 +104,4 @@ exports.listOrders = asyncHandler(async (req, res) => {
       date: o.created_at
     }))
   });
-});
-
-// GET /api/admin/maintenance
-exports.getMaintenance = asyncHandler(async (req, res) => {
-  res.json({ success: true, enabled: maintenanceState.isEnabled() });
-});
-
-// PATCH /api/admin/maintenance
-exports.setMaintenance = asyncHandler(async (req, res) => {
-  const enabled = !!req.body.enabled;
-  await maintenanceState.setEnabled(enabled, req.userId);
-  res.json({ success: true, enabled });
 });

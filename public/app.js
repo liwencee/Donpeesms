@@ -2350,43 +2350,6 @@ function adminNav(section) {
   if (section === 'pricing')    buildAdminPricing();
   if (section === 'orders')     buildAdminOrders();
   if (section === 'revenue')    setTimeout(()=>{ destroyChart('adminChartMonthly'); initAdminCharts(); }, 50);
-  if (section === 'settings')   loadAdminSettings();
-}
-
-// ═════════════════════════════════════════════
-// ADMIN — MAINTENANCE MODE
-// ═════════════════════════════════════════════
-function _renderMaintenanceState(enabled) {
-  const toggle = document.getElementById('maintenanceToggle');
-  const badge  = document.getElementById('maintenanceStatusBadge');
-  if (toggle) toggle.classList.toggle('on', enabled);
-  if (badge) {
-    badge.textContent = enabled ? 'LIVE — SITE LOCKED OUT' : 'Off';
-    badge.style.background = enabled ? 'var(--error)' : 'var(--bg-3)';
-    badge.style.color = enabled ? '#fff' : 'var(--txt-4)';
-  }
-}
-
-async function loadAdminSettings() {
-  try {
-    const data = await api('GET', '/admin/maintenance');
-    if (data) _renderMaintenanceState(!!data.enabled);
-  } catch (err) {
-    showToast(err.message || 'Failed to load maintenance status', 'error');
-  }
-}
-
-async function toggleMaintenanceMode(el) {
-  const next = !el.classList.contains('on');
-  if (next && !confirm('This takes the entire live site down for every visitor right now. Continue?')) return;
-  try {
-    const data = await api('PATCH', '/admin/maintenance', { enabled: next });
-    if (!data) return;
-    _renderMaintenanceState(!!data.enabled);
-    showToast(data.enabled ? 'Maintenance mode is ON — the site is locked out.' : 'Maintenance mode is OFF — the site is live again.', data.enabled ? 'warning' : 'success');
-  } catch (err) {
-    showToast(err.message || 'Failed to update maintenance mode', 'error');
-  }
 }
 
 // ═════════════════════════════════════════════

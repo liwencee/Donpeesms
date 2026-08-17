@@ -12,7 +12,5 @@ router.use(protect, requireRole('admin'));
 router.get('/users',           c.listUsers);
 router.patch('/users/:id/ban', c.toggleBan);
 router.get('/orders',          c.listOrders);
-router.get('/maintenance',     c.getMaintenance);
-router.patch('/maintenance',   c.setMaintenance);
 
 module.exports = router;

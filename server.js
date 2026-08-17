@@ -153,11 +153,6 @@ app.get('/health', (req, res) => {
   });
 });
 
-// ══════════════════════════════════════════
-// MAINTENANCE MODE (full site lockout, admin-exempt — see middleware/maintenance.js)
-// ══════════════════════════════════════════
-app.use(require('./middleware/maintenance'));
-
 // DB diagnostic — pings the database with a short timeout so failures
 // surface as a readable error instead of hanging the request.
 // Admin-only: this previously leaked DB host/port details and, during a
@@ -228,8 +223,6 @@ app.use(errorHandler);
 // STARTUP
 // ══════════════════════════════════════════
 const start = async () => {
-  await require('./utils/maintenanceState').load();
-
   // Warm SureVerifications' service-id cache in the background — not
   // awaited, so it never delays app.listen(). resolveServiceId's cache
   // is empty on every fresh process (every deploy restarts it), and
