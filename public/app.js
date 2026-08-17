@@ -1220,50 +1220,34 @@ const apps = [
 ];
 
 // ── PRODUCTS CATALOG ───────────────────────────────────────
-// usd = provider-side price; displayed in Naira via fmtNaira().
-const PRODUCTS = [
-  // One-time OTP numbers
-  { cat:'otp', name:'WhatsApp Number',    desc:'Receive WhatsApp OTP instantly. 150+ countries.',      usd:0.08, stock:'In stock', color:'#25D366' },
-  { cat:'otp', name:'Telegram Number',    desc:'Verify Telegram accounts in seconds.',                 usd:0.05, stock:'In stock', color:'#2CA5E0' },
-  { cat:'otp', name:'Google / Gmail',     desc:'OTP for Google sign-up and account recovery.',         usd:0.06, stock:'In stock', color:'#4285F4' },
-  { cat:'otp', name:'Instagram Number',   desc:'Phone verification code for Instagram.',               usd:0.06, stock:'In stock', color:'#E1306C' },
-  { cat:'otp', name:'TikTok Number',      desc:'Receive TikTok verification SMS.',                     usd:0.06, stock:'In stock', color:'#FF0050' },
-  { cat:'otp', name:'Twitter / X Number', desc:'SMS verification for X account setup.',                usd:0.07, stock:'In stock', color:'#1D9BF0' },
-  { cat:'otp', name:'Facebook Number',    desc:'OTP code for Facebook phone verification.',            usd:0.07, stock:'In stock', color:'#1877F2' },
-  { cat:'otp', name:'Any Service SMS',    desc:'Works with any platform that sends an SMS code.',      usd:0.05, stock:'In stock', color:'#8B5CF6' },
-  // Rentals
-  { cat:'rental', name:'Number Rental — 1 Day',   desc:'Keep one number for 24 hours, unlimited SMS.', usd:1.20, stock:'In stock', color:'#F59E0B' },
-  { cat:'rental', name:'Number Rental — 7 Days',  desc:'Weekly rental for repeat verifications.',      usd:6.00, stock:'In stock', color:'#F59E0B' },
-  { cat:'rental', name:'Number Rental — 30 Days', desc:'Long-term dedicated number for a month.',      usd:18.00, stock:'Limited',  color:'#F59E0B' },
-  // API / bulk
-  { cat:'api', name:'Developer API — Starter',  desc:'1,000 verifications/month with REST API access.', usd:45.00, stock:'In stock', color:'#3B82F6' },
-  { cat:'api', name:'Developer API — Growth',   desc:'5,000 verifications/month plus webhooks.',        usd:180.00, stock:'In stock', color:'#3B82F6' },
-  { cat:'api', name:'Developer API — Business', desc:'Unlimited volume, priority routing, SLA.',        usd:420.00, stock:'Contact us', color:'#3B82F6' }
-];
-
-const PRODUCT_CATS = [
-  { id:'all',    label:'All Products' },
-  { id:'otp',    label:'One-Time OTP' },
-  { id:'rental', label:'Number Rentals' },
-  { id:'api',    label:'Developer API' }
-];
-
+// The catalog is ENTIRELY database-driven (GET /api/products). There is
+// deliberately no hard-coded fallback list: the old one shipped a dozen
+// invented products (WhatsApp/Telegram/Rentals/etc.) whose prices were
+// stored as tiny USD floats, so fmtNaira() rendered every one of them as
+// "₦0" with a dead Contact Sales button. Worse, buildProducts() runs on
+// DOMContentLoaded BEFORE loadLiveProducts() resolves, so that fake list
+// rendered on every single page load and only got replaced if the API
+// call succeeded — meaning any slow or failed request left invented
+// products, and long-deleted categories, sitting on the live site.
 let _activeProdCat = 'all';
 let _liveCategories = null; // populated from /api/products/categories when available
 let _liveProducts   = null; // populated from /api/products when available
 
-// Fetch admin-managed products/categories once; fall back to the static
-// catalog above if the API has nothing yet (e.g. fresh install).
+// Fetch the admin-managed catalog. An empty result is a legitimate state
+// (every product may genuinely be delisted) and renders an empty grid —
+// never invented placeholder products.
 async function loadLiveProducts() {
   try {
     const [prodRes, catRes] = await Promise.all([
       api('GET', '/products'),
       api('GET', '/products/categories')
     ]);
-    if (prodRes?.products?.length) _liveProducts = prodRes.products;
-    if (catRes?.categories?.length) _liveCategories = catRes.categories;
+    _liveProducts   = prodRes?.products   || [];
+    _liveCategories = catRes?.categories  || [];
   } catch (_e) {
-    // API not reachable / no products yet — static catalog is used instead.
+    // Unreachable API is not evidence that products exist — leave both
+    // null so the grid shows its "couldn't load" state rather than
+    // inventing a catalog.
   }
   buildProductFilters();
   buildProducts();
@@ -1272,9 +1256,11 @@ async function loadLiveProducts() {
 function buildProductFilters() {
   const el = document.getElementById('prodFilters');
   if (!el) return;
-  const cats = _liveCategories
-    ? [{ id: 'all', label: 'All Products' }, ..._liveCategories.map(c => ({ id: c.slug, label: c.name }))]
-    : PRODUCT_CATS;
+  // Only categories that actually exist in the database are offered.
+  const cats = [
+    { id: 'all', label: 'All Products' },
+    ...(_liveCategories || []).map(c => ({ id: c.slug, label: c.name }))
+  ];
   el.innerHTML = cats.map(c =>
     `<button class="prod-chip${c.id === _activeProdCat ? ' active' : ''}" onclick="filterProducts('${escapeHTML(c.id)}')">${escapeHTML(c.label)}</button>`
   ).join('');
@@ -1327,6 +1313,10 @@ function buildProducts() {
     const list = _activeProdCat === 'all'
       ? _liveProducts
       : _liveProducts.filter(p => p.category?.slug === _activeProdCat);
+    if (!list.length) {
+      grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--txt-4);padding:40px 20px">No products available right now — <a href="#" onclick="showLandingPage('contact');return false" style="color:var(--p-400)">get in touch</a> and we'll sort you out.</div>`;
+      return;
+    }
     grid.innerHTML = list.map(p => {
       // The Developer API tier is the only category with a real, working
       // purchase path (POST /products/:id/purchase-plan). Everything else
@@ -1352,23 +1342,10 @@ function buildProducts() {
     return;
   }
 
-  // Fallback: static catalog (shown only until loadLiveProducts() resolves).
-  // No real product ids exist here to buy against, so every card is
-  // Contact Sales regardless of category — matches the live grid's
-  // behavior for anything it can't actually sell either.
-  const list = _activeProdCat === 'all' ? PRODUCTS : PRODUCTS.filter(p => p.cat === _activeProdCat);
-  grid.innerHTML = list.map(p => `<div class="prod-card">
-      <div class="prod-card-top">
-        <span class="prod-dot" style="background:${p.color}"></span>
-        <span class="prod-stock${p.stock === 'Limited' ? ' low' : ''}">${p.stock}</span>
-      </div>
-      <div class="prod-name">${p.name}</div>
-      <div class="prod-desc">${p.desc}</div>
-      <div class="prod-price">${fmtNaira(p.usd)}</div>
-      <button class="btn btn-outline w-full btn-sm" onclick="showLandingPage('contact')">
-        Contact Sales
-      </button>
-    </div>`).join('');
+  // _liveProducts === null means the fetch hasn't resolved (or failed).
+  // Showing nothing is correct here: the alternative is inventing
+  // products that can't be bought.
+  grid.innerHTML = `<div style="grid-column:1/-1;text-align:center;color:var(--txt-4);padding:40px 20px">Loading products…</div>`;
 }
 
 function buildAppChips() {
