@@ -196,6 +196,10 @@ app.use('/api/admin/api-providers', apiProviderRoutes); // admin API provider CR
 const path      = require('path');
 const publicDir = path.join(__dirname, 'public');
 
+// Ahead of express.static: otherwise "/" is answered by its index:
+// 'index.html' option before the gate ever runs.
+app.use(require('./middleware/frontendMaintenance'));
+
 app.use(express.static(publicDir, {
   maxAge:  env.env === 'production' ? '7d' : 0,
   etag:    true,
@@ -223,6 +227,11 @@ app.use(errorHandler);
 // STARTUP
 // ══════════════════════════════════════════
 const start = async () => {
+  // Awaited so the first requests after a deploy reflect the real flag
+  // rather than the module's default. It re-reads on a TTL after this,
+  // so a value changed in the database still lands without a restart.
+  await require('./utils/maintenanceFlag').load();
+
   // Warm SureVerifications' service-id cache in the background — not
   // awaited, so it never delays app.listen(). resolveServiceId's cache
   // is empty on every fresh process (every deploy restarts it), and
