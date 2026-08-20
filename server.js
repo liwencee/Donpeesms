@@ -153,6 +153,18 @@ app.get('/health', (req, res) => {
   });
 });
 
+// ══════════════════════════════════════════
+// SITE LOCKDOWN
+// ══════════════════════════════════════════
+// Position is load-bearing. Everything registered ABOVE this line stays
+// reachable during a lockdown — /api/payments/* (the DrexPay webhook, so
+// a bank transfer that confirms mid-window still credits the customer)
+// and /health (the host's uptime probe, which must not see 503 and start
+// restart-looping the app). Everything BELOW is locked: the whole API,
+// the admin panel, the dashboard, static assets and every page.
+// See middleware/siteLockdown.js before moving this.
+app.use(require('./middleware/siteLockdown'));
+
 // DB diagnostic — pings the database with a short timeout so failures
 // surface as a readable error instead of hanging the request.
 // Admin-only: this previously leaked DB host/port details and, during a
@@ -196,10 +208,6 @@ app.use('/api/admin/api-providers', apiProviderRoutes); // admin API provider CR
 const path      = require('path');
 const publicDir = path.join(__dirname, 'public');
 
-// Ahead of express.static: otherwise "/" is answered by its index:
-// 'index.html' option before the gate ever runs.
-app.use(require('./middleware/frontendMaintenance'));
-
 app.use(express.static(publicDir, {
   maxAge:  env.env === 'production' ? '7d' : 0,
   etag:    true,
@@ -230,7 +238,7 @@ const start = async () => {
   // Awaited so the first requests after a deploy reflect the real flag
   // rather than the module's default. It re-reads on a TTL after this,
   // so a value changed in the database still lands without a restart.
-  await require('./utils/maintenanceFlag').load();
+  await require('./utils/lockdownFlag').load();
 
   // Warm SureVerifications' service-id cache in the background — not
   // awaited, so it never delays app.listen(). resolveServiceId's cache

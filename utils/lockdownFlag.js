@@ -1,5 +1,5 @@
 /**
- * frontend_maintenance flag, read through a short-lived cache.
+ * site_lockdown flag, read through a short-lived cache.
  *
  * The previous implementation of this feature read the flag ONCE at boot,
  * so changing the value in the database never reached a running server —
@@ -25,7 +25,7 @@ let inflight  = null;
 
 const read = async () => {
   const { data, error } = await supabase
-    .from('app_settings').select('value').eq('key', 'frontend_maintenance').maybeSingle();
+    .from('app_settings').select('value').eq('key', 'site_lockdown').maybeSingle();
   if (error) throw new Error(error.message);
   return data?.value === true;
 };
@@ -38,7 +38,7 @@ const refresh = () => {
     // direction is safe to guess at: inventing `true` would black out a
     // healthy site over a database blip, and inventing `false` would
     // quietly un-maintenance a site somebody deliberately took down.
-    .catch((err) => { logger.warn('frontend_maintenance read failed, keeping last known value:', err.message); })
+    .catch((err) => { logger.warn('site_lockdown read failed, keeping last known value:', err.message); })
     .finally(() => { inflight = null; });
   return inflight;
 };
